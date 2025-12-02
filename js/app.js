@@ -12,19 +12,61 @@ class POSApp {
         this.init();
     }
 
-    init() {
-        this.loadProducts();
+    async init() {
+        // Check authentication
+        if (sessionStorage.getItem('woofcrafts_authenticated') !== 'true') {
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        await this.loadProducts();
         this.loadCart();
         this.filteredProducts = [...this.products];
         this.renderProducts();
         this.renderCart();
         this.setupEventListeners();
+        
+        // Periodically sync with Google Sheets (every 30 seconds)
+        setInterval(async () => {
+            try {
+                if (typeof loadProductsFromSheets === 'function') {
+                    const sheetsProducts = await loadProductsFromSheets();
+                    // Only update if there are differences
+                    if (JSON.stringify(sheetsProducts) !== JSON.stringify(this.products)) {
+                        this.products = sheetsProducts;
+                        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+                        this.filteredProducts = [];
+                        this.filterProducts();
+                        console.log('Products synced from Google Sheets');
+                    }
+                }
+            } catch (error) {
+                console.error('Error syncing products:', error);
+            }
+        }, 30000); // Sync every 30 seconds
     }
 
-    loadProducts() {
-        const storedProducts = localStorage.getItem('woofcrafts_products');
-        if (storedProducts) {
-            this.products = JSON.parse(storedProducts);
+    async loadProducts() {
+        // Load from Google Sheets first, fallback to localStorage
+        try {
+            if (typeof loadProductsFromSheets === 'function') {
+                this.products = await loadProductsFromSheets();
+                // Also sync to localStorage as backup
+                localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+            } else {
+                // Fallback to localStorage
+                const storedProducts = localStorage.getItem('woofcrafts_products');
+                if (storedProducts) {
+                    this.products = JSON.parse(storedProducts);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading products:', error);
+            // Fallback to localStorage
+            const storedProducts = localStorage.getItem('woofcrafts_products');
+            if (storedProducts) {
+                this.products = JSON.parse(storedProducts);
+            }
         }
     }
 
@@ -417,9 +459,9 @@ class POSApp {
         });
 
         // Reload products when page becomes visible (in case products were added in another tab)
-        document.addEventListener('visibilitychange', () => {
+        document.addEventListener('visibilitychange', async () => {
             if (!document.hidden) {
-                this.loadProducts();
+                await this.loadProducts();
                 this.filteredProducts = [];
                 this.filterProducts();
             }
@@ -429,7 +471,7 @@ class POSApp {
 
 // Initialize the POS app
 let posApp;
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     posApp = new POSApp();
 });
 
