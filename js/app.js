@@ -501,24 +501,13 @@ class POSApp {
                             margin: 0 auto; 
                         }
                         h1 { color: #4A90E2; }
-                        table { 
-                            width: 100%; 
-                            border-collapse: collapse; 
-                            margin: 20px 0; 
+                        /* Card-based styling for order items */
+                        .email-container div[style*="border-radius: 12px"] {
+                            transition: transform 0.2s ease, box-shadow 0.2s ease;
                         }
-                        th { 
-                            background-color: #f5f5f5; 
-                            padding: 12px; 
-                            text-align: left; 
-                            border-bottom: 2px solid #4A90E2; 
-                            font-weight: bold;
-                        }
-                        td { 
-                            padding: 10px 12px; 
-                            border-bottom: 1px solid #eee; 
-                        }
-                        tr:hover {
-                            background-color: #f9f9f9;
+                        .email-container div[style*="border-radius: 12px"]:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
                         }
                         .total-section { 
                             margin-top: 20px; 
