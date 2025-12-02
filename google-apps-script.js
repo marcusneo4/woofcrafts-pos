@@ -21,10 +21,26 @@ const ORDERS_SHEET_NAME = 'Orders';
 const PRODUCTS_SHEET_NAME = 'Products';
 
 /**
+ * Helper function to create CORS-enabled response
+ */
+function createCorsResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
  * Main function to handle POST requests for saving orders
  */
 function doPost(e) {
   try {
+    // Handle empty post data
+    if (!e.postData || !e.postData.contents) {
+      return createCorsResponse({
+        success: false,
+        error: 'No data received'
+      });
+    }
+    
     const data = JSON.parse(e.postData.contents);
     
     if (data.action === 'saveOrder') {
@@ -32,16 +48,17 @@ function doPost(e) {
     } else if (data.action === 'initializeSheets') {
       return initializeSheets();
     } else {
-      return ContentService.createTextOutput(JSON.stringify({
+      return createCorsResponse({
         success: false,
-        error: 'Unknown action'
-      })).setMimeType(ContentService.MimeType.JSON);
+        error: 'Unknown action: ' + (data.action || 'none')
+      });
     }
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
+    return createCorsResponse({
       success: false,
-      error: error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+      error: error.toString(),
+      stack: error.stack
+    });
   }
 }
 
@@ -49,11 +66,12 @@ function doPost(e) {
  * Handle GET requests (for testing)
  */
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
+  return createCorsResponse({
     success: true,
     message: 'WoofCrafts Google Sheets Web App is running!',
-    timestamp: new Date().toISOString()
-  })).setMimeType(ContentService.MimeType.JSON);
+    timestamp: new Date().toISOString(),
+    spreadsheetId: SPREADSHEET_ID
+  });
 }
 
 /**
@@ -105,17 +123,19 @@ function saveOrder(orderDetails) {
     // Append row
     sheet.appendRow(rowData);
     
-    return ContentService.createTextOutput(JSON.stringify({
+    return createCorsResponse({
       success: true,
       message: 'Order saved successfully',
-      orderId: orderDetails.orderId
-    })).setMimeType(ContentService.MimeType.JSON);
+      orderId: orderDetails.orderId,
+      timestamp: timestamp
+    });
     
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
+    return createCorsResponse({
       success: false,
-      error: error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+      error: error.toString(),
+      stack: error.stack
+    });
   }
 }
 
@@ -141,16 +161,17 @@ function initializeSheets() {
       ordersSheet.getRange(1, 1, 1, 8).setBackground('#f5f5f5');
     }
     
-    return ContentService.createTextOutput(JSON.stringify({
+    return createCorsResponse({
       success: true,
       message: 'Sheets initialized successfully'
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
     
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
+    return createCorsResponse({
       success: false,
-      error: error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+      error: error.toString(),
+      stack: error.stack
+    });
   }
 }
 

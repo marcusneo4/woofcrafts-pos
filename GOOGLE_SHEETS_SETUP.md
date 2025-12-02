@@ -24,7 +24,7 @@ Open your spreadsheet: https://docs.google.com/spreadsheets/d/16mQItKuqHE3EQ3c9R
 4. Choose **Web app**
 5. Configure:
    - **Execute as**: Me (your email)
-   - **Who has access**: Anyone (or "Anyone with Google account" for more security)
+   - **Who has access**: **Anyone** (IMPORTANT: Must be "Anyone" for CORS to work properly)
 6. Click **Deploy**
 7. Click **Authorize access** when prompted
    - You may need to click "Advanced" → "Go to [Project Name] (unsafe)" if you see a warning
@@ -33,6 +33,11 @@ Open your spreadsheet: https://docs.google.com/spreadsheets/d/16mQItKuqHE3EQ3c9R
    ```
    https://script.google.com/macros/s/AKfycby.../exec
    ```
+9. **IMPORTANT**: Test the URL by opening it directly in your browser. It should show JSON like:
+   ```json
+   {"success":true,"message":"WoofCrafts Google Sheets Web App is running!",...}
+   ```
+   If you see an error page or HTML instead, the deployment didn't work correctly.
 
 ### 5. Update Your Code
 1. Open `js/sheets.js`

@@ -35,8 +35,10 @@ async function saveOrderToSheets(orderDetails) {
         });
 
         // Send order to Google Apps Script web app
+        // Note: Google Apps Script web apps handle CORS automatically
         const response = await fetch(SHEETS_CONFIG.webAppUrl, {
             method: 'POST',
+            mode: 'cors', // Explicitly set CORS mode
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -44,6 +46,15 @@ async function saveOrderToSheets(orderDetails) {
                 action: 'saveOrder',
                 orderDetails: orderDetails
             })
+        }).catch(fetchError => {
+            // Enhanced error logging for fetch failures
+            console.error('Fetch error details:', {
+                message: fetchError.message,
+                name: fetchError.name,
+                stack: fetchError.stack,
+                url: SHEETS_CONFIG.webAppUrl
+            });
+            throw new Error(`Network error: ${fetchError.message}. Make sure the web app URL is correct and the app is deployed.`);
         });
 
         // Get response as text first to handle both JSON and HTML responses
@@ -95,13 +106,21 @@ async function initializeSheets() {
         // Call the web app to initialize sheets
         const response = await fetch(SHEETS_CONFIG.webAppUrl, {
             method: 'POST',
+            mode: 'cors', // Explicitly set CORS mode
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 action: 'initializeSheets'
             })
+        }).catch(fetchError => {
+            console.warn('Fetch error during initialization:', fetchError.message);
+            return null; // Non-critical, return null to skip
         });
+        
+        if (!response) {
+            return; // Skip if fetch failed
+        }
 
         const responseText = await response.text();
         let responseData;

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Web App Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4A90E2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #357ABD;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .info {
+            color: blue;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Direct Web App URL Test</h1>
+        <p>This page tests the Google Apps Script web app URL directly to diagnose connection issues.</p>
+        
+        <div>
+            <label>Web App URL:</label>
+            <input type="text" id="webapp-url" value="https://script.google.com/macros/s/AKfycbzbLvxYjdKEtk15okVg65QriE_NfjaShbm-7Cu1RCPg_auO8JdsWdSsx6oFtQxGIleo/exec" placeholder="Paste your web app URL here">
+        </div>
+        
+        <div>
+            <button onclick="testGet()">Test GET Request</button>
+            <button onclick="testPost()">Test POST Request</button>
+            <button onclick="testInNewTab()">Open URL in New Tab</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            resultsDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function getUrl() {
+            return document.getElementById('webapp-url').value.trim();
+        }
+
+        async function testGet() {
+            const url = getUrl();
+            log(`Testing GET request to: ${url}`, 'info');
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                log(`Response status: ${response.status} ${response.statusText}`, 'info');
+                log(`Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}`, 'info');
+                
+                const text = await response.text();
+                log(`Response text (first 1000 chars): ${text.substring(0, 1000)}`, 'info');
+                
+                try {
+                    const json = JSON.parse(text);
+                    log(`✓ Success! Parsed JSON: ${JSON.stringify(json, null, 2)}`, 'success');
+                } catch (e) {
+                    log(`⚠ Response is not JSON (might be HTML): ${e.message}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+                log(`Error name: ${error.name}`, 'error');
+                log(`Error stack: ${error.stack}`, 'error');
+            }
+        }
+
+        async function testPost() {
+            const url = getUrl();
+            log(`Testing POST request to: ${url}`, 'info');
+            
+            const testData = {
+                action: 'saveOrder',
+                orderDetails: {
+                    orderId: 'TEST-' + Date.now(),
+                    customerName: 'Test Customer',
+                    customerEmail: 'test@example.com',
+                    customerPhone: '123-456-7890',
+                    items: [
+                        { name: 'Test Product', quantity: 1, price: 10.00, subtotal: 10.00 }
+                    ],
+                    subtotal: 10.00,
+                    discountAmount: 0,
+                    discountPercent: 0,
+                    total: 10.00
+                }
+            };
+            
+            try {
+                log(`Sending: ${JSON.stringify(testData, null, 2)}`, 'info');
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                log(`Response status: ${response.status} ${response.statusText}`, 'info');
+                
+                const text = await response.text();
+                log(`Response text (first 1000 chars): ${text.substring(0, 1000)}`, 'info');
+                
+                try {
+                    const json = JSON.parse(text);
+                    if (json.success) {
+                        log(`✓ Success! Order saved: ${JSON.stringify(json, null, 2)}`, 'success');
+                    } else {
+                        log(`✗ Error from server: ${JSON.stringify(json, null, 2)}`, 'error');
+                    }
+                } catch (e) {
+                    log(`⚠ Response is not JSON: ${e.message}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ Fetch error: ${error.message}`, 'error');
+                log(`Error name: ${error.name}`, 'error');
+                log(`Error type: ${error.constructor.name}`, 'error');
+                
+                if (error.message.includes('Failed to fetch')) {
+                    log(`\n🔍 Troubleshooting "Failed to fetch":`, 'info');
+                    log(`1. Check if the web app URL is correct`, 'info');
+                    log(`2. Make sure the web app is deployed (not just saved)`, 'info');
+                    log(`3. Check "Who has access" is set to "Anyone" or "Anyone with Google account"`, 'info');
+                    log(`4. Try opening the URL directly in a new tab (click "Open URL in New Tab" button)`, 'info');
+                    log(`5. Check browser console (F12) for CORS errors`, 'info');
+                }
+            }
+        }
+
+        function testInNewTab() {
+            const url = getUrl();
+            window.open(url, '_blank');
+            log(`Opened ${url} in new tab. Check if it shows JSON or an error page.`, 'info');
+        }
+
+        // Clear results on load
+        resultsDiv.innerHTML = '<div class="info">Ready to test. Enter your web app URL and click a test button.</div>';
+    </script>
+</body>
+</html>
+
