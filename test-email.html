@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmailJS Test - WoofCrafts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: #FAF7F3;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(180, 148, 95, 0.25);
+        }
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            color: #D4A574;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .test-section {
+            margin-bottom: 30px;
+        }
+        .config-display {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .config-display strong {
+            color: #5C4A37;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #D4A574 0%, #C9A961 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+        .log {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid #D4A574;
+            padding-left: 10px;
+        }
+        .log-entry.error {
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        .log-entry.success {
+            border-left-color: #28a745;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐕 EmailJS Configuration Test</h1>
+        
+        <div class="test-section">
+            <h2>Current Configuration</h2>
+            <div class="config-display" id="config-display">
+                <strong>Public Key:</strong> <span id="public-key">Loading...</span><br>
+                <strong>Service ID:</strong> <span id="service-id">Loading...</span><br>
+                <strong>Template ID:</strong> <span id="template-id">Loading...</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Email</h2>
+            <p>This will send a test email to <strong>marcusneo4@gmail.com</strong></p>
+            <button id="test-btn" onclick="sendTestEmail()">📧 Send Test Email</button>
+            <div id="status" class="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Log</h2>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script src="js/email.js"></script>
+    
+    <script>
+        // Display current configuration
+        document.getElementById('public-key').textContent = EMAILJS_CONFIG.publicKey;
+        document.getElementById('service-id').textContent = EMAILJS_CONFIG.serviceId;
+        document.getElementById('template-id').textContent = EMAILJS_CONFIG.templateId;
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        async function sendTestEmail() {
+            const btn = document.getElementById('test-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Sending...';
+            
+            addLog('Starting email test...', 'info');
+            showStatus('Sending test email...', 'info');
+
+            // Check if EmailJS SDK is loaded
+            if (typeof emailjs === 'undefined') {
+                const error = 'EmailJS SDK not loaded!';
+                addLog(error, 'error');
+                showStatus(error, 'error');
+                btn.disabled = false;
+                btn.textContent = '📧 Send Test Email';
+                return;
+            }
+
+            addLog('EmailJS SDK loaded successfully', 'success');
+            addLog(`Initializing with Public Key: ${EMAILJS_CONFIG.publicKey}`, 'info');
+
+            try {
+                // Initialize EmailJS
+                emailjs.init(EMAILJS_CONFIG.publicKey);
+                addLog('EmailJS initialized successfully', 'success');
+
+                // Prepare test email data
+                const testOrderDetails = {
+                    orderId: 'TEST-' + Date.now(),
+                    customerName: 'Test Customer',
+                    customerEmail: 'marcusneo4@gmail.com',
+                    customerPhone: '123-456-7890',
+                    items: [
+                        {
+                            name: 'Test Product 1',
+                            quantity: 2,
+                            price: 10.00,
+                            subtotal: 20.00
+                        },
+                        {
+                            name: 'Test Product 2',
+                            quantity: 1,
+                            price: 15.50,
+                            subtotal: 15.50
+                        }
+                    ],
+                    subtotal: 35.50,
+                    discountAmount: 0,
+                    discountPercent: 0,
+                    total: 35.50
+                };
+
+                // Format items for email
+                const itemsList = testOrderDetails.items.map(item => 
+                    `${item.name} - Qty: ${item.quantity} x $${item.price.toFixed(2)} = $${item.subtotal.toFixed(2)}`
+                ).join('\n');
+
+                // Prepare template parameters
+                const templateParams = {
+                    to_email: 'marcusneo4@gmail.com',
+                    from_name: 'WoofCrafts',
+                    from_email: 'marcusneo4@gmail.com',
+                    customer_name: testOrderDetails.customerName,
+                    customer_phone: testOrderDetails.customerPhone,
+                    order_id: testOrderDetails.orderId,
+                    order_items: itemsList,
+                    subtotal: `$${testOrderDetails.subtotal.toFixed(2)}`,
+                    discount: 'None',
+                    total: `$${testOrderDetails.total.toFixed(2)}`,
+                    company_name: 'WoofCrafts'
+                };
+
+                addLog(`Sending email using Service ID: ${EMAILJS_CONFIG.serviceId}`, 'info');
+                addLog(`Using Template ID: ${EMAILJS_CONFIG.templateId}`, 'info');
+                addLog(`To: ${templateParams.to_email}`, 'info');
+
+                // Send email
+                const response = await emailjs.send(
+                    EMAILJS_CONFIG.serviceId,
+                    EMAILJS_CONFIG.templateId,
+                    templateParams
+                );
+
+                addLog('Email sent successfully!', 'success');
+                addLog(`Response: ${JSON.stringify(response, null, 2)}`, 'success');
+                showStatus('✅ Test email sent successfully! Check your inbox at marcusneo4@gmail.com', 'success');
+
+            } catch (error) {
+                console.error('EmailJS error:', error);
+                const errorMessage = error?.text || error?.message || 'Unknown error occurred';
+                const errorDetails = error?.status || error?.statusText || 'No status';
+                
+                addLog(`Error: ${errorMessage}`, 'error');
+                addLog(`Status: ${errorDetails}`, 'error');
+                addLog(`Full error: ${JSON.stringify(error, null, 2)}`, 'error');
+                
+                let userMessage = `❌ Failed to send email: ${errorMessage}`;
+                
+                // Provide helpful error messages
+                if (errorMessage.includes('Invalid') || errorMessage.includes('invalid')) {
+                    userMessage += '\n\nPossible issues:\n- Service ID might be incorrect\n- Template ID might be incorrect\n- Public Key might be incorrect';
+                } else if (errorMessage.includes('Service') || errorMessage.includes('service')) {
+                    userMessage += '\n\nCheck your Service ID in the EmailJS dashboard';
+                } else if (errorMessage.includes('Template') || errorMessage.includes('template')) {
+                    userMessage += '\n\nCheck your Template ID in the EmailJS dashboard';
+                }
+                
+                showStatus(userMessage, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📧 Send Test Email';
+            }
+        }
+
+        // Auto-check EmailJS on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (typeof emailjs !== 'undefined') {
+                    addLog('EmailJS SDK detected on page load', 'success');
+                } else {
+                    addLog('EmailJS SDK not detected - check script loading', 'error');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
+

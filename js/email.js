@@ -5,7 +5,7 @@
 // Use marcusneo4@gmail.com as the sending email
 const EMAILJS_CONFIG = {
     publicKey: 'pItLrmthOdxpZRMEw', // Replace with your EmailJS Public Key from dashboard
-    serviceId: 'service_phey43q',  // EmailJS Service ID (Gmail service)
+    serviceId: 'service_t1mlwir',  // EmailJS Service ID (Gmail service)
     templateId: 'template_iqb8umq' // Replace with your EmailJS Template ID
 };
 
@@ -87,8 +87,15 @@ async function sendOrderConfirmationEmail(orderDetails) {
     try {
         // Ensure EmailJS is initialized
         if (!emailjs || typeof emailjs.send !== 'function') {
+            console.log('Re-initializing EmailJS with public key:', EMAILJS_CONFIG.publicKey);
             emailjs.init(EMAILJS_CONFIG.publicKey);
         }
+
+        console.log('EmailJS Configuration:', {
+            publicKey: EMAILJS_CONFIG.publicKey,
+            serviceId: EMAILJS_CONFIG.serviceId,
+            templateId: EMAILJS_CONFIG.templateId
+        });
 
         // Format items for email
         const itemsList = orderDetails.items.map(item => 
@@ -112,6 +119,13 @@ async function sendOrderConfirmationEmail(orderDetails) {
             company_name: 'WoofCrafts'
         };
 
+        console.log('Sending email with parameters:', {
+            serviceId: EMAILJS_CONFIG.serviceId,
+            templateId: EMAILJS_CONFIG.templateId,
+            to_email: templateParams.to_email,
+            customer_name: templateParams.customer_name
+        });
+
         // Send email using EmailJS
         const response = await emailjs.send(
             EMAILJS_CONFIG.serviceId,
@@ -120,11 +134,43 @@ async function sendOrderConfirmationEmail(orderDetails) {
         );
 
         console.log('Email sent successfully:', response);
+        console.log('Response status:', response.status);
+        console.log('Response text:', response.text);
         return response;
     } catch (error) {
-        console.error('EmailJS error:', error);
-        const errorMessage = error?.text || error?.message || 'Unknown error occurred';
-        throw new Error('Failed to send email: ' + errorMessage);
+        console.error('EmailJS error details:', {
+            error: error,
+            status: error?.status,
+            statusText: error?.statusText,
+            text: error?.text,
+            message: error?.message
+        });
+        
+        // Provide more detailed error information
+        let errorMessage = 'Failed to send email: ';
+        
+        if (error?.status) {
+            errorMessage += `Status ${error.status} - `;
+        }
+        
+        if (error?.text) {
+            errorMessage += error.text;
+        } else if (error?.message) {
+            errorMessage += error.message;
+        } else {
+            errorMessage += 'Unknown error occurred';
+        }
+        
+        // Add helpful suggestions based on error
+        if (error?.status === 400) {
+            errorMessage += '\n\nPossible issues:\n- Service ID might be incorrect\n- Template ID might be incorrect\n- Template parameters might not match your template';
+        } else if (error?.status === 401 || error?.status === 403) {
+            errorMessage += '\n\nPossible issues:\n- Public Key might be incorrect\n- Service might not be properly connected in EmailJS dashboard';
+        } else if (error?.status === 404) {
+            errorMessage += '\n\nPossible issues:\n- Service ID not found\n- Template ID not found\n- Check your EmailJS dashboard for correct IDs';
+        }
+        
+        throw new Error(errorMessage);
     }
 }
 
