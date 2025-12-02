@@ -19,19 +19,41 @@ class ProductManager {
         const storedProducts = localStorage.getItem('woofcrafts_products');
         if (storedProducts) {
             try {
-                this.products = JSON.parse(storedProducts);
+                const parsed = JSON.parse(storedProducts);
+                if (Array.isArray(parsed)) {
+                    this.products = parsed;
+                    console.log(`✓ Loaded ${this.products.length} products`);
+                } else {
+                    console.warn('Invalid products data in localStorage');
+                    this.products = [];
+                }
             } catch (error) {
                 console.error('Error parsing stored products:', error);
                 this.products = [];
             }
         } else {
+            console.log('No products in localStorage yet');
             this.products = [];
         }
     }
 
     async saveProducts() {
         // Save to localStorage
-        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+        try {
+            localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+            console.log(`✓ Saved ${this.products.length} products to localStorage`);
+            
+            // Trigger storage event for other tabs
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: 'woofcrafts_products',
+                newValue: JSON.stringify(this.products),
+                url: window.location.href,
+                storageArea: localStorage
+            }));
+        } catch (error) {
+            console.error('Error saving products:', error);
+            throw error;
+        }
     }
 
     generateId() {
@@ -75,13 +97,24 @@ class ProductManager {
             return;
         }
 
-        if (!imageFile || imageFile.size === 0) {
+        // For new products, image is required. For editing, image is optional (keep existing)
+        let imageDataUrl = null;
+        if (imageFile && imageFile.size > 0) {
+            imageDataUrl = await this.saveImageAsDataURL(imageFile);
+        } else if (this.editingId) {
+            // If editing and no new image, keep the existing image
+            const existingProduct = this.products.find(p => p.id === this.editingId);
+            if (existingProduct) {
+                imageDataUrl = existingProduct.image;
+            }
+        }
+
+        if (!imageDataUrl) {
             alert('Please select an image');
             return;
         }
 
         try {
-            const imageDataUrl = await this.saveImageAsDataURL(imageFile);
             const productId = this.editingId || this.generateId();
 
             const product = {
@@ -106,14 +139,12 @@ class ProductManager {
             await this.saveProducts();
             this.renderProducts();
             this.resetForm();
-            this.showMessage('Product saved successfully!', 'success');
             
-            // Dispatch event to notify other pages (like index.html) that products were updated
-            // This works for same-origin pages that might be listening
+            const action = this.editingId ? 'updated' : 'added';
+            this.showMessage(`✓ Product ${action} successfully!`, 'success');
+            
+            // Notify other pages that products were updated
             window.dispatchEvent(new CustomEvent('productsUpdated'));
-            
-            // Also trigger storage event manually for same-tab updates (storage event only fires cross-tab)
-            // We'll use a custom mechanism: set a flag in sessionStorage
             sessionStorage.setItem('woofcrafts_products_updated', Date.now().toString());
         } catch (error) {
             console.error('Error saving product:', error);

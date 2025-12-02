@@ -16,36 +16,35 @@ class POSApp {
             return;
         }
         
-        await this.loadProducts();
-        
-        // Ensure products array is valid and always includes fixed products
-        if (!Array.isArray(this.products)) {
-            console.error('Products is not an array, resetting...');
+        try {
+            await this.loadProducts();
+            
+            // Ensure products array is always valid
+            if (!Array.isArray(this.products) || this.products.length === 0) {
+                console.log('No products found, initializing with fixed products...');
+                this.products = this.getFixedProducts();
+                localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+            }
+            
+            this.loadCart();
+            console.log(`✓ Successfully loaded ${this.products.length} products`);
+            this.renderProducts();
+            this.renderCart();
+            this.setupEventListeners();
+        } catch (error) {
+            console.error('Error initializing POS:', error);
+            // Fallback to fixed products
             this.products = this.getFixedProducts();
-        } else {
-            // Ensure fixed products are always included
-            const fixedProducts = this.getFixedProducts();
-            const fixedIds = fixedProducts.map(p => p.id);
-            const otherProducts = this.products.filter(p => !fixedIds.includes(p.id));
-            this.products = [...fixedProducts, ...otherProducts];
+            localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+            this.renderProducts();
+            this.renderCart();
+            this.setupEventListeners();
         }
-        
-        // Save merged products back to localStorage
-        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-        
-        this.loadCart();
-        console.log(`Loaded ${this.products.length} products (including ${this.getFixedProducts().length} fixed products)`);
-        this.renderProducts();
-        this.renderCart();
-        this.setupEventListeners();
     }
 
     async loadProducts() {
         // Get fixed/default products first
         const fixedProducts = this.getFixedProducts();
-        
-        // Initialize products array with fixed products
-        this.products = [...fixedProducts];
         
         // Load from localStorage
         const storedProducts = localStorage.getItem('woofcrafts_products');
@@ -57,8 +56,7 @@ class POSApp {
                     const fixedIds = fixedProducts.map(p => p.id);
                     const otherProducts = parsed.filter(p => !fixedIds.includes(p.id));
                     this.products = [...fixedProducts, ...otherProducts];
-                    localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-                    console.log(`Loaded ${this.products.length} products (${fixedProducts.length} fixed + ${otherProducts.length} from localStorage)`);
+                    console.log(`Loaded ${otherProducts.length} custom products + ${fixedProducts.length} fixed products`);
                     return;
                 }
             } catch (e) {
@@ -66,30 +64,17 @@ class POSApp {
             }
         }
         
-        // If no additional products found, just use fixed products
-        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-        console.log(`Using ${this.products.length} fixed products`);
-        
-        // Final validation - ensure we always have at least fixed products
-        if (this.products.length === 0) {
-            console.error('No products loaded! Resetting to fixed products only.');
-            this.products = [...fixedProducts];
-            localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-        }
+        // Default to fixed products only
+        this.products = [...fixedProducts];
+        console.log(`Loaded ${this.products.length} fixed products`);
     }
     
     async refreshProducts() {
         // Force reload products and re-render
         console.log('Refreshing products...');
         await this.loadProducts();
-        // Ensure fixed products are always included
-        const fixedProducts = this.getFixedProducts();
-        const fixedIds = fixedProducts.map(p => p.id);
-        const otherProducts = this.products.filter(p => !fixedIds.includes(p.id));
-        this.products = [...fixedProducts, ...otherProducts];
-        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
         this.renderProducts();
-        console.log(`Products refreshed: ${this.products.length} total products`);
+        console.log(`✓ Products refreshed: ${this.products.length} total`);
     }
 
     getFixedProducts() {
@@ -148,16 +133,17 @@ class POSApp {
         const grid = document.getElementById('products-grid');
         
         if (!grid) {
-            console.error('Products grid element not found!');
+            console.error('❌ Products grid element not found!');
             return;
         }
         
         // Filter out any invalid products
         const validProducts = this.products.filter(product => product && product.id && product.name);
         
-        console.log(`Rendering ${validProducts.length} products (total: ${this.products.length})`);
+        console.log(`📦 Rendering ${validProducts.length} valid products (total: ${this.products.length})`);
         
         if (!validProducts || validProducts.length === 0) {
+            console.warn('⚠️ No valid products to display');
             grid.innerHTML = `
                 <div class="empty-state">
                     <span class="empty-icon">🐶</span>
@@ -182,6 +168,8 @@ class POSApp {
                 </div>
             `;
         }).join('');
+        
+        console.log('✓ Products rendered successfully');
     }
 
     addToCart(productId) {
@@ -654,49 +642,15 @@ class POSApp {
                     </script>
                 </body>
             </html>
-        `);
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-                    <script>
-                        function downloadPDF() {
-                            // Wait for libraries to load
-                            if (typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') {
-                                setTimeout(downloadPDF, 100);
-                                return;
-                            }
-                            
-                            const { jsPDF } = window.jspdf;
-                            const doc = new jsPDF();
-                            
-                            // Get the order content
-                            const content = document.getElementById('orderContent');
-                            
-                            // Use html2canvas to convert HTML to image, then add to PDF
-                            html2canvas(content, {
-                                scale: 2,
-                                useCORS: true,
-                                logging: false,
-                                backgroundColor: '#ffffff'
-                            }).then(canvas => {
-                                const imgData = canvas.toDataURL('image/png');
-                                const imgWidth = doc.internal.pageSize.getWidth();
-                                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                                
-                                // Add image to PDF
-                                doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                                
-                                // Save PDF
-                                doc.save('WoofCrafts_Order_${orderDetails.orderId}.pdf');
-                            }).catch(err => {
-                                console.error('Error generating PDF:', err);
-                                alert('Error generating PDF. Please try printing instead.');
-                            });
-                        }
-                    </script>
-                </body>
-            </html>
-        `);
-        previewWindow.document.close();
+        `;
+        
+        const previewWindow = window.open('', '_blank', 'width=900,height=800');
+        if (previewWindow) {
+            previewWindow.document.write(previewHTML);
+            previewWindow.document.close();
+        } else {
+            alert('Please allow pop-ups to view the email preview.');
+        }
     }
 
     setupEventListeners() {
