@@ -307,8 +307,8 @@ function generatePlainTextEmailContent(orderDetails) {
 }
 
 /**
- * Generate beautiful, modern HTML email content
- * This function is also used by app.js to show email preview
+ * Generate beautiful, Gmail-friendly HTML email content
+ * Designed to render perfectly in Gmail, Outlook, and all email clients
  */
 function generateEmailContent(orderDetails) {
     // Escape HTML to prevent XSS and ensure proper rendering
@@ -324,136 +324,156 @@ function generateEmailContent(orderDetails) {
         return String(text).replace(/[&<>"']/g, m => map[m]);
     };
 
-    // Generate simple table rows for items
+    // Generate item rows - simple and clean
     const itemsHtml = orderDetails.items.map((item) => `
-        <tr>
-            <td style="padding: 15px 0; font-size: 16px; color: #5C4A37; font-weight: 500;">
-                ${escapeHtml(item.name)}
-            </td>
-            <td style="padding: 15px 0; text-align: center; font-size: 16px; color: #5C4A37; font-weight: 500;">
-                ${item.quantity}
-            </td>
-            <td style="padding: 15px 0; text-align: right; font-size: 16px; color: #5C4A37; font-weight: 500;">
-                $${item.price.toFixed(2)}
-            </td>
-            <td style="padding: 15px 0; text-align: right; font-size: 16px; color: #D4A574; font-weight: 700;">
-                $${item.subtotal.toFixed(2)}
-            </td>
-        </tr>
+        <div style="padding: 16px 0; border-bottom: 1px solid #f0f0f0;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td style="padding: 4px 0;">
+                        <strong style="font-size: 15px; color: #333;">${escapeHtml(item.name)}</strong>
+                    </td>
+                    <td align="right" style="padding: 4px 0;">
+                        <strong style="font-size: 15px; color: #D4A574;">$${item.subtotal.toFixed(2)}</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 0; font-size: 13px; color: #666;">
+                        Qty: ${item.quantity} × $${item.price.toFixed(2)}
+                    </td>
+                    <td></td>
+                </tr>
+            </table>
+        </div>
     `).join('');
 
-    // Generate simple, clean HTML email structure
+    // Generate clean, simple HTML email
     const emailBody = `
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; font-family: 'Nunito', Arial, sans-serif; background-color: #FAF7F3;">
-            <!-- Header -->
-            <tr>
-                <td style="background: linear-gradient(135deg, #D4A574 0%, #C9A961 50%, #E8D5B7 100%); padding: 40px 30px; text-align: center;">
-                    <div style="font-size: 48px; margin-bottom: 10px;">🐾</div>
-                    <h1 style="color: #FFFFFF; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: 1px;">
-                        WoofCrafts
-                    </h1>
-                    <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; font-weight: 600;">
-                        Order Confirmation
-                    </p>
-                </td>
-            </tr>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+        
+        <!-- Header -->
+        <div style="background-color: #D4A574; padding: 40px 20px; text-align: center;">
+            <div style="font-size: 40px; margin-bottom: 8px;">🐾</div>
+            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
+                WoofCrafts
+            </h1>
+            <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 16px;">
+                Order Confirmation
+            </p>
+        </div>
+        
+        <!-- Main Content -->
+        <div style="padding: 30px 20px;">
             
-            <!-- Content -->
-            <tr>
-                <td style="padding: 40px 30px; background-color: #FFFFFF;">
-                    
-                    <!-- Welcome Message -->
-                    <p style="margin: 0 0 30px 0; font-size: 17px; line-height: 1.7; color: #5C4A37; font-weight: 500;">
-                        Thank you for shopping with <strong style="color: #D4A574;">WoofCrafts</strong>! We've received your order and are getting it ready for your pup. 🐕
-                    </p>
-                    
-                    <!-- Order Info -->
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 30px;">
-                        <tr>
-                            <td style="padding: 0 0 15px 0; width: 50%;">
-                                <div style="font-size: 12px; color: #8B7355; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 5px;">Order ID</div>
-                                <div style="font-size: 20px; color: #D4A574; font-weight: 800; font-family: 'Courier New', monospace;">#${orderDetails.orderId || 'N/A'}</div>
-                            </td>
-                            <td style="padding: 0 0 15px 0; width: 50%; text-align: right;">
-                                <div style="font-size: 12px; color: #8B7355; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 5px;">Date</div>
-                                <div style="font-size: 16px; color: #5C4A37; font-weight: 600;">${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                            </td>
-                        </tr>
-                    </table>
-                    
-                    <!-- Order Summary Title -->
-                    <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 800; color: #D4A574;">
-                        Order Summary
-                    </h2>
-                    
-                    <!-- Items Table -->
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 30px;">
-                        <thead>
-                            <tr>
-                                <th style="padding: 15px 0; text-align: left; font-size: 14px; font-weight: 700; color: #FFFFFF; background-color: #D4A574; text-transform: uppercase; letter-spacing: 0.5px;">Item</th>
-                                <th style="padding: 15px 0; text-align: center; font-size: 14px; font-weight: 700; color: #FFFFFF; background-color: #D4A574; text-transform: uppercase; letter-spacing: 0.5px;">Qty</th>
-                                <th style="padding: 15px 0; text-align: right; font-size: 14px; font-weight: 700; color: #FFFFFF; background-color: #D4A574; text-transform: uppercase; letter-spacing: 0.5px;">Price</th>
-                                <th style="padding: 15px 0; text-align: right; font-size: 14px; font-weight: 700; color: #FFFFFF; background-color: #D4A574; text-transform: uppercase; letter-spacing: 0.5px;">Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsHtml}
-                        </tbody>
-                    </table>
-                    
-                    <!-- Totals -->
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 30px;">
-                        <tr>
-                            <td style="padding: 10px 0; font-size: 16px; color: #5C4A37; font-weight: 600;">Subtotal</td>
-                            <td align="right" style="padding: 10px 0; font-size: 16px; color: #5C4A37; font-weight: 600;">$${orderDetails.subtotal.toFixed(2)}</td>
-                        </tr>
-                        ${orderDetails.discountAmount > 0 ? `
-                        <tr>
-                            <td style="padding: 10px 0; font-size: 16px; color: #5C4A37; font-weight: 600;">Discount (${orderDetails.discountPercent}%)</td>
-                            <td align="right" style="padding: 10px 0; font-size: 16px; color: #A0B58F; font-weight: 600;">-$${orderDetails.discountAmount.toFixed(2)}</td>
-                        </tr>
-                        ` : ''}
-                        <tr>
-                            <td colspan="2" style="padding: 20px 0 10px 0;"></td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 10px 0; font-size: 24px; color: #D4A574; font-weight: 800;">Total</td>
-                            <td align="right" style="padding: 10px 0; font-size: 28px; color: #D4A574; font-weight: 800;">$${orderDetails.total.toFixed(2)}</td>
-                        </tr>
-                    </table>
-                    
-                    ${orderDetails.customerComment ? `
-                    <!-- Customer Comments -->
-                    <div style="margin-bottom: 30px; padding: 20px; background-color: #FAF7F3;">
-                        <div style="font-size: 14px; color: #D4A574; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Customer Comments</div>
-                        <div style="font-size: 15px; color: #5C4A37; line-height: 1.6;">${escapeHtml(orderDetails.customerComment)}</div>
-                    </div>
+            <!-- Greeting -->
+            <p style="font-size: 16px; color: #333; line-height: 1.6; margin: 0 0 24px 0;">
+                Hi <strong>${escapeHtml(orderDetails.customerName)}</strong>,
+            </p>
+            
+            <p style="font-size: 15px; color: #555; line-height: 1.6; margin: 0 0 24px 0;">
+                Thank you for your order! We're excited to get your items ready. Here's a summary of what you ordered:
+            </p>
+            
+            <!-- Order ID Box -->
+            <div style="background-color: #f8f8f8; padding: 16px; margin-bottom: 24px; border-left: 4px solid #D4A574;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td>
+                            <div style="font-size: 12px; color: #888; margin-bottom: 4px;">ORDER ID</div>
+                            <div style="font-size: 20px; color: #D4A574; font-weight: bold;">#${orderDetails.orderId || 'N/A'}</div>
+                        </td>
+                        <td align="right">
+                            <div style="font-size: 12px; color: #888; margin-bottom: 4px;">DATE</div>
+                            <div style="font-size: 14px; color: #333;">${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Order Items -->
+            <h2 style="font-size: 18px; color: #333; margin: 0 0 16px 0; font-weight: bold;">
+                Your Order
+            </h2>
+            
+            <div style="margin-bottom: 24px;">
+                ${itemsHtml}
+            </div>
+            
+            <!-- Totals -->
+            <div style="background-color: #f8f8f8; padding: 20px; margin-bottom: 24px;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td style="padding: 8px 0; font-size: 15px; color: #555;">
+                            Subtotal
+                        </td>
+                        <td align="right" style="padding: 8px 0; font-size: 15px; color: #555;">
+                            $${orderDetails.subtotal.toFixed(2)}
+                        </td>
+                    </tr>
+                    ${orderDetails.discountAmount > 0 ? `
+                    <tr>
+                        <td style="padding: 8px 0; font-size: 15px; color: #4CAF50;">
+                            Discount (${orderDetails.discountPercent}%)
+                        </td>
+                        <td align="right" style="padding: 8px 0; font-size: 15px; color: #4CAF50;">
+                            -$${orderDetails.discountAmount.toFixed(2)}
+                        </td>
+                    </tr>
                     ` : ''}
-                    
-                    <!-- Support Message -->
-                    <p style="margin: 30px 0 0 0; font-size: 15px; line-height: 1.7; color: #5C4A37; text-align: center;">
-                        If you have any questions about your order, just reply to this email and we'll be happy to help! 🐾
-                    </p>
-                    
-                    <!-- Footer -->
-                    <div style="padding-top: 40px; margin-top: 30px; text-align: center; border-top: 1px solid #E8D5B7;">
-                        <p style="margin: 0 0 10px 0; font-size: 15px; line-height: 1.6; color: #5C4A37; font-weight: 500;">
-                            With tail wags,
-                        </p>
-                        <p style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: #D4A574;">
-                            The WoofCrafts Team
-                        </p>
-                        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #8B7355; font-weight: 400;">
-                            Crafting pawsome accessories for good dogs everywhere 🐶
-                        </p>
-                    </div>
-                    
-                </td>
-            </tr>
-        </table>
+                    <tr>
+                        <td style="padding: 16px 0 8px 0; font-size: 18px; color: #333; font-weight: bold; border-top: 2px solid #ddd;">
+                            Total
+                        </td>
+                        <td align="right" style="padding: 16px 0 8px 0; font-size: 22px; color: #D4A574; font-weight: bold; border-top: 2px solid #ddd;">
+                            $${orderDetails.total.toFixed(2)}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            ${orderDetails.customerComment ? `
+            <!-- Customer Comments -->
+            <div style="background-color: #fffbf5; padding: 16px; margin-bottom: 24px; border-left: 4px solid #D4A574;">
+                <div style="font-size: 12px; color: #D4A574; font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">
+                    Your Note
+                </div>
+                <div style="font-size: 14px; color: #555; line-height: 1.5;">
+                    ${escapeHtml(orderDetails.customerComment)}
+                </div>
+            </div>
+            ` : ''}
+            
+            <!-- Contact Info -->
+            ${orderDetails.customerPhone ? `
+            <div style="font-size: 13px; color: #888; margin-bottom: 24px;">
+                <strong>Contact:</strong> ${escapeHtml(orderDetails.customerPhone)}
+            </div>
+            ` : ''}
+            
+            <!-- Support Message -->
+            <div style="padding: 24px 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee; margin-bottom: 24px;">
+                <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0; text-align: center;">
+                    Questions about your order? Just reply to this email and we'll help you out! 🐾
+                </p>
+            </div>
+            
+            <!-- Footer -->
+            <div style="text-align: center; padding-top: 16px;">
+                <p style="font-size: 14px; color: #888; margin: 0 0 8px 0;">
+                    Thanks for shopping with us!
+                </p>
+                <p style="font-size: 16px; color: #D4A574; font-weight: bold; margin: 0 0 4px 0;">
+                    The WoofCrafts Team 🐶
+                </p>
+                <p style="font-size: 13px; color: #aaa; margin: 0;">
+                    Crafting pawsome accessories for good dogs
+                </p>
+            </div>
+            
+        </div>
+        
+    </div>
     `;
 
-    // Return HTML content (EmailJS will wrap it in proper email structure)
     return emailBody;
 }
 
