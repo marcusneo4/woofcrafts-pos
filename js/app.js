@@ -34,8 +34,13 @@ class POSApp {
         }
         
         this.loadCart();
+        // Initialize filteredProducts with all products
         this.filteredProducts = [...this.products];
         console.log(`Rendering ${this.products.length} products (including ${this.getFixedProducts().length} fixed products)`);
+        // Ensure filteredProducts is properly set before rendering
+        if (this.filteredProducts.length === 0 && this.products.length > 0) {
+            this.filteredProducts = [...this.products];
+        }
         this.renderProducts();
         this.renderCart();
         this.setupEventListeners();
@@ -55,9 +60,9 @@ class POSApp {
                     if (JSON.stringify(mergedProducts) !== JSON.stringify(this.products)) {
                         this.products = mergedProducts;
                         localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-                        this.filteredProducts = [];
+                        // Re-apply current filter to update filteredProducts
                         this.filterProducts();
-                        console.log('Products synced from Google Sheets (with fixed products)');
+                        console.log(`Products synced from Google Sheets: ${this.products.length} total, ${this.filteredProducts.length} after filter`);
                     }
                 }
             } catch (error) {
@@ -169,10 +174,18 @@ class POSApp {
     }
 
     filterProducts() {
+        // Ensure we have products to filter
+        if (!Array.isArray(this.products) || this.products.length === 0) {
+            console.warn('No products available to filter');
+            this.filteredProducts = [];
+            this.renderProducts();
+            return;
+        }
+        
         let filtered = [...this.products];
         
         // Apply search filter
-        if (this.searchQuery.trim()) {
+        if (this.searchQuery && this.searchQuery.trim()) {
             const query = this.searchQuery.toLowerCase();
             filtered = filtered.filter(product => 
                 product.name.toLowerCase().includes(query) ||
@@ -198,14 +211,20 @@ class POSApp {
         }
         
         this.filteredProducts = filtered;
+        console.log(`Filtered products: ${filtered.length} out of ${this.products.length} total (filter: ${this.currentFilter}, search: "${this.searchQuery || ''}")`);
         this.renderProducts();
     }
 
     renderProducts() {
         const grid = document.getElementById('products-grid');
-        const productsToShow = this.filteredProducts.length > 0 ? this.filteredProducts : this.products;
         
-        if (productsToShow.length === 0) {
+        // Always use filteredProducts if it's been initialized (even if empty)
+        // Only fall back to this.products if filteredProducts hasn't been set yet
+        const productsToShow = (this.filteredProducts !== undefined && this.filteredProducts !== null) 
+            ? this.filteredProducts 
+            : this.products;
+        
+        if (!productsToShow || productsToShow.length === 0) {
             grid.innerHTML = `
                 <div class="empty-state">
                     <span class="empty-icon">🐶</span>
@@ -816,8 +835,25 @@ class POSApp {
                 const fixedIds = fixedProducts.map(p => p.id);
                 const otherProducts = this.products.filter(p => !fixedIds.includes(p.id));
                 this.products = [...fixedProducts, ...otherProducts];
-                this.filteredProducts = [];
+                localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+                // Re-apply current filter to update filteredProducts
                 this.filterProducts();
+                console.log(`Products refreshed: ${this.products.length} total, ${this.filteredProducts.length} after filter`);
+            }
+        });
+        
+        // Also listen for storage events (when products are updated in another tab)
+        window.addEventListener('storage', async (e) => {
+            if (e.key === 'woofcrafts_products') {
+                await this.loadProducts();
+                // Ensure fixed products are always included
+                const fixedProducts = this.getFixedProducts();
+                const fixedIds = fixedProducts.map(p => p.id);
+                const otherProducts = this.products.filter(p => !fixedIds.includes(p.id));
+                this.products = [...fixedProducts, ...otherProducts];
+                // Re-apply current filter to update filteredProducts
+                this.filterProducts();
+                console.log(`Products synced from storage: ${this.products.length} total, ${this.filteredProducts.length} after filter`);
             }
         });
     }
