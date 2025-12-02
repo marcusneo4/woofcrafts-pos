@@ -12,63 +12,26 @@ class ProductManager {
         await this.loadProducts();
         this.renderProducts();
         this.setupEventListeners();
-        
-        // Periodically sync with Google Sheets (every 30 seconds)
-        setInterval(async () => {
-            try {
-                if (typeof loadProductsFromSheets === 'function') {
-                    const sheetsProducts = await loadProductsFromSheets();
-                    // Only update if there are differences
-                    if (JSON.stringify(sheetsProducts) !== JSON.stringify(this.products)) {
-                        this.products = sheetsProducts;
-                        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-                        this.renderProducts();
-                        console.log('Products synced from Google Sheets');
-                    }
-                }
-            } catch (error) {
-                console.error('Error syncing products:', error);
-            }
-        }, 30000); // Sync every 30 seconds
     }
 
     async loadProducts() {
-        // Load from Google Sheets first, fallback to localStorage
-        try {
-            if (typeof loadProductsFromSheets === 'function') {
-                this.products = await loadProductsFromSheets();
-                // Also sync to localStorage as backup
-                localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-            } else {
-                // Fallback to localStorage
-                const storedProducts = localStorage.getItem('woofcrafts_products');
-                if (storedProducts) {
-                    this.products = JSON.parse(storedProducts);
-                }
-            }
-        } catch (error) {
-            console.error('Error loading products:', error);
-            // Fallback to localStorage
-            const storedProducts = localStorage.getItem('woofcrafts_products');
-            if (storedProducts) {
+        // Load from localStorage
+        const storedProducts = localStorage.getItem('woofcrafts_products');
+        if (storedProducts) {
+            try {
                 this.products = JSON.parse(storedProducts);
+            } catch (error) {
+                console.error('Error parsing stored products:', error);
+                this.products = [];
             }
+        } else {
+            this.products = [];
         }
     }
 
     async saveProducts() {
-        // Save to localStorage first (for immediate UI update)
+        // Save to localStorage
         localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-        
-        // Then sync to Google Sheets
-        try {
-            if (typeof saveAllProductsToSheets === 'function') {
-                await saveAllProductsToSheets(this.products);
-            }
-        } catch (error) {
-            console.error('Error saving products to Google Sheets:', error);
-            // Continue even if Sheets fails
-        }
     }
 
     generateId() {
@@ -185,16 +148,6 @@ class ProductManager {
         if (!confirm('Are you sure you want to delete this product?')) return;
 
         this.products = this.products.filter(p => p.id !== productId);
-        
-        // Delete from Google Sheets
-        try {
-            if (typeof deleteProductFromSheets === 'function') {
-                await deleteProductFromSheets(productId);
-            }
-        } catch (error) {
-            console.error('Error deleting product from Google Sheets:', error);
-        }
-        
         await this.saveProducts();
         this.renderProducts();
         this.showMessage('Product deleted successfully!', 'success');
