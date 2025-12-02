@@ -33,15 +33,29 @@ function createCorsResponse(data) {
  */
 function doPost(e) {
   try {
-    // Handle empty post data
-    if (!e.postData || !e.postData.contents) {
+    let data;
+    
+    // Handle JSON in postData.contents (from fetch)
+    if (e.postData && e.postData.contents) {
+      data = JSON.parse(e.postData.contents);
+    }
+    // Handle form data (from form submission)
+    else if (e.parameter && e.parameter.data) {
+      data = JSON.parse(e.parameter.data);
+    }
+    // Handle form data as direct parameters
+    else if (e.parameter && e.parameter.action) {
+      data = {
+        action: e.parameter.action,
+        orderDetails: e.parameter.orderDetails ? JSON.parse(e.parameter.orderDetails) : null
+      };
+    }
+    else {
       return createCorsResponse({
         success: false,
         error: 'No data received'
       });
     }
-    
-    const data = JSON.parse(e.postData.contents);
     
     if (data.action === 'saveOrder') {
       return saveOrder(data.orderDetails);
