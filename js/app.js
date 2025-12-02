@@ -31,6 +31,9 @@ class POSApp {
             this.products = [...fixedProducts, ...otherProducts];
         }
         
+        // Save merged products back to localStorage
+        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+        
         this.loadCart();
         // Initialize filteredProducts with all products - always call filterProducts to ensure proper initialization
         console.log(`Loaded ${this.products.length} products (including ${this.getFixedProducts().length} fixed products)`);
@@ -38,31 +41,6 @@ class POSApp {
         this.filterProducts();
         this.renderCart();
         this.setupEventListeners();
-        
-        // Periodically sync with Google Sheets (every 30 seconds)
-        setInterval(async () => {
-            try {
-                if (typeof loadProductsFromSheets === 'function') {
-                    const sheetsProducts = await loadProductsFromSheets();
-                    // Merge fixed products with sheets products
-                    const fixedProducts = this.getFixedProducts();
-                    const fixedIds = fixedProducts.map(p => p.id);
-                    const otherProducts = Array.isArray(sheetsProducts) ? sheetsProducts.filter(p => !fixedIds.includes(p.id)) : [];
-                    const mergedProducts = [...fixedProducts, ...otherProducts];
-                    
-                    // Only update if there are differences
-                    if (JSON.stringify(mergedProducts) !== JSON.stringify(this.products)) {
-                        this.products = mergedProducts;
-                        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-                        // Re-apply current filter to update filteredProducts
-                        this.filterProducts();
-                        console.log(`Products synced from Google Sheets: ${this.products.length} total, ${this.filteredProducts.length} after filter`);
-                    }
-                }
-            } catch (error) {
-                console.error('Error syncing products:', error);
-            }
-        }, 30000); // Sync every 30 seconds
     }
 
     async loadProducts() {
@@ -72,26 +50,7 @@ class POSApp {
         // Initialize products array with fixed products
         this.products = [...fixedProducts];
         
-        // Load from Google Sheets first, fallback to localStorage
-        try {
-            if (typeof loadProductsFromSheets === 'function') {
-                const sheetsProducts = await loadProductsFromSheets();
-                if (sheetsProducts && Array.isArray(sheetsProducts) && sheetsProducts.length > 0) {
-                    // Merge fixed products with sheets products (avoid duplicates)
-                    const fixedIds = fixedProducts.map(p => p.id);
-                    const otherProducts = sheetsProducts.filter(p => !fixedIds.includes(p.id));
-                    this.products = [...fixedProducts, ...otherProducts];
-                    // Also sync to localStorage as backup
-                    localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-                    console.log(`Loaded ${this.products.length} products (${fixedProducts.length} fixed + ${otherProducts.length} from Sheets)`);
-                    return;
-                }
-            }
-        } catch (error) {
-            console.error('Error loading products from Sheets:', error);
-        }
-        
-        // If still no additional products, try localStorage
+        // Load from localStorage
         const storedProducts = localStorage.getItem('woofcrafts_products');
         if (storedProducts) {
             try {
@@ -481,13 +440,6 @@ class POSApp {
 
         try {
             await sendOrderConfirmationEmail(orderDetails);
-            // Save to Google Sheets if configured
-            try {
-                await this.saveOrderToSheets(orderDetails);
-            } catch (sheetsError) {
-                console.error('Error saving to Sheets (non-critical):', sheetsError);
-                // Don't block the flow if Sheets fails
-            }
             alert('Order email sent successfully!');
             this.clearCart();
         } catch (error) {
@@ -780,13 +732,6 @@ class POSApp {
             </html>
         `);
         previewWindow.document.close();
-    }
-
-    async saveOrderToSheets(orderDetails) {
-        // Save to Google Sheets if configured
-        if (typeof saveOrderToSheets === 'function') {
-            await saveOrderToSheets(orderDetails);
-        }
     }
 
     setupEventListeners() {
