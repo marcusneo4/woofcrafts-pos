@@ -16,12 +16,15 @@ const SHEETS_CONFIG = {
  */
 async function saveOrderToSheets(orderDetails) {
     // Check if Sheets is configured
-    if (SHEETS_CONFIG.spreadsheetId === 'YOUR_SPREADSHEET_ID') {
+    if (SHEETS_CONFIG.spreadsheetId === 'YOUR_SPREADSHEET_ID' || !SHEETS_CONFIG.spreadsheetId) {
         console.log('Google Sheets not configured. Order data:', orderDetails);
         return;
     }
 
     try {
+        // First, ensure Orders sheet exists and has headers
+        await initializeSheets();
+
         const timestamp = new Date().toISOString();
         const itemsText = orderDetails.items.map(item => 
             `${item.name} (Qty: ${item.quantity})`
@@ -31,17 +34,26 @@ async function saveOrderToSheets(orderDetails) {
         const rowData = [
             timestamp,
             orderDetails.orderId || 'N/A',
-            orderDetails.customerName,
-            orderDetails.customerEmail,
+            orderDetails.customerName || '',
+            orderDetails.customerEmail || '',
             orderDetails.customerPhone || '',
             itemsText,
             `$${orderDetails.total.toFixed(2)}`,
             orderDetails.discountAmount > 0 ? `${orderDetails.discountPercent}%` : 'None'
         ];
 
-        // Use Google Sheets API v4 to append row
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_CONFIG.spreadsheetId}/values/${SHEETS_CONFIG.range}:append?valueInputOption=RAW&key=${SHEETS_CONFIG.apiKey}`;
+        // URL encode the range (Orders!A:H becomes Orders%21A%3AH)
+        const encodedRange = encodeURIComponent('Orders!A:H');
         
+        // Use Google Sheets API v4 to append row
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_CONFIG.spreadsheetId}/values/${encodedRange}:append?valueInputOption=RAW&key=${SHEETS_CONFIG.apiKey}`;
+        
+        console.log('Saving order to Google Sheets...', {
+            spreadsheetId: SHEETS_CONFIG.spreadsheetId,
+            range: 'Orders!A:H',
+            rowData: rowData
+        });
+
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -52,15 +64,25 @@ async function saveOrderToSheets(orderDetails) {
             })
         });
 
+        const responseData = await response.json();
+
         if (!response.ok) {
-            throw new Error(`Sheets API error: ${response.statusText}`);
+            console.error('Sheets API error response:', responseData);
+            throw new Error(`Sheets API error: ${response.status} ${response.statusText} - ${JSON.stringify(responseData)}`);
         }
 
-        console.log('Order saved to Google Sheets successfully');
-        return await response.json();
+        console.log('Order saved to Google Sheets successfully:', responseData);
+        return responseData;
     } catch (error) {
         console.error('Error saving to Google Sheets:', error);
-        // Don't throw - allow email to still be sent even if Sheets fails
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            orderDetails: orderDetails
+        });
+        // Re-throw so the calling code can handle it appropriately
+        // The app.js already has a try-catch that won't block email sending
+        throw error;
     }
 }
 
@@ -69,7 +91,7 @@ async function saveOrderToSheets(orderDetails) {
  * Call this once to set up your sheet
  */
 async function initializeSheets() {
-    if (SHEETS_CONFIG.spreadsheetId === 'YOUR_SPREADSHEET_ID') {
+    if (SHEETS_CONFIG.spreadsheetId === 'YOUR_SPREADSHEET_ID' || !SHEETS_CONFIG.spreadsheetId) {
         console.log('Please configure Google Sheets first');
         return;
     }
@@ -80,21 +102,34 @@ async function initializeSheets() {
             ['Timestamp', 'Order ID', 'Customer Name', 'Email', 'Phone', 'Items', 'Total', 'Discount']
         ];
 
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_CONFIG.spreadsheetId}/values/Orders!A1:H1?valueInputOption=RAW&key=${SHEETS_CONFIG.apiKey}`;
+        const encodedRange = encodeURIComponent('Orders!A1:H1');
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_CONFIG.spreadsheetId}/values/${encodedRange}?key=${SHEETS_CONFIG.apiKey}`;
         
         const checkResponse = await fetch(url);
-        if (!checkResponse.ok) {
-            // Sheet might not exist, create headers
-            const createUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_CONFIG.spreadsheetId}/values/Orders!A1:H1?valueInputOption=RAW&key=${SHEETS_CONFIG.apiKey}`;
-            await fetch(createUrl, {
+        const checkData = await checkResponse.json();
+        
+        // If no values exist or the response indicates empty, create headers
+        if (!checkResponse.ok || !checkData.values || checkData.values.length === 0) {
+            // Create headers using PUT
+            const createUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_CONFIG.spreadsheetId}/values/${encodedRange}?valueInputOption=RAW&key=${SHEETS_CONFIG.apiKey}`;
+            const createResponse = await fetch(createUrl, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ values: headers })
             });
-            console.log('Google Sheets headers created');
+            
+            if (createResponse.ok) {
+                console.log('Google Sheets headers created successfully');
+            } else {
+                const errorData = await createResponse.json();
+                console.error('Failed to create headers:', errorData);
+            }
+        } else {
+            console.log('Google Sheets headers already exist');
         }
     } catch (error) {
         console.error('Error initializing Google Sheets:', error);
+        // Don't throw - allow order saving to continue
     }
 }
 

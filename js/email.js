@@ -201,30 +201,44 @@ async function sendOrderConfirmationEmail(orderDetails) {
  * This function is also used by app.js to show email preview
  */
 function generateEmailContent(orderDetails) {
+    // Escape HTML to prevent XSS and ensure proper rendering
+    const escapeHtml = (text) => {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, m => map[m]);
+    };
+
     const itemsHtml = orderDetails.items.map(item => `
         <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.name}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">${escapeHtml(item.name)}</td>
             <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
             <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.price.toFixed(2)}</td>
             <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.subtotal.toFixed(2)}</td>
         </tr>
     `).join('');
 
-    return `
-        <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-            <h1 style="color: #4A90E2;">🐾 WoofCrafts Order Confirmation</h1>
-            <p>Thank you for shopping with WoofCrafts, your home for adorable dog accessories and NFC-enabled dog tags!</p>
+    // Generate full HTML email structure for better email client compatibility
+    const emailBody = `
+        <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; padding: 20px;">
+            <h1 style="color: #4A90E2; margin-top: 0;">🐾 WoofCrafts Order Confirmation</h1>
+            <p style="margin: 10px 0;">Thank you for shopping with WoofCrafts, your home for adorable dog accessories and NFC-enabled dog tags!</p>
             
-            <p>We've received your order and are getting it ready for your pup.</p>
+            <p style="margin: 10px 0;">We've received your order and are getting it ready for your pup.</p>
             
-            <p><strong>Here's a summary of what you bought:</strong></p>
+            <p style="margin: 10px 0;"><strong>Here's a summary of what you bought:</strong></p>
             
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #ddd;">
                 <thead>
                     <tr style="background-color: #f5f5f5;">
-                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #4A90E2;">Item</th>
-                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid #4A90E2;">Qty</th>
-                        <th style="padding: 10px; text-align: right; border-bottom: 2px solid #4A90E2;">Price</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #4A90E2; border-right: 1px solid #ddd;">Item</th>
+                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid #4A90E2; border-right: 1px solid #ddd;">Qty</th>
+                        <th style="padding: 10px; text-align: right; border-bottom: 2px solid #4A90E2; border-right: 1px solid #ddd;">Price</th>
                         <th style="padding: 10px; text-align: right; border-bottom: 2px solid #4A90E2;">Subtotal</th>
                     </tr>
                 </thead>
@@ -234,28 +248,41 @@ function generateEmailContent(orderDetails) {
             </table>
             
             <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee;">
-                <p style="text-align: right;"><strong>Subtotal: $${orderDetails.subtotal.toFixed(2)}</strong></p>
+                <p style="text-align: right; margin: 5px 0;"><strong>Subtotal: $${orderDetails.subtotal.toFixed(2)}</strong></p>
                 ${orderDetails.discountAmount > 0 ? `
-                    <p style="text-align: right;">Discount (${orderDetails.discountPercent}%): -$${orderDetails.discountAmount.toFixed(2)}</p>
+                    <p style="text-align: right; margin: 5px 0;">Discount (${orderDetails.discountPercent}%): -$${orderDetails.discountAmount.toFixed(2)}</p>
                 ` : ''}
-                <p style="text-align: right; font-size: 1.2em; color: #4A90E2;"><strong>Total: $${orderDetails.total.toFixed(2)}</strong></p>
+                <p style="text-align: right; font-size: 1.2em; color: #4A90E2; margin: 10px 0;"><strong>Total: $${orderDetails.total.toFixed(2)}</strong></p>
             </div>
             
             ${orderDetails.customerComment ? `
             <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid #4A90E2; border-radius: 5px;">
                 <p style="margin: 0; font-weight: bold; color: #4A90E2;">Customer Comments:</p>
-                <p style="margin: 5px 0 0 0; color: #5C4A37;">${orderDetails.customerComment}</p>
+                <p style="margin: 5px 0 0 0; color: #5C4A37;">${escapeHtml(orderDetails.customerComment)}</p>
             </div>
             ` : ''}
             
-            <p>If anything looks off with your order, just reply to this email and our pack will help you out.</p>
+            <p style="margin: 20px 0 10px 0;">If anything looks off with your order, just reply to this email and our pack will help you out.</p>
             
-            <p style="font-size:14px;">
+            <p style="font-size: 14px; margin: 20px 0 0 0;">
                 With tail wags,<br/>
                 <strong>The WoofCrafts Team</strong><br/>
                 Crafting pawsome accessories for good dogs everywhere 🐶
             </p>
         </div>
     `;
+
+    // Return full HTML document structure for email clients
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WoofCrafts Order Confirmation</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4;">
+    ${emailBody}
+</body>
+</html>`;
 }
 
