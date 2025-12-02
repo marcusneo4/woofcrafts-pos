@@ -20,8 +20,17 @@ class POSApp {
         }
         
         await this.loadProducts();
+        
+        // Ensure products array is valid
+        if (!Array.isArray(this.products)) {
+            console.error('Products is not an array, resetting...');
+            this.products = [];
+            this.initializeDefaultProducts();
+        }
+        
         this.loadCart();
         this.filteredProducts = [...this.products];
+        console.log(`Rendering ${this.products.length} products`);
         this.renderProducts();
         this.renderCart();
         this.setupEventListeners();
@@ -47,31 +56,45 @@ class POSApp {
     }
 
     async loadProducts() {
+        // Initialize products array
+        this.products = [];
+        
         // Load from Google Sheets first, fallback to localStorage
         try {
             if (typeof loadProductsFromSheets === 'function') {
-                this.products = await loadProductsFromSheets();
-                // Also sync to localStorage as backup
-                localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-            } else {
-                // Fallback to localStorage
-                const storedProducts = localStorage.getItem('woofcrafts_products');
-                if (storedProducts) {
-                    this.products = JSON.parse(storedProducts);
+                const sheetsProducts = await loadProductsFromSheets();
+                if (sheetsProducts && Array.isArray(sheetsProducts) && sheetsProducts.length > 0) {
+                    this.products = sheetsProducts;
+                    // Also sync to localStorage as backup
+                    localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+                    console.log(`Loaded ${this.products.length} products from Google Sheets`);
+                    return; // Exit early if we got products from Sheets
                 }
             }
         } catch (error) {
-            console.error('Error loading products:', error);
-            // Fallback to localStorage
-            const storedProducts = localStorage.getItem('woofcrafts_products');
-            if (storedProducts) {
-                this.products = JSON.parse(storedProducts);
+            console.error('Error loading products from Sheets:', error);
+        }
+        
+        // If still no products, try localStorage
+        const storedProducts = localStorage.getItem('woofcrafts_products');
+        if (storedProducts) {
+            try {
+                const parsed = JSON.parse(storedProducts);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    this.products = parsed;
+                    console.log(`Loaded ${this.products.length} products from localStorage`);
+                    return; // Exit early if we got products from localStorage
+                }
+            } catch (e) {
+                console.error('Error parsing stored products:', e);
             }
         }
         
         // Initialize default products if none exist
-        if (this.products.length === 0) {
+        if (!this.products || this.products.length === 0) {
+            console.log('No products found, initializing default products...');
             this.initializeDefaultProducts();
+            console.log(`Initialized ${this.products.length} default products`);
         }
     }
 
