@@ -7,15 +7,17 @@
 // IMPORTANT EMAILJS TEMPLATE CONFIGURATION:
 // 1. In your EmailJS template, set the "To Email" field to: {{to_email}}
 //    This ensures emails are sent to the customer email entered in the form, not a hardcoded address.
-// 2. Set your EmailJS template format to "Plain Text" (not HTML) for clean email formatting.
-//    Use {{message}} in your template body to include the full formatted email content.
+// 2. Set your EmailJS template format to "HTML" for rich email formatting.
+//    Use {{message_html}} in your template body to include the full formatted HTML email content.
+//    For plain text fallback, use {{message}} instead.
 // 3. Available template variables:
 //    - {{to_email}} - Customer email (REQUIRED for correct recipient)
 //    - {{customer_name}} - Customer name
 //    - {{customer_phone}} - Customer phone
 //    - {{order_id}} - Order ID
 //    - {{order_items}} - Plain text items list (simple format)
-//    - {{message}} - Full formatted plain text email body (RECOMMENDED - use this in template)
+//    - {{message}} - Full formatted plain text email body
+//    - {{message_html}} - Full formatted HTML email body (RECOMMENDED for HTML templates)
 //    - {{subtotal}} - Order subtotal
 //    - {{discount}} - Discount information
 //    - {{total}} - Final total
@@ -114,7 +116,8 @@ async function sendOrderConfirmationEmail(orderDetails) {
             templateId: EMAILJS_CONFIG.templateId
         });
 
-        // Generate plain text email content
+        // Generate both HTML and plain text email content
+        const emailHtml = generateEmailContent(orderDetails);
         const emailText = generatePlainTextEmailContent(orderDetails);
         
         // Format items for email (plain text)
@@ -131,7 +134,8 @@ async function sendOrderConfirmationEmail(orderDetails) {
             customer_phone: orderDetails.customerPhone || 'Not provided',
             order_id: orderDetails.orderId || 'N/A',
             order_items: itemsList, // Plain text version
-            message: emailText, // Plain text email body - use this in your EmailJS template
+            message: emailText, // Plain text email body
+            message_html: emailHtml, // HTML email body - use this in your EmailJS template for HTML format
             subtotal: `$${orderDetails.subtotal.toFixed(2)}`,
             discount: orderDetails.discountAmount > 0 
                 ? `${orderDetails.discountPercent}% ($${orderDetails.discountAmount.toFixed(2)})`
@@ -303,7 +307,7 @@ function generatePlainTextEmailContent(orderDetails) {
 }
 
 /**
- * Generate HTML email content (used as fallback or for preview)
+ * Generate HTML email content matching WoofCrafts brand specification
  * This function is also used by app.js to show email preview
  */
 function generateEmailContent(orderDetails) {
@@ -320,75 +324,102 @@ function generateEmailContent(orderDetails) {
         return String(text).replace(/[&<>"']/g, m => map[m]);
     };
 
+    // Generate table rows for items
     const itemsHtml = orderDetails.items.map(item => `
         <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #eee;">${escapeHtml(item.name)}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.price.toFixed(2)}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.subtotal.toFixed(2)}</td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; color: #333;">${escapeHtml(item.name)}</td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #e0e0e0; text-align: center; font-size: 14px; color: #333;">${item.quantity}</td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #e0e0e0; text-align: right; font-size: 14px; color: #333;">$${item.price.toFixed(2)}</td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #e0e0e0; text-align: right; font-size: 14px; color: #333; font-weight: 500;">$${item.subtotal.toFixed(2)}</td>
         </tr>
     `).join('');
 
-    // Generate full HTML email structure for better email client compatibility
+    // Generate full HTML email structure matching the specification
     const emailBody = `
-        <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; padding: 20px;">
-            <h1 style="color: #4A90E2; margin-top: 0;">🐾 WoofCrafts Order Confirmation</h1>
-            <p style="margin: 10px 0;">Thank you for shopping with WoofCrafts, your home for adorable dog accessories and NFC-enabled dog tags!</p>
+        <div style="max-width: 600px; margin: 0 auto; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; background-color: #ffffff;">
+            <!-- Header Section with Blue Background -->
+            <div style="background-color: #4A90E2; padding: 30px 20px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold; line-height: 1.2;">
+                    🐾 WoofCrafts Order Confirmation
+                </h1>
+            </div>
             
-            <p style="margin: 10px 0;">We've received your order and are getting it ready for your pup.</p>
-            
-            <p style="margin: 10px 0;"><strong>Here's a summary of what you bought:</strong></p>
-            
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #ddd;">
-                <thead>
-                    <tr style="background-color: #f5f5f5;">
-                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #4A90E2; border-right: 1px solid #ddd;">Item</th>
-                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid #4A90E2; border-right: 1px solid #ddd;">Qty</th>
-                        <th style="padding: 10px; text-align: right; border-bottom: 2px solid #4A90E2; border-right: 1px solid #ddd;">Price</th>
-                        <th style="padding: 10px; text-align: right; border-bottom: 2px solid #4A90E2;">Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${itemsHtml}
-                </tbody>
-            </table>
-            
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee;">
-                <p style="text-align: right; margin: 5px 0;"><strong>Subtotal: $${orderDetails.subtotal.toFixed(2)}</strong></p>
-                ${orderDetails.discountAmount > 0 ? `
-                    <p style="text-align: right; margin: 5px 0;">Discount (${orderDetails.discountPercent}%): -$${orderDetails.discountAmount.toFixed(2)}</p>
+            <!-- Main Content -->
+            <div style="padding: 30px 20px;">
+                <!-- Welcome Text -->
+                <p style="margin: 0 0 15px 0; font-size: 16px; line-height: 1.6; color: #333;">
+                    Thank you for shopping with WoofCrafts, your home for adorable dog accessories and NFC-enabled dog tags!
+                </p>
+                
+                <p style="margin: 0 0 25px 0; font-size: 16px; line-height: 1.6; color: #333;">
+                    We've received your order and are getting it ready for your pup.
+                </p>
+                
+                <!-- Order Summary Introduction -->
+                <p style="margin: 0 0 20px 0; font-size: 16px; font-weight: 600; color: #333;">
+                    Here's a summary of what you bought:
+                </p>
+                
+                <!-- Itemized Order Table -->
+                <table style="width: 100%; border-collapse: collapse; margin: 0 0 25px 0; border: 1px solid #e0e0e0;">
+                    <thead>
+                        <tr style="background-color: #f8f9fa;">
+                            <th style="padding: 12px 10px; text-align: left; border-bottom: 2px solid #4A90E2; font-size: 14px; font-weight: 600; color: #333;">Item</th>
+                            <th style="padding: 12px 10px; text-align: center; border-bottom: 2px solid #4A90E2; font-size: 14px; font-weight: 600; color: #333;">Qty</th>
+                            <th style="padding: 12px 10px; text-align: right; border-bottom: 2px solid #4A90E2; font-size: 14px; font-weight: 600; color: #333;">Price</th>
+                            <th style="padding: 12px 10px; text-align: right; border-bottom: 2px solid #4A90E2; font-size: 14px; font-weight: 600; color: #333;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHtml}
+                    </tbody>
+                </table>
+                
+                <!-- Totals Section - Right Aligned -->
+                <div style="margin-top: 25px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+                    <p style="text-align: right; margin: 8px 0; font-size: 16px; color: #333;">
+                        <strong>Subtotal: $${orderDetails.subtotal.toFixed(2)}</strong>
+                    </p>
+                    ${orderDetails.discountAmount > 0 ? `
+                    <p style="text-align: right; margin: 8px 0; font-size: 16px; color: #333;">
+                        Discount (${orderDetails.discountPercent}%): -$${orderDetails.discountAmount.toFixed(2)}
+                    </p>
+                    ` : ''}
+                    <p style="text-align: right; margin: 15px 0 0 0; font-size: 20px; color: #4A90E2; font-weight: bold;">
+                        Total: $${orderDetails.total.toFixed(2)}
+                    </p>
+                </div>
+                
+                ${orderDetails.customerComment ? `
+                <!-- Customer Comments Section -->
+                <div style="margin-top: 25px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #4A90E2; border-radius: 4px;">
+                    <p style="margin: 0 0 8px 0; font-weight: bold; font-size: 14px; color: #4A90E2;">Customer Comments:</p>
+                    <p style="margin: 0; font-size: 14px; color: #555; line-height: 1.5;">${escapeHtml(orderDetails.customerComment)}</p>
+                </div>
                 ` : ''}
-                <p style="text-align: right; font-size: 1.2em; color: #4A90E2; margin: 10px 0;"><strong>Total: $${orderDetails.total.toFixed(2)}</strong></p>
+                
+                <!-- Support Message -->
+                <p style="margin: 30px 0 0 0; font-size: 15px; line-height: 1.6; color: #555;">
+                    If anything looks off with your order, just reply to this email and our pack will help you out.
+                </p>
+                
+                <!-- Footer Section -->
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                    <p style="margin: 0 0 5px 0; font-size: 15px; line-height: 1.6; color: #333;">
+                        With tail wags,
+                    </p>
+                    <p style="margin: 5px 0; font-size: 15px; font-weight: bold; color: #333;">
+                        The WoofCrafts Team
+                    </p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; line-height: 1.6; color: #666;">
+                        Crafting pawsome accessories for good dogs everywhere 🐶
+                    </p>
+                </div>
             </div>
-            
-            ${orderDetails.customerComment ? `
-            <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid #4A90E2; border-radius: 5px;">
-                <p style="margin: 0; font-weight: bold; color: #4A90E2;">Customer Comments:</p>
-                <p style="margin: 5px 0 0 0; color: #5C4A37;">${escapeHtml(orderDetails.customerComment)}</p>
-            </div>
-            ` : ''}
-            
-            <p style="margin: 20px 0 10px 0;">If anything looks off with your order, just reply to this email and our pack will help you out.</p>
-            
-            <p style="font-size: 14px; margin: 20px 0 0 0;">
-                With tail wags,<br/>
-                <strong>The WoofCrafts Team</strong><br/>
-                Crafting pawsome accessories for good dogs everywhere 🐶
-            </p>
         </div>
     `;
 
-    // Return full HTML document structure for email clients
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WoofCrafts Order Confirmation</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f4;">
-    ${emailBody}
-</body>
-</html>`;
+    // Return HTML content (EmailJS will wrap it in proper email structure)
+    return emailBody;
 }
 
