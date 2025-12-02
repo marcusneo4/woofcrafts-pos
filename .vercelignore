@@ -1,0 +1,12 @@
+# Vercel ignore file
+node_modules/
+.git/
+*.log
+.DS_Store
+start-server.bat
+start-server.ps1
+server.js
+HOSTING_GUIDE.md
+SETUP_INSTRUCTIONS.md
+
+

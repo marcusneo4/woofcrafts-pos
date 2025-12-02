@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Products - WoofCrafts POS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="paw-bg-decoration"></div>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="logo-section">
+                    <span class="dog-icon">🐕</span>
+                    <h1>WoofCrafts Product Management</h1>
+                    <span class="paw-decoration">🐾</span>
+                </div>
+                <a href="index.html" class="manage-products-btn">
+                    <span>🏠</span> Back to POS
+                </a>
+            </div>
+        </header>
+
+        <div class="products-management">
+            <!-- Add Product Form -->
+            <section class="add-product-section">
+                <div class="section-header">
+                    <h2>
+                        <span class="paw-icon">✨</span>
+                        Add New Product
+                        <span class="paw-icon">✨</span>
+                    </h2>
+                    <p class="section-subtitle">Add pawsome products to your store!</p>
+                </div>
+                <form id="product-form" class="product-form">
+                    <input type="hidden" id="product-id" name="productId">
+                    
+                    <div class="form-group">
+                        <label for="product-name">
+                            <span>📝</span> Product Name *
+                        </label>
+                        <input type="text" id="product-name" name="name" placeholder="e.g., Cute Dog Bandana" required class="input-field">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-price">
+                            <span>💰</span> Price ($) *
+                        </label>
+                        <input type="number" id="product-price" name="price" step="0.01" min="0" placeholder="0.00" required class="input-field">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-category">
+                            <span>🏷️</span> Category
+                        </label>
+                        <select id="product-category" name="category" class="input-field">
+                            <option value="general">General</option>
+                            <option value="tags">Tags</option>
+                            <option value="photoframes">Photo Frames</option>
+                            <option value="toys">Toys</option>
+                            <option value="treats">Treats</option>
+                            <option value="food">Food</option>
+                            <option value="grooming">Grooming</option>
+                            <option value="accessories">Accessories</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-image">
+                            <span>📷</span> Product Image *
+                        </label>
+                        <input type="file" id="product-image" name="image" accept="image/*" required class="input-field file-input">
+                        <div id="image-preview" class="image-preview">
+                            <div class="preview-placeholder">
+                                <span>🐕</span>
+                                <p>Image preview will appear here</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-buttons">
+                        <button type="submit" class="btn-primary" id="submit-btn">
+                            <span>➕</span> Add Product
+                        </button>
+                        <button type="button" class="btn-secondary" id="cancel-edit-btn" style="display: none;">
+                            <span>❌</span> Cancel Edit
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Products List -->
+            <section class="products-list-section">
+                <div class="section-header">
+                    <h2>
+                        <span class="paw-icon">📦</span>
+                        Your Products
+                        <span class="paw-icon">📦</span>
+                    </h2>
+                    <p class="section-subtitle">Manage your pawsome product collection</p>
+                </div>
+                <div id="products-list" class="products-list">
+                    <!-- Products will be loaded here -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="js/products.js"></script>
+</body>
+</html>
+
