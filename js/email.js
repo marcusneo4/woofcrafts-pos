@@ -201,107 +201,53 @@ async function sendOrderConfirmationEmail(orderDetails) {
 }
 
 /**
- * Generate plain text email content for EmailJS with professional table formatting
+ * Generate plain text email content for EmailJS with clean, simple formatting
  */
 function generatePlainTextEmailContent(orderDetails) {
-    // Calculate column widths for table formatting
-    const maxNameLength = Math.max(...orderDetails.items.map(item => item.name.length), 20);
-    const nameWidth = Math.min(maxNameLength + 2, 40);
-    const qtyWidth = 8;
-    const priceWidth = 12;
-    const totalWidth = 12;
+    // Build plain text email with clean, simple formatting
+    let emailBody = `🐾 WOOFCRAFTS ORDER CONFIRMATION 🐾\n\n`;
+    emailBody += `Dear ${orderDetails.customerName},\n\n`;
+    emailBody += `Thank you for shopping with WoofCrafts! We've received your order and are getting it ready for your pup.\n\n`;
     
-    // Helper function to pad strings for table alignment
-    const padRight = (str, width) => (str + ' '.repeat(width)).substring(0, width);
-    const padLeft = (str, width) => (' '.repeat(width) + str).substring(str.length);
-    
-    // Build table header
-    let tableHeader = `┌${'─'.repeat(nameWidth)}┬${'─'.repeat(qtyWidth)}┬${'─'.repeat(priceWidth)}┬${'─'.repeat(totalWidth)}┐\n`;
-    tableHeader += `│${padRight('ITEM', nameWidth)}│${padRight('QTY', qtyWidth)}│${padLeft('PRICE', priceWidth)}│${padLeft('TOTAL', totalWidth)}│\n`;
-    tableHeader += `├${'─'.repeat(nameWidth)}┼${'─'.repeat(qtyWidth)}┼${'─'.repeat(priceWidth)}┼${'─'.repeat(totalWidth)}┤\n`;
-    
-    // Build table rows
-    let tableRows = '';
-    orderDetails.items.forEach(item => {
-        const name = item.name.length > nameWidth - 2 ? item.name.substring(0, nameWidth - 5) + '...' : item.name;
-        const qty = item.quantity.toString();
-        const price = `$${item.price.toFixed(2)}`;
-        const total = `$${item.subtotal.toFixed(2)}`;
-        
-        tableRows += `│${padRight(name, nameWidth)}│${padRight(qty, qtyWidth)}│${padLeft(price, priceWidth)}│${padLeft(total, totalWidth)}│\n`;
-    });
-    
-    // Build table footer
-    const tableFooter = `└${'─'.repeat(nameWidth)}┴${'─'.repeat(qtyWidth)}┴${'─'.repeat(priceWidth)}┴${'─'.repeat(totalWidth)}┘\n`;
-    
-    // Build plain text email with professional formatting
-    let emailBody = `╔═══════════════════════════════════════════════════════════════╗\n`;
-    emailBody += `║          🐾 WOOFCRAFTS ORDER CONFIRMATION 🐾          ║\n`;
-    emailBody += `╚═══════════════════════════════════════════════════════════════╝\n`;
-    emailBody += `\n`;
-    emailBody += `Dear ${orderDetails.customerName},\n`;
-    emailBody += `\n`;
-    emailBody += `Thank you for shopping with WoofCrafts! We've received your order\n`;
-    emailBody += `and are getting it ready for your pup.\n`;
-    emailBody += `\n`;
-    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    emailBody += `ORDER INFORMATION\n`;
-    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    emailBody += `\n`;
-    emailBody += `Order ID:     ${orderDetails.orderId || 'N/A'}\n`;
-    emailBody += `Customer:     ${orderDetails.customerName}\n`;
+    emailBody += `ORDER INFORMATION\n\n`;
+    emailBody += `Order ID: ${orderDetails.orderId || 'N/A'}\n`;
+    emailBody += `Customer: ${orderDetails.customerName}\n`;
     if (orderDetails.customerPhone) {
-        emailBody += `Phone:        ${orderDetails.customerPhone}\n`;
+        emailBody += `Phone: ${orderDetails.customerPhone}\n`;
     }
-    emailBody += `Date:         ${new Date().toLocaleDateString('en-US', { 
+    emailBody += `Date: ${new Date().toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: 'long', 
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
-    })}\n`;
-    emailBody += `\n`;
-    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    emailBody += `ORDER SUMMARY\n`;
-    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    emailBody += `\n`;
-    emailBody += tableHeader;
-    emailBody += tableRows;
-    emailBody += tableFooter;
-    emailBody += `\n`;
-    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    emailBody += `PAYMENT SUMMARY\n`;
-    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    emailBody += `\n`;
-    emailBody += `${padRight('Subtotal:', 20)}${padLeft(`$${orderDetails.subtotal.toFixed(2)}`, 20)}\n`;
+    })}\n\n`;
+    
+    emailBody += `ORDER SUMMARY\n\n`;
+    
+    // List items in a simple format
+    orderDetails.items.forEach(item => {
+        emailBody += `${item.name}\n`;
+        emailBody += `  Qty: ${item.quantity} x $${item.price.toFixed(2)} = $${item.subtotal.toFixed(2)}\n\n`;
+    });
+    
+    emailBody += `PAYMENT SUMMARY\n\n`;
+    emailBody += `Subtotal: $${orderDetails.subtotal.toFixed(2)}\n`;
     if (orderDetails.discountAmount > 0) {
-        emailBody += `${padRight(`Discount (${orderDetails.discountPercent}%):`, 20)}${padLeft(`-$${orderDetails.discountAmount.toFixed(2)}`, 20)}\n`;
+        emailBody += `Discount (${orderDetails.discountPercent}%): -$${orderDetails.discountAmount.toFixed(2)}\n`;
     }
-    emailBody += `${'─'.repeat(40)}\n`;
-    emailBody += `${padRight('TOTAL:', 20)}${padLeft(`$${orderDetails.total.toFixed(2)}`, 20)}\n`;
-    emailBody += `\n`;
+    emailBody += `TOTAL: $${orderDetails.total.toFixed(2)}\n\n`;
     
     if (orderDetails.customerComment) {
-        emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        emailBody += `CUSTOMER COMMENTS\n`;
-        emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        emailBody += `\n`;
-        emailBody += `${orderDetails.customerComment}\n`;
-        emailBody += `\n`;
+        emailBody += `CUSTOMER COMMENTS\n\n`;
+        emailBody += `${orderDetails.customerComment}\n\n`;
     }
     
-    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    emailBody += `\n`;
-    emailBody += `If you have any questions or concerns about your order, please reply\n`;
-    emailBody += `to this email and our team will be happy to assist you.\n`;
-    emailBody += `\n`;
-    emailBody += `We appreciate your business and look forward to serving you again!\n`;
-    emailBody += `\n`;
+    emailBody += `If you have any questions or concerns about your order, please reply to this email and our team will be happy to assist you.\n\n`;
+    emailBody += `We appreciate your business and look forward to serving you again!\n\n`;
     emailBody += `Best regards,\n`;
     emailBody += `The WoofCrafts Team 🐶\n`;
     emailBody += `Crafting pawsome accessories for good dogs everywhere\n`;
-    emailBody += `\n`;
-    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
 
     return emailBody;
 }
