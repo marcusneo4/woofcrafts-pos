@@ -430,33 +430,43 @@ class POSApp {
     }
 
     showEmailPreview(orderDetails) {
-        const emailContent = generateEmailContent(orderDetails);
-        const previewWindow = window.open('', '_blank', 'width=900,height=700');
-        previewWindow.document.write(`
+        // Generate simple table-based preview with WoofCrafts colors
+        const itemsTableRows = orderDetails.items.map(item => `
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #E8D5B7;">${item.name}</td>
+                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #E8D5B7;">${item.quantity}</td>
+                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #E8D5B7;">$${item.price.toFixed(2)}</td>
+                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #E8D5B7; font-weight: 600; color: #D4A574;">$${item.subtotal.toFixed(2)}</td>
+            </tr>
+        `).join('');
+
+        const previewHTML = `
             <!DOCTYPE html>
             <html>
                 <head>
                     <title>Order Summary - #${orderDetails.orderId}</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
                     <style>
                         * { margin: 0; padding: 0; box-sizing: border-box; }
                         body { 
-                            font-family: Arial, sans-serif; 
+                            font-family: 'Nunito', sans-serif; 
                             padding: 20px; 
-                            background: #f5f5f5; 
+                            background: #FAF7F3; 
                         }
                         .header-bar {
-                            background: #4A90E2;
+                            background: linear-gradient(135deg, #D4A574 0%, #C9A961 50%, #E8D5B7 100%);
                             color: white;
-                            padding: 15px 20px;
-                            margin: -20px -20px 20px -20px;
+                            padding: 20px 30px;
+                            margin: -20px -20px 30px -20px;
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
-                            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                            box-shadow: 0 4px 15px rgba(180, 148, 95, 0.25);
                         }
                         .header-bar h1 {
+                            font-family: 'Fredoka One', cursive;
                             color: white;
-                            font-size: 18px;
+                            font-size: 24px;
                             margin: 0;
                         }
                         .button-group {
@@ -466,79 +476,201 @@ class POSApp {
                         .btn {
                             padding: 10px 20px;
                             border: none;
-                            border-radius: 5px;
+                            border-radius: 50px;
                             cursor: pointer;
                             font-size: 14px;
-                            font-weight: bold;
+                            font-weight: 700;
                             transition: all 0.3s;
-                            text-decoration: none;
-                            display: inline-block;
+                            background: white;
+                            color: #D4A574;
                         }
-                        .btn-download {
-                            background: #28a745;
-                            color: white;
+                        .btn:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
                         }
-                        .btn-download:hover {
-                            background: #218838;
-                            transform: translateY(-1px);
-                            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                        }
-                        .btn-print {
-                            background: #17a2b8;
-                            color: white;
-                        }
-                        .btn-print:hover {
-                            background: #138496;
-                            transform: translateY(-1px);
-                            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                        }
-                        .email-container { 
+                        .container { 
                             background: white; 
-                            padding: 30px; 
-                            border-radius: 8px; 
-                            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
-                            max-width: 700px; 
+                            padding: 40px; 
+                            border-radius: 20px; 
+                            box-shadow: 0 4px 15px rgba(180, 148, 95, 0.15); 
+                            max-width: 800px; 
                             margin: 0 auto; 
                         }
-                        h1 { color: #4A90E2; }
-                        /* Card-based styling for order items */
-                        .email-container div[style*="border-radius: 12px"] {
-                            transition: transform 0.2s ease, box-shadow 0.2s ease;
+                        h2 {
+                            font-family: 'Fredoka One', cursive;
+                            color: #D4A574;
+                            font-size: 28px;
+                            margin-bottom: 20px;
+                            text-align: center;
                         }
-                        .email-container div[style*="border-radius: 12px"]:hover {
-                            transform: translateY(-2px);
-                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+                        .order-info {
+                            background: #FAF7F3;
+                            padding: 20px;
+                            border-radius: 15px;
+                            margin-bottom: 30px;
                         }
-                        .total-section { 
-                            margin-top: 20px; 
-                            padding-top: 20px; 
-                            border-top: 2px solid #eee; 
+                        .order-info p {
+                            margin: 8px 0;
+                            color: #5C4A37;
+                            font-weight: 600;
                         }
-                        .total-row { 
-                            text-align: right; 
-                            font-size: 1.2em; 
-                            color: #4A90E2; 
-                            font-weight: bold; 
+                        .order-info strong {
+                            color: #D4A574;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin: 20px 0;
+                        }
+                        th {
+                            background: linear-gradient(135deg, #D4A574 0%, #C9A961 100%);
+                            color: white;
+                            padding: 15px 12px;
+                            text-align: left;
+                            font-weight: 700;
+                            font-size: 16px;
+                        }
+                        th:last-child, td:last-child {
+                            text-align: right;
+                        }
+                        th:nth-child(2), td:nth-child(2) {
+                            text-align: center;
+                        }
+                        th:nth-child(3), td:nth-child(3) {
+                            text-align: right;
+                        }
+                        td {
+                            padding: 12px;
+                            color: #5C4A37;
+                        }
+                        .total-section {
+                            margin-top: 30px;
+                            padding-top: 20px;
+                        }
+                        .total-row {
+                            display: flex;
+                            justify-content: space-between;
+                            padding: 12px 0;
+                            font-size: 18px;
+                            font-weight: 600;
+                            color: #5C4A37;
+                        }
+                        .total-final {
+                            font-size: 28px;
+                            font-weight: 800;
+                            color: #D4A574;
+                            font-family: 'Fredoka One', cursive;
+                            border-top: 3px solid #E8D5B7;
+                            padding-top: 15px;
+                            margin-top: 10px;
+                        }
+                        .comments {
+                            background: #FAF7F3;
+                            padding: 20px;
+                            border-radius: 15px;
+                            margin-top: 30px;
+                        }
+                        .comments h3 {
+                            color: #D4A574;
+                            margin-bottom: 10px;
+                            font-size: 18px;
                         }
                         @media print {
                             .header-bar, .button-group { display: none; }
                             body { padding: 0; background: white; }
-                            .email-container { box-shadow: none; }
+                            .container { box-shadow: none; }
                         }
                     </style>
                 </head>
                 <body>
                     <div class="header-bar">
-                        <h1>📄 Order Summary - #${orderDetails.orderId}</h1>
+                        <h1>🐾 Order Summary - #${orderDetails.orderId}</h1>
                         <div class="button-group">
-                            <button class="btn btn-download" onclick="downloadPDF()">💾 Download PDF</button>
-                            <button class="btn btn-print" onclick="window.print()">🖨️ Print</button>
+                            <button class="btn" onclick="downloadPDF()">💾 Download PDF</button>
+                            <button class="btn" onclick="window.print()">🖨️ Print</button>
                         </div>
                     </div>
-                    <div class="email-container" id="orderContent">
-                        ${emailContent}
+                    <div class="container" id="orderContent">
+                        <h2>WoofCrafts Order Confirmation</h2>
+                        
+                        <div class="order-info">
+                            <p><strong>Order ID:</strong> #${orderDetails.orderId}</p>
+                            <p><strong>Customer:</strong> ${orderDetails.customerName || 'Customer'}</p>
+                            <p><strong>Email:</strong> ${orderDetails.customerEmail}</p>
+                            ${orderDetails.customerPhone ? `<p><strong>Phone:</strong> ${orderDetails.customerPhone}</p>` : ''}
+                            <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsTableRows}
+                            </tbody>
+                        </table>
+
+                        <div class="total-section">
+                            <div class="total-row">
+                                <span>Subtotal:</span>
+                                <span>$${orderDetails.subtotal.toFixed(2)}</span>
+                            </div>
+                            ${orderDetails.discountAmount > 0 ? `
+                            <div class="total-row" style="color: #A0B58F;">
+                                <span>Discount (${orderDetails.discountPercent}%):</span>
+                                <span>-$${orderDetails.discountAmount.toFixed(2)}</span>
+                            </div>
+                            ` : ''}
+                            <div class="total-row total-final">
+                                <span>Total:</span>
+                                <span>$${orderDetails.total.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        ${orderDetails.customerComment ? `
+                        <div class="comments">
+                            <h3>💬 Customer Comments</h3>
+                            <p style="color: #5C4A37; line-height: 1.6;">${orderDetails.customerComment}</p>
+                        </div>
+                        ` : ''}
                     </div>
                     <!-- PDF Generation Libraries -->
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+                    <script>
+                        function downloadPDF() {
+                            if (typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') {
+                                setTimeout(downloadPDF, 100);
+                                return;
+                            }
+                            const { jsPDF } = window.jspdf;
+                            const doc = new jsPDF();
+                            const content = document.getElementById('orderContent');
+                            html2canvas(content, {
+                                scale: 2,
+                                useCORS: true,
+                                logging: false,
+                                backgroundColor: '#ffffff'
+                            }).then(canvas => {
+                                const imgData = canvas.toDataURL('image/png');
+                                const imgWidth = doc.internal.pageSize.getWidth();
+                                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                                doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                                doc.save('WoofCrafts_Order_${orderDetails.orderId}.pdf');
+                            }).catch(err => {
+                                console.error('Error generating PDF:', err);
+                                alert('Error generating PDF. Please try printing instead.');
+                            });
+                        }
+                    </script>
+                </body>
+            </html>
+        `);
                     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
                     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
                     <script>
