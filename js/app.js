@@ -21,16 +21,21 @@ class POSApp {
         
         await this.loadProducts();
         
-        // Ensure products array is valid
+        // Ensure products array is valid and always includes fixed products
         if (!Array.isArray(this.products)) {
             console.error('Products is not an array, resetting...');
-            this.products = [];
-            this.initializeDefaultProducts();
+            this.products = this.getFixedProducts();
+        } else {
+            // Ensure fixed products are always included
+            const fixedProducts = this.getFixedProducts();
+            const fixedIds = fixedProducts.map(p => p.id);
+            const otherProducts = this.products.filter(p => !fixedIds.includes(p.id));
+            this.products = [...fixedProducts, ...otherProducts];
         }
         
         this.loadCart();
         this.filteredProducts = [...this.products];
-        console.log(`Rendering ${this.products.length} products`);
+        console.log(`Rendering ${this.products.length} products (including ${this.getFixedProducts().length} fixed products)`);
         this.renderProducts();
         this.renderCart();
         this.setupEventListeners();
@@ -40,13 +45,19 @@ class POSApp {
             try {
                 if (typeof loadProductsFromSheets === 'function') {
                     const sheetsProducts = await loadProductsFromSheets();
+                    // Merge fixed products with sheets products
+                    const fixedProducts = this.getFixedProducts();
+                    const fixedIds = fixedProducts.map(p => p.id);
+                    const otherProducts = Array.isArray(sheetsProducts) ? sheetsProducts.filter(p => !fixedIds.includes(p.id)) : [];
+                    const mergedProducts = [...fixedProducts, ...otherProducts];
+                    
                     // Only update if there are differences
-                    if (JSON.stringify(sheetsProducts) !== JSON.stringify(this.products)) {
-                        this.products = sheetsProducts;
+                    if (JSON.stringify(mergedProducts) !== JSON.stringify(this.products)) {
+                        this.products = mergedProducts;
                         localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
                         this.filteredProducts = [];
                         this.filterProducts();
-                        console.log('Products synced from Google Sheets');
+                        console.log('Products synced from Google Sheets (with fixed products)');
                     }
                 }
             } catch (error) {
@@ -56,50 +67,58 @@ class POSApp {
     }
 
     async loadProducts() {
-        // Initialize products array
-        this.products = [];
+        // Get fixed/default products first
+        const fixedProducts = this.getFixedProducts();
+        
+        // Initialize products array with fixed products
+        this.products = [...fixedProducts];
         
         // Load from Google Sheets first, fallback to localStorage
         try {
             if (typeof loadProductsFromSheets === 'function') {
                 const sheetsProducts = await loadProductsFromSheets();
                 if (sheetsProducts && Array.isArray(sheetsProducts) && sheetsProducts.length > 0) {
-                    this.products = sheetsProducts;
+                    // Merge fixed products with sheets products (avoid duplicates)
+                    const fixedIds = fixedProducts.map(p => p.id);
+                    const otherProducts = sheetsProducts.filter(p => !fixedIds.includes(p.id));
+                    this.products = [...fixedProducts, ...otherProducts];
                     // Also sync to localStorage as backup
                     localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-                    console.log(`Loaded ${this.products.length} products from Google Sheets`);
-                    return; // Exit early if we got products from Sheets
+                    console.log(`Loaded ${this.products.length} products (${fixedProducts.length} fixed + ${otherProducts.length} from Sheets)`);
+                    return;
                 }
             }
         } catch (error) {
             console.error('Error loading products from Sheets:', error);
         }
         
-        // If still no products, try localStorage
+        // If still no additional products, try localStorage
         const storedProducts = localStorage.getItem('woofcrafts_products');
         if (storedProducts) {
             try {
                 const parsed = JSON.parse(storedProducts);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    this.products = parsed;
-                    console.log(`Loaded ${this.products.length} products from localStorage`);
-                    return; // Exit early if we got products from localStorage
+                    // Merge fixed products with stored products (avoid duplicates)
+                    const fixedIds = fixedProducts.map(p => p.id);
+                    const otherProducts = parsed.filter(p => !fixedIds.includes(p.id));
+                    this.products = [...fixedProducts, ...otherProducts];
+                    localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+                    console.log(`Loaded ${this.products.length} products (${fixedProducts.length} fixed + ${otherProducts.length} from localStorage)`);
+                    return;
                 }
             } catch (e) {
                 console.error('Error parsing stored products:', e);
             }
         }
         
-        // Initialize default products if none exist
-        if (!this.products || this.products.length === 0) {
-            console.log('No products found, initializing default products...');
-            this.initializeDefaultProducts();
-            console.log(`Initialized ${this.products.length} default products`);
-        }
+        // If no additional products found, just use fixed products
+        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+        console.log(`Using ${this.products.length} fixed products`);
     }
 
-    initializeDefaultProducts() {
-        const defaultProducts = [
+    getFixedProducts() {
+        // These are the fixed products that should ALWAYS be included
+        return [
             {
                 id: 'prod_charm_3for8',
                 name: '3 Charms for 8 Dollars',
@@ -129,16 +148,13 @@ class POSApp {
                 image: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E'
             }
         ];
-        
-        this.products = defaultProducts;
+    }
+    
+    initializeDefaultProducts() {
+        // This method is kept for backward compatibility but is no longer used
+        // Fixed products are now always included via getFixedProducts()
+        this.products = this.getFixedProducts();
         localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-        
-        // Try to save to Sheets if available
-        if (typeof saveAllProductsToSheets === 'function') {
-            saveAllProductsToSheets(this.products).catch(err => {
-                console.error('Error saving default products to Sheets:', err);
-            });
-        }
     }
 
     loadCart() {
@@ -795,6 +811,11 @@ class POSApp {
         document.addEventListener('visibilitychange', async () => {
             if (!document.hidden) {
                 await this.loadProducts();
+                // Ensure fixed products are always included
+                const fixedProducts = this.getFixedProducts();
+                const fixedIds = fixedProducts.map(p => p.id);
+                const otherProducts = this.products.filter(p => !fixedIds.includes(p.id));
+                this.products = [...fixedProducts, ...otherProducts];
                 this.filteredProducts = [];
                 this.filterProducts();
             }
