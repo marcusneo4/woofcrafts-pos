@@ -34,14 +34,10 @@ class POSApp {
         }
         
         this.loadCart();
-        // Initialize filteredProducts with all products
-        this.filteredProducts = [...this.products];
-        console.log(`Rendering ${this.products.length} products (including ${this.getFixedProducts().length} fixed products)`);
-        // Ensure filteredProducts is properly set before rendering
-        if (this.filteredProducts.length === 0 && this.products.length > 0) {
-            this.filteredProducts = [...this.products];
-        }
-        this.renderProducts();
+        // Initialize filteredProducts with all products - always call filterProducts to ensure proper initialization
+        console.log(`Loaded ${this.products.length} products (including ${this.getFixedProducts().length} fixed products)`);
+        // Use filterProducts to properly initialize filteredProducts based on current filter state
+        this.filterProducts();
         this.renderCart();
         this.setupEventListeners();
         
@@ -119,6 +115,27 @@ class POSApp {
         // If no additional products found, just use fixed products
         localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
         console.log(`Using ${this.products.length} fixed products`);
+        
+        // Final validation - ensure we always have at least fixed products
+        if (this.products.length === 0) {
+            console.error('No products loaded! Resetting to fixed products only.');
+            this.products = [...fixedProducts];
+            localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+        }
+    }
+    
+    async refreshProducts() {
+        // Force reload products and re-render
+        console.log('Refreshing products...');
+        await this.loadProducts();
+        // Ensure fixed products are always included
+        const fixedProducts = this.getFixedProducts();
+        const fixedIds = fixedProducts.map(p => p.id);
+        const otherProducts = this.products.filter(p => !fixedIds.includes(p.id));
+        this.products = [...fixedProducts, ...otherProducts];
+        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+        this.filterProducts(); // This will update filteredProducts and render
+        console.log(`Products refreshed: ${this.products.length} total products`);
     }
 
     getFixedProducts() {
@@ -174,23 +191,32 @@ class POSApp {
     }
 
     filterProducts() {
-        // Ensure we have products to filter
-        if (!Array.isArray(this.products) || this.products.length === 0) {
-            console.warn('No products available to filter');
+        // Ensure products array exists
+        if (!Array.isArray(this.products)) {
+            console.warn('Products is not an array, initializing...');
+            this.products = [];
+        }
+        
+        // If no products, set filteredProducts to empty array
+        if (this.products.length === 0) {
+            console.log('No products available to filter');
             this.filteredProducts = [];
             this.renderProducts();
             return;
         }
         
+        // Start with all products
         let filtered = [...this.products];
         
         // Apply search filter
         if (this.searchQuery && this.searchQuery.trim()) {
             const query = this.searchQuery.toLowerCase();
             filtered = filtered.filter(product => 
-                product.name.toLowerCase().includes(query) ||
-                (product.category && product.category.toLowerCase().includes(query)) ||
-                (product.tags && product.tags.some(tag => tag.toLowerCase().includes(query)))
+                product && product.name && (
+                    product.name.toLowerCase().includes(query) ||
+                    (product.category && product.category.toLowerCase().includes(query)) ||
+                    (product.tags && Array.isArray(product.tags) && product.tags.some(tag => tag.toLowerCase().includes(query)))
+                )
             );
         }
         
@@ -198,17 +224,26 @@ class POSApp {
         if (this.currentFilter !== 'all') {
             if (this.currentFilter === 'tags') {
                 filtered = filtered.filter(product => 
-                    product.category === 'tags' || 
-                    (product.tags && product.tags.length > 0)
+                    product && (
+                        product.category === 'tags' || 
+                        (product.tags && Array.isArray(product.tags) && product.tags.length > 0)
+                    )
                 );
             } else if (this.currentFilter === 'photoframes') {
                 filtered = filtered.filter(product => 
-                    product.category === 'photoframes' ||
-                    product.name.toLowerCase().includes('frame') ||
-                    product.name.toLowerCase().includes('photo')
+                    product && (
+                        product.category === 'photoframes' ||
+                        (product.name && (
+                            product.name.toLowerCase().includes('frame') ||
+                            product.name.toLowerCase().includes('photo')
+                        ))
+                    )
                 );
             }
         }
+        
+        // Filter out any invalid products
+        filtered = filtered.filter(product => product && product.id && product.name);
         
         this.filteredProducts = filtered;
         console.log(`Filtered products: ${filtered.length} out of ${this.products.length} total (filter: ${this.currentFilter}, search: "${this.searchQuery || ''}")`);
@@ -218,11 +253,24 @@ class POSApp {
     renderProducts() {
         const grid = document.getElementById('products-grid');
         
-        // Always use filteredProducts if it's been initialized (even if empty)
-        // Only fall back to this.products if filteredProducts hasn't been set yet
-        const productsToShow = (this.filteredProducts !== undefined && this.filteredProducts !== null) 
-            ? this.filteredProducts 
-            : this.products;
+        if (!grid) {
+            console.error('Products grid element not found!');
+            return;
+        }
+        
+        // Use filteredProducts if it exists and has been set, otherwise use this.products
+        // If filteredProducts is an empty array but we have products, it means filter returned no results
+        // If filteredProducts is undefined/null, use this.products as fallback
+        let productsToShow;
+        if (this.filteredProducts !== undefined && this.filteredProducts !== null) {
+            // filteredProducts has been set - use it (even if empty, which means no matches)
+            productsToShow = this.filteredProducts;
+        } else {
+            // filteredProducts hasn't been initialized yet - use all products
+            productsToShow = this.products;
+        }
+        
+        console.log(`Rendering products: ${productsToShow.length} products to show (filtered: ${this.filteredProducts?.length || 'not set'}, total: ${this.products.length})`);
         
         if (!productsToShow || productsToShow.length === 0) {
             grid.innerHTML = `
@@ -829,33 +877,45 @@ class POSApp {
         // Reload products when page becomes visible (in case products were added in another tab)
         document.addEventListener('visibilitychange', async () => {
             if (!document.hidden) {
-                await this.loadProducts();
-                // Ensure fixed products are always included
-                const fixedProducts = this.getFixedProducts();
-                const fixedIds = fixedProducts.map(p => p.id);
-                const otherProducts = this.products.filter(p => !fixedIds.includes(p.id));
-                this.products = [...fixedProducts, ...otherProducts];
-                localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-                // Re-apply current filter to update filteredProducts
-                this.filterProducts();
-                console.log(`Products refreshed: ${this.products.length} total, ${this.filteredProducts.length} after filter`);
+                await this.refreshProducts();
             }
         });
         
-        // Also listen for storage events (when products are updated in another tab)
+        // Also reload when window gains focus (more reliable than visibility change)
+        window.addEventListener('focus', async () => {
+            await this.refreshProducts();
+        });
+        
+        // Listen for storage events (when products are updated in another tab)
         window.addEventListener('storage', async (e) => {
             if (e.key === 'woofcrafts_products') {
-                await this.loadProducts();
-                // Ensure fixed products are always included
-                const fixedProducts = this.getFixedProducts();
-                const fixedIds = fixedProducts.map(p => p.id);
-                const otherProducts = this.products.filter(p => !fixedIds.includes(p.id));
-                this.products = [...fixedProducts, ...otherProducts];
-                // Re-apply current filter to update filteredProducts
-                this.filterProducts();
-                console.log(`Products synced from storage: ${this.products.length} total, ${this.filteredProducts.length} after filter`);
+                await this.refreshProducts();
             }
         });
+        
+        // Also listen for custom event that can be triggered from products.html
+        window.addEventListener('productsUpdated', async () => {
+            console.log('Products updated event received');
+            await this.refreshProducts();
+        });
+        
+        // Check sessionStorage for product updates (set by products.html)
+        const checkForUpdates = () => {
+            const lastUpdate = sessionStorage.getItem('woofcrafts_products_updated');
+            if (lastUpdate) {
+                const updateTime = parseInt(lastUpdate);
+                const now = Date.now();
+                // If update was recent (within last 5 seconds), refresh
+                if (now - updateTime < 5000) {
+                    console.log('Recent product update detected, refreshing...');
+                    this.refreshProducts();
+                }
+            }
+        };
+        
+        // Check on load and periodically
+        checkForUpdates();
+        setInterval(checkForUpdates, 2000); // Check every 2 seconds
     }
 }
 
@@ -863,5 +923,20 @@ class POSApp {
 let posApp;
 document.addEventListener('DOMContentLoaded', async () => {
     posApp = new POSApp();
+    
+    // Double-check that products are rendered after a short delay
+    // This helps catch any timing issues
+    setTimeout(() => {
+        if (posApp && posApp.products && posApp.products.length > 0) {
+            const grid = document.getElementById('products-grid');
+            if (grid) {
+                const hasProducts = grid.querySelector('.product-card');
+                if (!hasProducts) {
+                    console.warn('Products exist but not rendered! Forcing re-render...');
+                    posApp.filterProducts();
+                }
+            }
+        }
+    }, 500);
 });
 
