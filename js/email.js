@@ -324,23 +324,69 @@ function generateEmailContent(orderDetails) {
         return String(text).replace(/[&<>"']/g, m => map[m]);
     };
 
-    // Generate beautiful table rows for items with alternating colors
-    const itemsHtml = orderDetails.items.map((item, index) => `
-        <tr style="background-color: ${index % 2 === 0 ? '#ffffff' : '#fafbfc'};">
-            <td style="padding: 18px 16px; border-bottom: 1px solid #e8ecf0; font-size: 15px; color: #2d3748; font-weight: 500; line-height: 1.5;">
-                ${escapeHtml(item.name)}
-            </td>
-            <td style="padding: 18px 16px; border-bottom: 1px solid #e8ecf0; text-align: center; font-size: 15px; color: #4a5568; font-weight: 500;">
-                ${item.quantity}
-            </td>
-            <td style="padding: 18px 16px; border-bottom: 1px solid #e8ecf0; text-align: right; font-size: 15px; color: #4a5568; font-weight: 500;">
-                $${item.price.toFixed(2)}
-            </td>
-            <td style="padding: 18px 16px; border-bottom: 1px solid #e8ecf0; text-align: right; font-size: 15px; color: #2d3748; font-weight: 600;">
-                $${item.subtotal.toFixed(2)}
-            </td>
-        </tr>
-    `).join('');
+    // Generate beautiful card-based items using tables for email compatibility
+    const colors = [
+        { bg: '#FFF5F7', border: '#FED7E2', accent: '#ED64A6' }, // Pink
+        { bg: '#EBF8FF', border: '#BEE3F8', accent: '#4299E1' }, // Blue
+        { bg: '#F0FFF4', border: '#C6F6D5', accent: '#48BB78' }, // Green
+        { bg: '#FFFAF0', border: '#FEEBC8', accent: '#ED8936' }, // Orange
+        { bg: '#F7FAFC', border: '#E2E8F0', accent: '#718096' }  // Gray
+    ];
+    
+    const itemsHtml = orderDetails.items.map((item, index) => {
+        const colorScheme = colors[index % colors.length];
+        return `
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 16px;">
+                <tr>
+                    <td style="background-color: ${colorScheme.bg}; border: 2px solid ${colorScheme.border}; border-radius: 12px; padding: 20px;">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                                <td style="padding: 0;">
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                        <tr>
+                                            <td style="padding-bottom: 12px;">
+                                                <div style="font-size: 18px; color: #2D3748; font-weight: 700; line-height: 1.4;">
+                                                    ${escapeHtml(item.name)}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                                    <tr>
+                                                        <td style="padding-right: 20px;">
+                                                            <span style="font-size: 12px; color: #718096; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Qty:</span>
+                                                            <span style="background-color: ${colorScheme.accent}; color: #FFFFFF; padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 700; display: inline-block; margin-left: 6px;">
+                                                                ${item.quantity}
+                                                            </span>
+                                                        </td>
+                                                        <td style="padding-right: 20px;">
+                                                            <span style="font-size: 12px; color: #718096; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Price:</span>
+                                                            <span style="font-size: 15px; color: #4A5568; font-weight: 700; margin-left: 6px;">
+                                                                $${item.price.toFixed(2)}
+                                                            </span>
+                                                        </td>
+                                                        <td align="right" style="padding: 0;">
+                                                            <div style="font-size: 24px; color: ${colorScheme.accent}; font-weight: 800; letter-spacing: -0.5px;">
+                                                                $${item.subtotal.toFixed(2)}
+                                                            </div>
+                                                            <div style="font-size: 10px; color: #A0AEC0; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">
+                                                                Subtotal
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        `;
+    }).join('');
 
     // Generate beautiful, modern HTML email structure
     const emailBody = `
@@ -352,17 +398,17 @@ function generateEmailContent(orderDetails) {
                         <!-- Main Card Container -->
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
                             
-                            <!-- Beautiful Gradient Header -->
+                            <!-- Beautiful Colorful Gradient Header -->
                             <tr>
-                                <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 50px 40px; text-align: center;">
+                                <td style="background: linear-gradient(135deg, #D4A574 0%, #C9A961 50%, #E8D5B7 100%); padding: 50px 40px; text-align: center;">
                                     <div style="margin-bottom: 12px;">
-                                        <span style="font-size: 48px; display: inline-block;">🐾</span>
+                                        <span style="font-size: 56px; display: inline-block;">🐾</span>
                                     </div>
-                                    <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 800; letter-spacing: 1px; line-height: 1.2; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
                                         WoofCrafts
                                     </h1>
-                                    <p style="color: rgba(255, 255, 255, 0.95); margin: 8px 0 0 0; font-size: 18px; font-weight: 400; letter-spacing: 0.3px;">
-                                        Order Confirmation
+                                    <p style="color: #FFFFFF; margin: 12px 0 0 0; font-size: 20px; font-weight: 600; letter-spacing: 0.5px; text-shadow: 1px 1px 2px rgba(0,0,0,0.15);">
+                                        ✨ Order Confirmation ✨
                                     </p>
                                 </td>
                             </tr>
@@ -371,107 +417,127 @@ function generateEmailContent(orderDetails) {
                             <tr>
                                 <td style="padding: 45px 40px;">
                                     
-                                    <!-- Welcome Section -->
-                                    <div style="margin-bottom: 35px;">
-                                        <p style="margin: 0 0 16px 0; font-size: 18px; line-height: 1.7; color: #2d3748; font-weight: 400;">
-                                            Thank you for shopping with <strong style="color: #667eea;">WoofCrafts</strong>, your home for adorable dog accessories and NFC-enabled dog tags!
-                                        </p>
-                                        <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #4a5568; font-weight: 400;">
-                                            We've received your order and are getting it ready for your pup. 🐕
-                                        </p>
-                                    </div>
+                                    <!-- Welcome Section with Color -->
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 35px;">
+                                        <tr>
+                                            <td style="background: linear-gradient(135deg, #EBF8FF 0%, #F0FFF4 100%); border-left: 5px solid #D4A574; border-radius: 8px; padding: 24px;">
+                                                <p style="margin: 0 0 12px 0; font-size: 19px; line-height: 1.7; color: #2D3748; font-weight: 600;">
+                                                    🎉 Thank you for shopping with <strong style="color: #D4A574;">WoofCrafts</strong>! 🎉
+                                                </p>
+                                                <p style="margin: 0; font-size: 16px; line-height: 1.7; color: #4A5568; font-weight: 400;">
+                                                    Your home for adorable dog accessories and NFC-enabled dog tags! We've received your order and are getting it ready for your pup. 🐕✨
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    </table>
                                     
-                                    <!-- Order Info Card -->
-                                    <div style="background: linear-gradient(135deg, #f6f8fb 0%, #ffffff 100%); border-radius: 12px; padding: 24px; margin-bottom: 35px; border: 1px solid #e8ecf0;">
-                                        <div style="display: table; width: 100%;">
-                                            <div style="display: table-row;">
-                                                <div style="display: table-cell; padding: 8px 0; width: 50%;">
-                                                    <div style="font-size: 12px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 4px;">Order ID</div>
-                                                    <div style="font-size: 18px; color: #2d3748; font-weight: 700; font-family: 'Courier New', monospace;">#${orderDetails.orderId || 'N/A'}</div>
-                                                </div>
-                                                <div style="display: table-cell; padding: 8px 0; width: 50%; text-align: right;">
-                                                    <div style="font-size: 12px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 4px;">Date</div>
-                                                    <div style="font-size: 16px; color: #4a5568; font-weight: 500;">${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <!-- Order Info Card with Colors -->
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 35px;">
+                                        <tr>
+                                            <td style="background: linear-gradient(135deg, #FFF5F7 0%, #EBF8FF 100%); border-radius: 12px; padding: 24px; border: 2px solid #FED7E2;">
+                                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                                    <tr>
+                                                        <td style="padding: 8px 0; width: 50%;">
+                                                            <div style="font-size: 11px; color: #ED64A6; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px;">📋 Order ID</div>
+                                                            <div style="font-size: 22px; color: #D4A574; font-weight: 800; font-family: 'Courier New', monospace; letter-spacing: 1px;">#${orderDetails.orderId || 'N/A'}</div>
+                                                        </td>
+                                                        <td style="padding: 8px 0; width: 50%; text-align: right;">
+                                                            <div style="font-size: 11px; color: #ED64A6; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px;">📅 Date</div>
+                                                            <div style="font-size: 18px; color: #4A5568; font-weight: 700;">${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
                                     
-                                    <!-- Section Title -->
-                                    <div style="margin-bottom: 20px;">
-                                        <h2 style="margin: 0; font-size: 22px; font-weight: 700; color: #2d3748; letter-spacing: -0.3px;">
-                                            Order Summary
-                                        </h2>
-                                        <div style="width: 60px; height: 4px; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); border-radius: 2px; margin-top: 8px;"></div>
-                                    </div>
+                                    <!-- Section Title with Color -->
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+                                        <tr>
+                                            <td>
+                                                <h2 style="margin: 0; font-size: 26px; font-weight: 800; color: #D4A574; letter-spacing: 0.5px;">
+                                                    🛒 Order Summary
+                                                </h2>
+                                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top: 10px;">
+                                                    <tr>
+                                                        <td style="width: 80px; height: 5px; background: linear-gradient(90deg, #D4A574 0%, #C9A961 50%, #E8D5B7 100%); border-radius: 3px;"></td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
                                     
-                                    <!-- Beautiful Order Table -->
-                                    <div style="border-radius: 12px; overflow: hidden; border: 1px solid #e8ecf0; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);">
-                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
-                                            <thead>
-                                                <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                                    <th style="padding: 18px 16px; text-align: left; font-size: 13px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Item</th>
-                                                    <th style="padding: 18px 16px; text-align: center; font-size: 13px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Qty</th>
-                                                    <th style="padding: 18px 16px; text-align: right; font-size: 13px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Price</th>
-                                                    <th style="padding: 18px 16px; text-align: right; font-size: 13px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Subtotal</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
+                                    <!-- Beautiful Colorful Order Cards -->
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 30px;">
+                                        <tr>
+                                            <td>
                                                 ${itemsHtml}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            </td>
+                                        </tr>
+                                    </table>
                                     
-                                    <!-- Totals Section - Beautiful Card -->
-                                    <div style="background: linear-gradient(135deg, #f6f8fb 0%, #ffffff 100%); border-radius: 12px; padding: 28px; margin-bottom: 30px; border: 1px solid #e8ecf0;">
-                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                            <tr>
-                                                <td style="padding: 8px 0;">
-                                                    <div style="font-size: 16px; color: #4a5568; font-weight: 500;">Subtotal</div>
-                                                </td>
-                                                <td align="right" style="padding: 8px 0;">
-                                                    <div style="font-size: 16px; color: #2d3748; font-weight: 600;">$${orderDetails.subtotal.toFixed(2)}</div>
-                                                </td>
-                                            </tr>
-                                            ${orderDetails.discountAmount > 0 ? `
-                                            <tr>
-                                                <td style="padding: 8px 0;">
-                                                    <div style="font-size: 16px; color: #4a5568; font-weight: 500;">Discount (${orderDetails.discountPercent}%)</div>
-                                                </td>
-                                                <td align="right" style="padding: 8px 0;">
-                                                    <div style="font-size: 16px; color: #48bb78; font-weight: 600;">-$${orderDetails.discountAmount.toFixed(2)}</div>
-                                                </td>
-                                            </tr>
-                                            ` : ''}
-                                            <tr>
-                                                <td colspan="2" style="padding: 16px 0 8px 0; border-top: 2px solid #e8ecf0;"></td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding: 8px 0;">
-                                                    <div style="font-size: 24px; color: #2d3748; font-weight: 700; letter-spacing: -0.5px;">Total</div>
-                                                </td>
-                                                <td align="right" style="padding: 8px 0;">
-                                                    <div style="font-size: 28px; color: #667eea; font-weight: 700; letter-spacing: -0.5px;">$${orderDetails.total.toFixed(2)}</div>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </div>
+                                    <!-- Totals Section - Beautiful Colorful Card -->
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 30px;">
+                                        <tr>
+                                            <td style="background: linear-gradient(135deg, #F0FFF4 0%, #EBF8FF 100%); border-radius: 12px; padding: 28px; border: 3px solid #C9A961;">
+                                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                                    <tr>
+                                                        <td style="padding: 10px 0;">
+                                                            <div style="font-size: 17px; color: #4A5568; font-weight: 600;">Subtotal</div>
+                                                        </td>
+                                                        <td align="right" style="padding: 10px 0;">
+                                                            <div style="font-size: 18px; color: #2D3748; font-weight: 700;">$${orderDetails.subtotal.toFixed(2)}</div>
+                                                        </td>
+                                                    </tr>
+                                                    ${orderDetails.discountAmount > 0 ? `
+                                                    <tr>
+                                                        <td style="padding: 10px 0;">
+                                                            <div style="font-size: 17px; color: #4A5568; font-weight: 600;">🎁 Discount (${orderDetails.discountPercent}%)</div>
+                                                        </td>
+                                                        <td align="right" style="padding: 10px 0;">
+                                                            <div style="font-size: 18px; color: #48BB78; font-weight: 700;">-$${orderDetails.discountAmount.toFixed(2)}</div>
+                                                        </td>
+                                                    </tr>
+                                                    ` : ''}
+                                                    <tr>
+                                                        <td colspan="2" style="padding: 20px 0 10px 0; border-top: 3px solid #C9A961;"></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 10px 0;">
+                                                            <div style="font-size: 26px; color: #D4A574; font-weight: 800; letter-spacing: 0.5px;">💰 Total</div>
+                                                        </td>
+                                                        <td align="right" style="padding: 10px 0;">
+                                                            <div style="font-size: 32px; color: #D4A574; font-weight: 900; letter-spacing: 0.5px;">$${orderDetails.total.toFixed(2)}</div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
                                     
                                     ${orderDetails.customerComment ? `
-                                    <!-- Customer Comments - Beautiful Card -->
-                                    <div style="background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); border-left: 4px solid #f56565; border-radius: 8px; padding: 20px; margin-bottom: 30px; border: 1px solid #fed7d7;">
-                                        <div style="font-size: 13px; color: #c53030; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 10px;">💬 Customer Comments</div>
-                                        <div style="font-size: 15px; color: #2d3748; line-height: 1.6; font-weight: 400;">${escapeHtml(orderDetails.customerComment)}</div>
-                                    </div>
+                                    <!-- Customer Comments - Beautiful Colorful Card -->
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 30px;">
+                                        <tr>
+                                            <td style="background: linear-gradient(135deg, #FFF5F7 0%, #FFFAF0 100%); border-left: 5px solid #ED8936; border-radius: 10px; padding: 24px; border: 2px solid #FED7E2;">
+                                                <div style="font-size: 13px; color: #ED8936; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 12px;">💬 Customer Comments</div>
+                                                <div style="font-size: 16px; color: #2D3748; line-height: 1.7; font-weight: 500;">${escapeHtml(orderDetails.customerComment)}</div>
+                                            </td>
+                                        </tr>
+                                    </table>
                                     ` : ''}
                                     
-                                    <!-- Support Message Card -->
-                                    <div style="background: linear-gradient(135deg, #ebf8ff 0%, #ffffff 100%); border-radius: 12px; padding: 24px; margin-bottom: 35px; border: 1px solid #bee3f8; text-align: center;">
-                                        <div style="font-size: 32px; margin-bottom: 12px;">💌</div>
-                                        <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #2d3748; font-weight: 400;">
-                                            If anything looks off with your order, just reply to this email and our pack will help you out.
-                                        </p>
-                                    </div>
+                                    <!-- Support Message Card with Color -->
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 35px;">
+                                        <tr>
+                                            <td style="background: linear-gradient(135deg, #EBF8FF 0%, #F0FFF4 100%); border-radius: 12px; padding: 28px; border: 2px solid #BEE3F8; text-align: center;">
+                                                <div style="font-size: 40px; margin-bottom: 16px;">💌</div>
+                                                <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #2D3748; font-weight: 500;">
+                                                    If anything looks off with your order, just reply to this email and our pack will help you out! 🐾
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    </table>
                                     
                                     <!-- Beautiful Footer -->
                                     <div style="padding-top: 30px; border-top: 1px solid #e8ecf0; text-align: center;">
@@ -489,9 +555,9 @@ function generateEmailContent(orderDetails) {
                                 </td>
                             </tr>
                             
-                            <!-- Bottom Accent -->
+                            <!-- Bottom Colorful Accent -->
                             <tr>
-                                <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 6px;"></td>
+                                <td style="background: linear-gradient(135deg, #D4A574 0%, #C9A961 50%, #E8D5B7 100%); height: 8px;"></td>
                             </tr>
                             
                         </table>
