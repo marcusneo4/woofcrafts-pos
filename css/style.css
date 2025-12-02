@@ -280,7 +280,7 @@ header h1 {
 /* Main Content Layout */
 .main-content {
     display: grid;
-    grid-template-columns: 1fr 420px;
+    grid-template-columns: 1fr 500px;
     gap: 30px;
 }
 
@@ -693,11 +693,13 @@ header h1 {
     align-items: center;
     gap: 15px;
     flex: 1;
+    flex-wrap: wrap;
 }
 
 .cart-item-details {
     flex: 1;
-    min-width: 0;
+    min-width: 150px;
+    max-width: none;
 }
 
 .cart-item-name {
@@ -705,6 +707,8 @@ header h1 {
     margin-bottom: 6px;
     color: var(--text-dark);
     font-size: 1rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .cart-item-price {
@@ -970,6 +974,11 @@ header h1 {
 .input-field::placeholder {
     color: var(--text-light);
     opacity: 0.6;
+}
+
+textarea.input-field {
+    font-family: 'Nunito', sans-serif;
+    line-height: 1.5;
 }
 
 /* Select dropdown styling */

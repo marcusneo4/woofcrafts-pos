@@ -68,6 +68,54 @@ class POSApp {
                 this.products = JSON.parse(storedProducts);
             }
         }
+        
+        // Initialize default products if none exist
+        if (this.products.length === 0) {
+            this.initializeDefaultProducts();
+        }
+    }
+
+    initializeDefaultProducts() {
+        const defaultProducts = [
+            {
+                id: 'prod_charm_3for8',
+                name: '3 Charms for 8 Dollars',
+                price: 8.00,
+                category: 'tags',
+                image: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E'
+            },
+            {
+                id: 'prod_nfc_additional',
+                name: 'Additional NFC (5 SGD)',
+                price: 5.00,
+                category: 'tags',
+                image: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E'
+            },
+            {
+                id: 'prod_charm_takehome',
+                name: 'Charm Take Home Already',
+                price: 0.00,
+                category: 'tags',
+                image: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E'
+            },
+            {
+                id: 'prod_charm_reserved',
+                name: 'Charm Reserved',
+                price: 0.00,
+                category: 'tags',
+                image: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E'
+            }
+        ];
+        
+        this.products = defaultProducts;
+        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+        
+        // Try to save to Sheets if available
+        if (typeof saveAllProductsToSheets === 'function') {
+            saveAllProductsToSheets(this.products).catch(err => {
+                console.error('Error saving default products to Sheets:', err);
+            });
+        }
     }
 
     loadCart() {
@@ -309,6 +357,8 @@ class POSApp {
         document.getElementById('customer-name').value = '';
         document.getElementById('customer-email').value = '';
         document.getElementById('customer-phone').value = '';
+        const commentField = document.getElementById('customer-comment');
+        if (commentField) commentField.value = '';
     }
 
     validateCheckout() {
@@ -339,11 +389,14 @@ class POSApp {
         // Generate order ID
         const orderId = 'WC-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
 
+        const customerComment = document.getElementById('customer-comment')?.value.trim() || '';
+
         const orderDetails = {
             orderId: orderId,
             customerName: customerName,
             customerEmail: customerEmail,
             customerPhone: customerPhone,
+            customerComment: customerComment,
             items: this.cart.map(item => ({
                 name: item.name,
                 quantity: item.quantity,

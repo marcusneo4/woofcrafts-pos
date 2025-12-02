@@ -3,6 +3,23 @@
 // Initialize EmailJS
 // Configure EmailJS at https://www.emailjs.com
 // Use marcusneo4@gmail.com as the sending email
+// 
+// IMPORTANT EMAILJS TEMPLATE CONFIGURATION:
+// 1. In your EmailJS template, set the "To Email" field to: {{to_email}}
+//    This ensures emails are sent to the customer email entered in the form, not a hardcoded address.
+// 2. To use the HTML email format (same as preview), use {{order_items_html}} in your template
+//    and set the template to use HTML format. If you prefer plain text, use {{order_items}}.
+// 3. Available template variables:
+//    - {{to_email}} - Customer email (REQUIRED for correct recipient)
+//    - {{customer_name}} - Customer name
+//    - {{customer_phone}} - Customer phone
+//    - {{order_id}} - Order ID
+//    - {{order_items}} - Plain text items list
+//    - {{order_items_html}} - HTML formatted items (use this for rich email)
+//    - {{subtotal}} - Order subtotal
+//    - {{discount}} - Discount information
+//    - {{total}} - Final total
+//    - {{customer_comment}} - Customer comments/special instructions
 const EMAILJS_CONFIG = {
     publicKey: 'pItLrmthOdxpZRMEw', // Replace with your EmailJS Public Key from dashboard
     serviceId: 'service_t1mlwir',  // EmailJS Service ID (Gmail service)
@@ -97,26 +114,31 @@ async function sendOrderConfirmationEmail(orderDetails) {
             templateId: EMAILJS_CONFIG.templateId
         });
 
-        // Format items for email
+        // Generate HTML email content (same as preview)
+        const emailHtml = generateEmailContent(orderDetails);
+        
+        // Format items for email (plain text fallback)
         const itemsList = orderDetails.items.map(item => 
             `${item.name} - Qty: ${item.quantity} x $${item.price.toFixed(2)} = $${item.subtotal.toFixed(2)}`
         ).join('\n');
 
         // Prepare email template parameters
         const templateParams = {
-            to_email: orderDetails.customerEmail,
+            to_email: orderDetails.customerEmail, // IMPORTANT: Make sure your EmailJS template uses {{to_email}} for the recipient
             from_name: 'WoofCrafts',
             from_email: 'marcusneo4@gmail.com',
             customer_name: orderDetails.customerName,
             customer_phone: orderDetails.customerPhone || 'Not provided',
             order_id: orderDetails.orderId || 'N/A',
-            order_items: itemsList,
+            order_items: itemsList, // Plain text version
+            order_items_html: emailHtml, // HTML version - use this in your EmailJS template
             subtotal: `$${orderDetails.subtotal.toFixed(2)}`,
             discount: orderDetails.discountAmount > 0 
                 ? `${orderDetails.discountPercent}% ($${orderDetails.discountAmount.toFixed(2)})`
                 : 'None',
             total: `$${orderDetails.total.toFixed(2)}`,
-            company_name: 'WoofCrafts'
+            company_name: 'WoofCrafts',
+            customer_comment: orderDetails.customerComment || 'No comments'
         };
 
         console.log('Sending email with parameters:', {
@@ -218,6 +240,13 @@ function generateEmailContent(orderDetails) {
                 ` : ''}
                 <p style="text-align: right; font-size: 1.2em; color: #4A90E2;"><strong>Total: $${orderDetails.total.toFixed(2)}</strong></p>
             </div>
+            
+            ${orderDetails.customerComment ? `
+            <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid #4A90E2; border-radius: 5px;">
+                <p style="margin: 0; font-weight: bold; color: #4A90E2;">Customer Comments:</p>
+                <p style="margin: 5px 0 0 0; color: #5C4A37;">${orderDetails.customerComment}</p>
+            </div>
+            ` : ''}
             
             <p>If anything looks off with your order, just reply to this email and our pack will help you out.</p>
             
