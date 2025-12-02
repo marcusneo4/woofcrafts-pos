@@ -6,8 +6,6 @@ class POSApp {
         this.discountApplied = false;
         this.products = [];
         this.filteredProducts = [];
-        this.currentFilter = 'all';
-        this.searchQuery = '';
         
         this.init();
     }
@@ -199,54 +197,17 @@ class POSApp {
         
         // If no products, set filteredProducts to empty array
         if (this.products.length === 0) {
-            console.log('No products available to filter');
+            console.log('No products available');
             this.filteredProducts = [];
             this.renderProducts();
             return;
         }
         
-        // Start with all products
-        let filtered = [...this.products];
-        
-        // Apply search filter
-        if (this.searchQuery && this.searchQuery.trim()) {
-            const query = this.searchQuery.toLowerCase();
-            filtered = filtered.filter(product => 
-                product && product.name && (
-                    product.name.toLowerCase().includes(query) ||
-                    (product.category && product.category.toLowerCase().includes(query)) ||
-                    (product.tags && Array.isArray(product.tags) && product.tags.some(tag => tag.toLowerCase().includes(query)))
-                )
-            );
-        }
-        
-        // Apply category filter
-        if (this.currentFilter !== 'all') {
-            if (this.currentFilter === 'tags') {
-                filtered = filtered.filter(product => 
-                    product && (
-                        product.category === 'tags' || 
-                        (product.tags && Array.isArray(product.tags) && product.tags.length > 0)
-                    )
-                );
-            } else if (this.currentFilter === 'photoframes') {
-                filtered = filtered.filter(product => 
-                    product && (
-                        product.category === 'photoframes' ||
-                        (product.name && (
-                            product.name.toLowerCase().includes('frame') ||
-                            product.name.toLowerCase().includes('photo')
-                        ))
-                    )
-                );
-            }
-        }
-        
-        // Filter out any invalid products
-        filtered = filtered.filter(product => product && product.id && product.name);
+        // Filter out any invalid products and show all valid products
+        const filtered = this.products.filter(product => product && product.id && product.name);
         
         this.filteredProducts = filtered;
-        console.log(`Filtered products: ${filtered.length} out of ${this.products.length} total (filter: ${this.currentFilter}, search: "${this.searchQuery || ''}")`);
+        console.log(`Displaying all products: ${filtered.length} total`);
         this.renderProducts();
     }
 
@@ -276,8 +237,8 @@ class POSApp {
             grid.innerHTML = `
                 <div class="empty-state">
                     <span class="empty-icon">🐶</span>
-                    <p>${this.searchQuery || this.currentFilter !== 'all' ? 'No products match your search!' : 'No products available yet!'}</p>
-                    ${!this.searchQuery && this.currentFilter === 'all' ? '<a href="products.html" class="empty-link">Add your first product here 🎉</a>' : ''}
+                    <p>No products available yet!</p>
+                    <a href="products.html" class="empty-link">Add your first product here 🎉</a>
                 </div>
             `;
             return;
@@ -852,27 +813,6 @@ class POSApp {
             this.sendOrderEmail();
         });
 
-        // Search input
-        const searchInput = document.getElementById('search-input');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.searchQuery = e.target.value;
-                this.filterProducts();
-            });
-        }
-
-        // Filter buttons
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Update active state
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                
-                // Update filter
-                this.currentFilter = e.target.dataset.filter;
-                this.filterProducts();
-            });
-        });
 
         // Reload products when page becomes visible (in case products were added in another tab)
         document.addEventListener('visibilitychange', async () => {
