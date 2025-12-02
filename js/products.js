@@ -144,6 +144,14 @@ class ProductManager {
             this.renderProducts();
             this.resetForm();
             this.showMessage('Product saved successfully!', 'success');
+            
+            // Dispatch event to notify other pages (like index.html) that products were updated
+            // This works for same-origin pages that might be listening
+            window.dispatchEvent(new CustomEvent('productsUpdated'));
+            
+            // Also trigger storage event manually for same-tab updates (storage event only fires cross-tab)
+            // We'll use a custom mechanism: set a flag in sessionStorage
+            sessionStorage.setItem('woofcrafts_products_updated', Date.now().toString());
         } catch (error) {
             console.error('Error saving product:', error);
             alert('Error saving product. Please try again.');
