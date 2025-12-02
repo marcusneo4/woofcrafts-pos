@@ -46,7 +46,17 @@ async function saveOrderToSheets(orderDetails) {
             })
         });
 
-        const responseData = await response.json();
+        // Get response as text first to handle both JSON and HTML responses
+        const responseText = await response.text();
+        let responseData;
+        
+        try {
+            responseData = JSON.parse(responseText);
+        } catch (e) {
+            // If response is not JSON, it might be an HTML error page
+            console.error('Web app returned non-JSON response:', responseText.substring(0, 500));
+            throw new Error(`Web app returned invalid response. Make sure the web app is properly deployed and accessible. Response: ${responseText.substring(0, 200)}`);
+        }
 
         if (!response.ok || !responseData.success) {
             console.error('Sheets Web App error response:', responseData);
@@ -93,7 +103,15 @@ async function initializeSheets() {
             })
         });
 
-        const responseData = await response.json();
+        const responseText = await response.text();
+        let responseData;
+        
+        try {
+            responseData = JSON.parse(responseText);
+        } catch (e) {
+            console.warn('Web app returned non-JSON response during initialization:', responseText.substring(0, 200));
+            return; // Non-critical, continue anyway
+        }
 
         if (response.ok && responseData.success) {
             console.log('Google Sheets initialized successfully');
