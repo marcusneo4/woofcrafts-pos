@@ -386,8 +386,8 @@ class POSApp {
         const discountAmount = subtotal * discountPercent;
         const total = subtotal - discountAmount;
 
-        // Generate order ID
-        const orderId = 'WC-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+        // Generate 4-digit order ID
+        const orderId = String(Math.floor(1000 + Math.random() * 9000));
 
         const customerComment = document.getElementById('customer-comment')?.value.trim() || '';
 
@@ -431,27 +431,163 @@ class POSApp {
 
     showEmailPreview(orderDetails) {
         const emailContent = generateEmailContent(orderDetails);
-        const previewWindow = window.open('', '_blank', 'width=800,height=600');
+        const previewWindow = window.open('', '_blank', 'width=900,height=700');
         previewWindow.document.write(`
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>Email Preview - Order Confirmation</title>
+                    <title>Order Summary - #${orderDetails.orderId}</title>
                     <style>
-                        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
-                        .email-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            padding: 20px; 
+                            background: #f5f5f5; 
+                        }
+                        .header-bar {
+                            background: #4A90E2;
+                            color: white;
+                            padding: 15px 20px;
+                            margin: -20px -20px 20px -20px;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                        }
+                        .header-bar h1 {
+                            color: white;
+                            font-size: 18px;
+                            margin: 0;
+                        }
+                        .button-group {
+                            display: flex;
+                            gap: 10px;
+                        }
+                        .btn {
+                            padding: 10px 20px;
+                            border: none;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            font-weight: bold;
+                            transition: all 0.3s;
+                            text-decoration: none;
+                            display: inline-block;
+                        }
+                        .btn-download {
+                            background: #28a745;
+                            color: white;
+                        }
+                        .btn-download:hover {
+                            background: #218838;
+                            transform: translateY(-1px);
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                        }
+                        .btn-print {
+                            background: #17a2b8;
+                            color: white;
+                        }
+                        .btn-print:hover {
+                            background: #138496;
+                            transform: translateY(-1px);
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                        }
+                        .email-container { 
+                            background: white; 
+                            padding: 30px; 
+                            border-radius: 8px; 
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+                            max-width: 700px; 
+                            margin: 0 auto; 
+                        }
                         h1 { color: #4A90E2; }
-                        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-                        th { background-color: #f5f5f5; padding: 10px; text-align: left; border-bottom: 2px solid #4A90E2; }
-                        td { padding: 8px; border-bottom: 1px solid #eee; }
-                        .total-section { margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee; }
-                        .total-row { text-align: right; font-size: 1.2em; color: #4A90E2; font-weight: bold; }
+                        table { 
+                            width: 100%; 
+                            border-collapse: collapse; 
+                            margin: 20px 0; 
+                        }
+                        th { 
+                            background-color: #f5f5f5; 
+                            padding: 12px; 
+                            text-align: left; 
+                            border-bottom: 2px solid #4A90E2; 
+                            font-weight: bold;
+                        }
+                        td { 
+                            padding: 10px 12px; 
+                            border-bottom: 1px solid #eee; 
+                        }
+                        tr:hover {
+                            background-color: #f9f9f9;
+                        }
+                        .total-section { 
+                            margin-top: 20px; 
+                            padding-top: 20px; 
+                            border-top: 2px solid #eee; 
+                        }
+                        .total-row { 
+                            text-align: right; 
+                            font-size: 1.2em; 
+                            color: #4A90E2; 
+                            font-weight: bold; 
+                        }
+                        @media print {
+                            .header-bar, .button-group { display: none; }
+                            body { padding: 0; background: white; }
+                            .email-container { box-shadow: none; }
+                        }
                     </style>
                 </head>
                 <body>
-                    <div class="email-container">
+                    <div class="header-bar">
+                        <h1>📄 Order Summary - #${orderDetails.orderId}</h1>
+                        <div class="button-group">
+                            <button class="btn btn-download" onclick="downloadPDF()">💾 Download PDF</button>
+                            <button class="btn btn-print" onclick="window.print()">🖨️ Print</button>
+                        </div>
+                    </div>
+                    <div class="email-container" id="orderContent">
                         ${emailContent}
                     </div>
+                    <!-- PDF Generation Libraries -->
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+                    <script>
+                        function downloadPDF() {
+                            // Wait for libraries to load
+                            if (typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') {
+                                setTimeout(downloadPDF, 100);
+                                return;
+                            }
+                            
+                            const { jsPDF } = window.jspdf;
+                            const doc = new jsPDF();
+                            
+                            // Get the order content
+                            const content = document.getElementById('orderContent');
+                            
+                            // Use html2canvas to convert HTML to image, then add to PDF
+                            html2canvas(content, {
+                                scale: 2,
+                                useCORS: true,
+                                logging: false,
+                                backgroundColor: '#ffffff'
+                            }).then(canvas => {
+                                const imgData = canvas.toDataURL('image/png');
+                                const imgWidth = doc.internal.pageSize.getWidth();
+                                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                                
+                                // Add image to PDF
+                                doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                                
+                                // Save PDF
+                                doc.save('WoofCrafts_Order_${orderDetails.orderId}.pdf');
+                            }).catch(err => {
+                                console.error('Error generating PDF:', err);
+                                alert('Error generating PDF. Please try printing instead.');
+                            });
+                        }
+                    </script>
                 </body>
             </html>
         `);
