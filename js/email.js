@@ -7,15 +7,15 @@
 // IMPORTANT EMAILJS TEMPLATE CONFIGURATION:
 // 1. In your EmailJS template, set the "To Email" field to: {{to_email}}
 //    This ensures emails are sent to the customer email entered in the form, not a hardcoded address.
-// 2. To use the HTML email format (same as preview), use {{order_items_html}} in your template
-//    and set the template to use HTML format. If you prefer plain text, use {{order_items}}.
+// 2. Set your EmailJS template format to "Plain Text" (not HTML) for clean email formatting.
+//    Use {{message}} in your template body to include the full formatted email content.
 // 3. Available template variables:
 //    - {{to_email}} - Customer email (REQUIRED for correct recipient)
 //    - {{customer_name}} - Customer name
 //    - {{customer_phone}} - Customer phone
 //    - {{order_id}} - Order ID
-//    - {{order_items}} - Plain text items list
-//    - {{order_items_html}} - HTML formatted items (use this for rich email)
+//    - {{order_items}} - Plain text items list (simple format)
+//    - {{message}} - Full formatted plain text email body (RECOMMENDED - use this in template)
 //    - {{subtotal}} - Order subtotal
 //    - {{discount}} - Discount information
 //    - {{total}} - Final total
@@ -73,7 +73,7 @@ async function sendOrderConfirmationEmail(orderDetails) {
     // Check if EmailJS is configured
     if (EMAILJS_CONFIG.publicKey === 'YOUR_PUBLIC_KEY') {
         // Fallback: Generate email content and show it (for testing)
-        const emailContent = generateEmailContent(orderDetails);
+        const emailContent = generatePlainTextEmailContent(orderDetails);
         console.log('EmailJS not configured. Email content:', emailContent);
         
         // Show email content in a new window for manual sending
@@ -81,13 +81,13 @@ async function sendOrderConfirmationEmail(orderDetails) {
         emailWindow.document.write(`
             <html>
                 <head><title>Order Confirmation Email</title></head>
-                <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <body style="font-family: 'Courier New', monospace; padding: 20px; white-space: pre-wrap;">
                     <h2>EmailJS not configured yet.</h2>
                     <p>To enable automatic email sending, configure EmailJS in js/email.js</p>
                     <hr>
                     <h3>Email Content (to send manually):</h3>
-                    <div style="border: 1px solid #ccc; padding: 15px; background: #f9f9f9;">
-                        ${emailContent}
+                    <div style="border: 1px solid #ccc; padding: 15px; background: #f9f9f9; font-family: 'Courier New', monospace; white-space: pre-wrap;">
+                        ${emailContent.replace(/\n/g, '<br>')}
                     </div>
                     <hr>
                     <h3>To:</h3>
@@ -114,10 +114,10 @@ async function sendOrderConfirmationEmail(orderDetails) {
             templateId: EMAILJS_CONFIG.templateId
         });
 
-        // Generate HTML email content (same as preview)
-        const emailHtml = generateEmailContent(orderDetails);
+        // Generate plain text email content
+        const emailText = generatePlainTextEmailContent(orderDetails);
         
-        // Format items for email (plain text fallback)
+        // Format items for email (plain text)
         const itemsList = orderDetails.items.map(item => 
             `${item.name} - Qty: ${item.quantity} x $${item.price.toFixed(2)} = $${item.subtotal.toFixed(2)}`
         ).join('\n');
@@ -131,7 +131,7 @@ async function sendOrderConfirmationEmail(orderDetails) {
             customer_phone: orderDetails.customerPhone || 'Not provided',
             order_id: orderDetails.orderId || 'N/A',
             order_items: itemsList, // Plain text version
-            order_items_html: emailHtml, // HTML version - use this in your EmailJS template
+            message: emailText, // Plain text email body - use this in your EmailJS template
             subtotal: `$${orderDetails.subtotal.toFixed(2)}`,
             discount: orderDetails.discountAmount > 0 
                 ? `${orderDetails.discountPercent}% ($${orderDetails.discountAmount.toFixed(2)})`
@@ -194,6 +194,58 @@ async function sendOrderConfirmationEmail(orderDetails) {
         
         throw new Error(errorMessage);
     }
+}
+
+/**
+ * Generate plain text email content for EmailJS
+ */
+function generatePlainTextEmailContent(orderDetails) {
+    // Format items as plain text
+    const itemsText = orderDetails.items.map((item, index) => 
+        `${index + 1}. ${item.name}\n   Quantity: ${item.quantity} x $${item.price.toFixed(2)} = $${item.subtotal.toFixed(2)}`
+    ).join('\n\n');
+
+    // Build plain text email
+    let emailBody = `🐾 WoofCrafts Order Confirmation\n`;
+    emailBody += `\n`;
+    emailBody += `Thank you for shopping with WoofCrafts, your home for adorable dog accessories and NFC-enabled dog tags!\n`;
+    emailBody += `\n`;
+    emailBody += `We've received your order and are getting it ready for your pup.\n`;
+    emailBody += `\n`;
+    emailBody += `Order ID: ${orderDetails.orderId || 'N/A'}\n`;
+    emailBody += `Customer: ${orderDetails.customerName}\n`;
+    if (orderDetails.customerPhone) {
+        emailBody += `Phone: ${orderDetails.customerPhone}\n`;
+    }
+    emailBody += `\n`;
+    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    emailBody += `ORDER SUMMARY\n`;
+    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    emailBody += `\n`;
+    emailBody += `${itemsText}\n`;
+    emailBody += `\n`;
+    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    emailBody += `Subtotal: $${orderDetails.subtotal.toFixed(2)}\n`;
+    if (orderDetails.discountAmount > 0) {
+        emailBody += `Discount (${orderDetails.discountPercent}%): -$${orderDetails.discountAmount.toFixed(2)}\n`;
+    }
+    emailBody += `TOTAL: $${orderDetails.total.toFixed(2)}\n`;
+    emailBody += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    
+    if (orderDetails.customerComment) {
+        emailBody += `\n`;
+        emailBody += `Customer Comments:\n`;
+        emailBody += `${orderDetails.customerComment}\n`;
+    }
+    
+    emailBody += `\n`;
+    emailBody += `If anything looks off with your order, just reply to this email and our pack will help you out.\n`;
+    emailBody += `\n`;
+    emailBody += `With tail wags,\n`;
+    emailBody += `The WoofCrafts Team\n`;
+    emailBody += `Crafting pawsome accessories for good dogs everywhere 🐶\n`;
+
+    return emailBody;
 }
 
 /**
