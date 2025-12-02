@@ -5,7 +5,7 @@
 // Use marcusneo4@gmail.com as the sending email
 const EMAILJS_CONFIG = {
     publicKey: 'pItLrmthOdxpZRMEw', // Replace with your EmailJS Public Key from dashboard
-    serviceId: 'service_3k1iv3f',  // EmailJS Service ID (Gmail service)
+    serviceId: 'service_phey43q',  // EmailJS Service ID (Gmail service)
     templateId: 'template_iqb8umq' // Replace with your EmailJS Template ID
 };
 
