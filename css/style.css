@@ -39,6 +39,16 @@ body {
     position: relative;
 }
 
+/* Explicitly hide any search/filter UI elements */
+.filter-bar,
+.search-container,
+.search-input,
+.filter-buttons,
+.filter-btn {
+    display: none !important;
+    visibility: hidden !important;
+}
+
 /* Left and Right Side Paw Print Decorations */
 body::before,
 body::after {
