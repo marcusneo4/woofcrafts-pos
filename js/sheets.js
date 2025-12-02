@@ -6,7 +6,7 @@
 
 const SHEETS_CONFIG = {
     spreadsheetId: '16mQItKuqHE3EQ3c9RFS2uIRGpi6EgBVQhLL_9D9EeGg', // Get this from your Google Sheets URL
-    webAppUrl: '', // Get this from Google Apps Script deployment (see GOOGLE_SHEETS_SETUP.md)
+    webAppUrl: 'https://script.google.com/macros/s/AKfycbzbLvxYjdKEtk15okVg65QriE_NfjaShbm-7Cu1RCPg_auO8JdsWdSsx6oFtQxGIleo/exec', // Get this from Google Apps Script deployment (see GOOGLE_SHEETS_SETUP.md)
     // Legacy API key (only used for read operations if needed)
     apiKey: 'AIzaSyAD38FRzpAwx7Sy98-AhTZ3XL7G_SlBm_s',
     range: 'Orders!A:H', // Sheet name and range (added Order ID column)
