@@ -1,23 +1,27 @@
 // Google Sheets Integration for WoofCrafts POS System
 // This stores order data and products in Google Sheets
+// 
+// IMPORTANT: This uses Google Apps Script as a web app to write to sheets
+// See GOOGLE_SHEETS_SETUP.md for setup instructions
 
-// Google Sheets API Configuration
-// You'll need to set up a Google Cloud Project and enable Sheets API
 const SHEETS_CONFIG = {
     spreadsheetId: '16mQItKuqHE3EQ3c9RFS2uIRGpi6EgBVQhLL_9D9EeGg', // Get this from your Google Sheets URL
-    apiKey: 'AIzaSyAD38FRzpAwx7Sy98-AhTZ3XL7G_SlBm_s', // Get from Google Cloud Console
+    webAppUrl: '', // Get this from Google Apps Script deployment (see GOOGLE_SHEETS_SETUP.md)
+    // Legacy API key (only used for read operations if needed)
+    apiKey: 'AIzaSyAD38FRzpAwx7Sy98-AhTZ3XL7G_SlBm_s',
     range: 'Orders!A:H', // Sheet name and range (added Order ID column)
     productsRange: 'Products!A:E' // Products sheet range
 };
 
 /**
- * Save order to Google Sheets
+ * Save order to Google Sheets using Google Apps Script web app
  * @param {Object} orderDetails - Order information
  */
 async function saveOrderToSheets(orderDetails) {
     // Check if Sheets is configured
-    if (SHEETS_CONFIG.spreadsheetId === 'YOUR_SPREADSHEET_ID' || !SHEETS_CONFIG.spreadsheetId) {
-        console.log('Google Sheets not configured. Order data:', orderDetails);
+    if (!SHEETS_CONFIG.webAppUrl || SHEETS_CONFIG.webAppUrl === '') {
+        console.warn('Google Sheets Web App URL not configured. See GOOGLE_SHEETS_SETUP.md for setup instructions.');
+        console.log('Order data (not saved):', orderDetails);
         return;
     }
 
@@ -25,50 +29,28 @@ async function saveOrderToSheets(orderDetails) {
         // First, ensure Orders sheet exists and has headers
         await initializeSheets();
 
-        const timestamp = new Date().toISOString();
-        const itemsText = orderDetails.items.map(item => 
-            `${item.name} (Qty: ${item.quantity})`
-        ).join('; ');
-
-        // Prepare row data
-        const rowData = [
-            timestamp,
-            orderDetails.orderId || 'N/A',
-            orderDetails.customerName || '',
-            orderDetails.customerEmail || '',
-            orderDetails.customerPhone || '',
-            itemsText,
-            `$${orderDetails.total.toFixed(2)}`,
-            orderDetails.discountAmount > 0 ? `${orderDetails.discountPercent}%` : 'None'
-        ];
-
-        // URL encode the range (Orders!A:H becomes Orders%21A%3AH)
-        const encodedRange = encodeURIComponent('Orders!A:H');
-        
-        // Use Google Sheets API v4 to append row
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_CONFIG.spreadsheetId}/values/${encodedRange}:append?valueInputOption=RAW&key=${SHEETS_CONFIG.apiKey}`;
-        
-        console.log('Saving order to Google Sheets...', {
-            spreadsheetId: SHEETS_CONFIG.spreadsheetId,
-            range: 'Orders!A:H',
-            rowData: rowData
+        console.log('Saving order to Google Sheets via Web App...', {
+            orderId: orderDetails.orderId,
+            customerEmail: orderDetails.customerEmail
         });
 
-        const response = await fetch(url, {
+        // Send order to Google Apps Script web app
+        const response = await fetch(SHEETS_CONFIG.webAppUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                values: [rowData]
+                action: 'saveOrder',
+                orderDetails: orderDetails
             })
         });
 
         const responseData = await response.json();
 
-        if (!response.ok) {
-            console.error('Sheets API error response:', responseData);
-            throw new Error(`Sheets API error: ${response.status} ${response.statusText} - ${JSON.stringify(responseData)}`);
+        if (!response.ok || !responseData.success) {
+            console.error('Sheets Web App error response:', responseData);
+            throw new Error(`Sheets error: ${responseData.error || response.statusText}`);
         }
 
         console.log('Order saved to Google Sheets successfully:', responseData);
@@ -88,44 +70,35 @@ async function saveOrderToSheets(orderDetails) {
 
 /**
  * Initialize Google Sheets - creates headers if sheet doesn't exist
- * Call this once to set up your sheet
+ * Uses Google Apps Script web app if configured, otherwise skips
  */
 async function initializeSheets() {
-    if (SHEETS_CONFIG.spreadsheetId === 'YOUR_SPREADSHEET_ID' || !SHEETS_CONFIG.spreadsheetId) {
-        console.log('Please configure Google Sheets first');
+    // If web app is not configured, skip initialization
+    if (!SHEETS_CONFIG.webAppUrl || SHEETS_CONFIG.webAppUrl === '') {
+        console.log('Google Sheets Web App not configured. Skipping initialization.');
         return;
     }
 
     try {
-        // Check if headers exist, if not create them
-        const headers = [
-            ['Timestamp', 'Order ID', 'Customer Name', 'Email', 'Phone', 'Items', 'Total', 'Discount']
-        ];
+        console.log('Initializing Google Sheets...');
+        
+        // Call the web app to initialize sheets
+        const response = await fetch(SHEETS_CONFIG.webAppUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'initializeSheets'
+            })
+        });
 
-        const encodedRange = encodeURIComponent('Orders!A1:H1');
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_CONFIG.spreadsheetId}/values/${encodedRange}?key=${SHEETS_CONFIG.apiKey}`;
-        
-        const checkResponse = await fetch(url);
-        const checkData = await checkResponse.json();
-        
-        // If no values exist or the response indicates empty, create headers
-        if (!checkResponse.ok || !checkData.values || checkData.values.length === 0) {
-            // Create headers using PUT
-            const createUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_CONFIG.spreadsheetId}/values/${encodedRange}?valueInputOption=RAW&key=${SHEETS_CONFIG.apiKey}`;
-            const createResponse = await fetch(createUrl, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ values: headers })
-            });
-            
-            if (createResponse.ok) {
-                console.log('Google Sheets headers created successfully');
-            } else {
-                const errorData = await createResponse.json();
-                console.error('Failed to create headers:', errorData);
-            }
+        const responseData = await response.json();
+
+        if (response.ok && responseData.success) {
+            console.log('Google Sheets initialized successfully');
         } else {
-            console.log('Google Sheets headers already exist');
+            console.warn('Sheets initialization warning:', responseData.error || 'Unknown error');
         }
     } catch (error) {
         console.error('Error initializing Google Sheets:', error);
