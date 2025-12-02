@@ -5,7 +5,6 @@ class POSApp {
         this.cart = [];
         this.discountApplied = false;
         this.products = [];
-        this.filteredProducts = [];
         
         this.init();
     }
@@ -35,10 +34,8 @@ class POSApp {
         localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
         
         this.loadCart();
-        // Initialize filteredProducts with all products - always call filterProducts to ensure proper initialization
         console.log(`Loaded ${this.products.length} products (including ${this.getFixedProducts().length} fixed products)`);
-        // Use filterProducts to properly initialize filteredProducts based on current filter state
-        this.filterProducts();
+        this.renderProducts();
         this.renderCart();
         this.setupEventListeners();
     }
@@ -91,7 +88,7 @@ class POSApp {
         const otherProducts = this.products.filter(p => !fixedIds.includes(p.id));
         this.products = [...fixedProducts, ...otherProducts];
         localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-        this.filterProducts(); // This will update filteredProducts and render
+        this.renderProducts();
         console.log(`Products refreshed: ${this.products.length} total products`);
     }
 
@@ -147,29 +144,6 @@ class POSApp {
         localStorage.setItem('woofcrafts_cart', JSON.stringify(this.cart));
     }
 
-    filterProducts() {
-        // Ensure products array exists
-        if (!Array.isArray(this.products)) {
-            console.warn('Products is not an array, initializing...');
-            this.products = [];
-        }
-        
-        // If no products, set filteredProducts to empty array
-        if (this.products.length === 0) {
-            console.log('No products available');
-            this.filteredProducts = [];
-            this.renderProducts();
-            return;
-        }
-        
-        // Filter out any invalid products and show all valid products
-        const filtered = this.products.filter(product => product && product.id && product.name);
-        
-        this.filteredProducts = filtered;
-        console.log(`Displaying all products: ${filtered.length} total`);
-        this.renderProducts();
-    }
-
     renderProducts() {
         const grid = document.getElementById('products-grid');
         
@@ -178,21 +152,12 @@ class POSApp {
             return;
         }
         
-        // Use filteredProducts if it exists and has been set, otherwise use this.products
-        // If filteredProducts is an empty array but we have products, it means filter returned no results
-        // If filteredProducts is undefined/null, use this.products as fallback
-        let productsToShow;
-        if (this.filteredProducts !== undefined && this.filteredProducts !== null) {
-            // filteredProducts has been set - use it (even if empty, which means no matches)
-            productsToShow = this.filteredProducts;
-        } else {
-            // filteredProducts hasn't been initialized yet - use all products
-            productsToShow = this.products;
-        }
+        // Filter out any invalid products
+        const validProducts = this.products.filter(product => product && product.id && product.name);
         
-        console.log(`Rendering products: ${productsToShow.length} products to show (filtered: ${this.filteredProducts?.length || 'not set'}, total: ${this.products.length})`);
+        console.log(`Rendering ${validProducts.length} products (total: ${this.products.length})`);
         
-        if (!productsToShow || productsToShow.length === 0) {
+        if (!validProducts || validProducts.length === 0) {
             grid.innerHTML = `
                 <div class="empty-state">
                     <span class="empty-icon">🐶</span>
@@ -203,7 +168,7 @@ class POSApp {
             return;
         }
 
-        grid.innerHTML = productsToShow.map(product => {
+        grid.innerHTML = validProducts.map(product => {
             const category = product.category || 'general';
             const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
             return `
@@ -818,7 +783,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const hasProducts = grid.querySelector('.product-card');
                 if (!hasProducts) {
                     console.warn('Products exist but not rendered! Forcing re-render...');
-                    posApp.filterProducts();
+                    posApp.renderProducts();
                 }
             }
         }
