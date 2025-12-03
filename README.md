@@ -2,6 +2,8 @@
 
 A simple, intuitive Point of Sale (POS) system for WoofCrafts pet booth. This web application allows you to quickly select products by clicking images, manage shopping cart, apply discounts, and automatically send order confirmation emails to customers.
 
+**🌐 Now optimized for GitHub Pages deployment!** - See [GITHUB_PAGES_DEPLOY.md](GITHUB_PAGES_DEPLOY.md) for hosting instructions.
+
 ## Features
 
 - **Visual Product Selection**: Click on product images to add items to cart
@@ -23,7 +25,20 @@ A simple, intuitive Point of Sale (POS) system for WoofCrafts pet booth. This we
 
 You need to run this through a local web server (not just opening the HTML file directly) because of browser security restrictions with localStorage and file access.
 
-**Option A: Using Python (if installed)**
+**Option A: Using the included Node.js server (Recommended for Windows)**
+```bash
+# Start the server
+.\start-server.bat
+
+# Or using PowerShell
+.\start-server.ps1
+
+# Or directly with Node.js
+node server.js
+```
+The server will automatically open your default browser to `http://localhost:8000`
+
+**Option B: Using Python (if installed)**
 ```bash
 # Python 3
 python -m http.server 8000
@@ -34,16 +49,12 @@ python -m SimpleHTTPServer 8000
 
 Then open: `http://localhost:8000`
 
-**Option B: Using VS Code Live Server**
+**Option C: Using VS Code Live Server**
 1. Install "Live Server" extension in VS Code
 2. Right-click on `index.html`
 3. Select "Open with Live Server"
 
-**Option C: Using Node.js http-server**
-```bash
-npm install -g http-server
-http-server
-```
+**Default Login Password**: `hyper` (can be changed in `index.html`)
 
 ### 3. Email Setup (Optional but Recommended)
 
@@ -120,18 +131,22 @@ To enable automatic email sending:
 
 ```
 POS system/
-├── index.html              # Main POS interface
+├── index.html              # Login page (entry point)
+├── pos.html                # Main POS interface
 ├── products.html           # Product management page
 ├── css/
 │   └── style.css          # Main stylesheet
 ├── js/
 │   ├── app.js             # Main POS functionality
 │   ├── products.js        # Product management logic
-│   └── email.js           # Email sending functionality
+│   ├── email.js           # Email sending functionality
+│   └── sheets.js          # Google Sheets integration
 ├── images/
-│   └── products/          # Product images folder (optional, images stored as data URLs)
+│   └── products/          # Product images folder
 ├── data/
 │   └── products.json      # Product data storage (backup)
+├── .nojekyll              # GitHub Pages configuration
+├── GITHUB_PAGES_DEPLOY.md # GitHub Pages deployment guide
 └── README.md              # This file
 ```
 
@@ -145,15 +160,22 @@ POS system/
   localStorage.removeItem('woofcrafts_cart');
   ```
 
-## Future Web Deployment
+## Web Deployment
 
-This is a static website, so it can be deployed to:
-- GitHub Pages
+This is a static website that can be easily deployed to:
+
+### GitHub Pages (Recommended) ⭐
+- **FREE hosting** for public repositories
+- Automatic HTTPS and CDN
+- Easy updates via Git push
+- **See [GITHUB_PAGES_DEPLOY.md](GITHUB_PAGES_DEPLOY.md) for detailed deployment instructions**
+
+### Other Options
 - Netlify
-- Vercel
-- Any web hosting service
+- Vercel (see [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md))
+- Any static web hosting service
 
-Simply upload all files to your web host. Make sure to configure EmailJS before deploying.
+Make sure to configure EmailJS before deploying to any platform.
 
 ## Browser Support
 

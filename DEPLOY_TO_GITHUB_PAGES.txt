@@ -1,0 +1,54 @@
+================================================================================
+  QUICK START: Deploy WoofCrafts POS to GitHub Pages
+================================================================================
+
+Your POS system is now ready for GitHub Pages! Follow these steps:
+
+STEP 1: Commit and Push Changes
+--------------------------------
+Run these commands in your terminal:
+
+    git add .
+    git commit -m "Configure for GitHub Pages deployment"
+    git push origin main
+
+
+STEP 2: Enable GitHub Pages
+----------------------------
+1. Go to your GitHub repository: https://github.com/YOUR_USERNAME/YOUR_REPO
+2. Click "Settings" tab
+3. Click "Pages" in the left sidebar
+4. Under "Source", select: Branch: main, Folder: / (root)
+5. Click "Save"
+
+
+STEP 3: Wait for Deployment (1-2 minutes)
+------------------------------------------
+GitHub will build and deploy your site automatically.
+
+
+STEP 4: Access Your Live Site
+------------------------------
+Your POS will be available at:
+
+    https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/
+
+Example: https://johndoe.github.io/woofcrafts-pos/
+
+
+STEP 5: Login
+-------------
+- Default password: hyper
+- (You can change this in index.html)
+
+
+IMPORTANT: Configure Services Before Use
+-----------------------------------------
+☐ EmailJS - Set up in js/email.js (see GITHUB_PAGES_DEPLOY.md)
+☐ Google Sheets - Optional (see GOOGLE_SHEETS_SETUP.md)
+
+
+================================================================================
+For detailed instructions, see: GITHUB_PAGES_DEPLOY.md
+================================================================================
+

@@ -266,7 +266,7 @@ let productManager;
 document.addEventListener('DOMContentLoaded', async () => {
     // Check authentication
     if (sessionStorage.getItem('woofcrafts_authenticated') !== 'true') {
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
         return;
     }
     

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WoofCrafts POS System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="paw-bg-decoration"></div>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="logo-section">
+                    <span class="dog-icon">🐕</span>
+                    <h1>WoofCrafts</h1>
+                    <span class="paw-decoration">🐾</span>
+                </div>
+                <a href="products.html" class="manage-products-btn">
+                    <span>📦</span> Manage Products
+                </a>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Product Grid Section -->
+            <section class="products-section">
+                <div class="section-header">
+                    <h2>
+                        <span class="paw-icon">🐾</span>
+                        Browse Our Pawsome Products
+                        <span class="paw-icon">🐾</span>
+                    </h2>
+                    <p class="section-subtitle">Click on any product to add it to your cart!</p>
+                </div>
+                
+                <div id="products-grid" class="products-grid">
+                    <!-- Products will be loaded here -->
+                    <div class="no-products">
+                        <div class="empty-state">
+                            <span class="empty-icon">🐶</span>
+                            <p>No products available yet!</p>
+                            <a href="products.html" class="empty-link">Add your first product here 🎉</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Cart and Checkout Section -->
+            <aside class="cart-section">
+                <div class="cart-header">
+                    <h2>
+                        <span class="cart-icon">🛒</span>
+                        Your Cart
+                        <span class="cart-badge" id="cart-count">0</span>
+                    </h2>
+                </div>
+                
+                <div id="cart-items" class="cart-items">
+                    <div class="empty-cart">
+                        <span class="empty-cart-icon">🐕</span>
+                        <p>Your cart is empty</p>
+                        <p class="empty-cart-hint">Start shopping by clicking on products!</p>
+                    </div>
+                </div>
+
+                <div class="order-summary">
+                    <div class="summary-row">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">$0.00</span>
+                    </div>
+                    <div class="discount-section">
+                        <button id="discount-btn" class="discount-btn">
+                            <span>🎁</span> Apply 5% Discount
+                        </button>
+                        <span id="discount-amount" class="discount-amount hidden">-$0.00</span>
+                    </div>
+                    <div class="summary-row total-row">
+                        <span>Total:</span>
+                        <span id="total">$0.00</span>
+                    </div>
+                </div>
+                
+                <!-- POS Actions -->
+                <div class="pos-actions">
+                    <button id="reset-cart-btn" class="btn-secondary">
+                        <span>🔄</span> Reset Cart
+                    </button>
+                </div>
+
+                <div class="checkout-section">
+                    <h3>
+                        <span>🐾</span>
+                        Customer Information
+                    </h3>
+                    <div class="input-group">
+                        <label>👤 Customer Name (Optional)</label>
+                        <input type="text" id="customer-name" placeholder="Fido's Owner" class="input-field">
+                    </div>
+                    <div class="input-group">
+                        <label>📧 Customer Email *</label>
+                        <input type="email" id="customer-email" placeholder="owner@email.com" class="input-field" required>
+                    </div>
+                    <div class="input-group">
+                        <label>📞 Phone Number</label>
+                        <input type="tel" id="customer-phone" placeholder="(555) 123-4567" class="input-field">
+                    </div>
+                    <div class="input-group">
+                        <label>💬 Comments / Special Instructions</label>
+                        <textarea id="customer-comment" placeholder="Any special requests or notes..." class="input-field" rows="3" style="resize: vertical; min-height: 80px;"></textarea>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button id="send-email-btn" class="btn-primary">
+                            <span>📬</span> Send Email
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script src="js/email.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
+
