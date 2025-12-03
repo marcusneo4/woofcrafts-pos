@@ -36,4 +36,7 @@ start-server.ps1
 *.tmp
 *.temp
 
+# Credentials - keep API keys safe
+js/email.js
+
 
