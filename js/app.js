@@ -521,10 +521,30 @@ class POSApp {
                 // Initialize EmailJS with your public key
                 emailjs.init('pItLrmthOdxpZRMEw');
                 
-                // Format items for email
-                const itemsList = orderDetails.items.map(item => 
-                    `${item.name} - Qty: ${item.quantity} - $${item.price.toFixed(2)} each = $${item.subtotal.toFixed(2)}`
-                ).join('\n');
+                // Format items for email as HTML table rows
+                const escapeHtml = (text) => {
+                    if (!text) return '';
+                    const map = {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#039;'
+                    };
+                    return String(text).replace(/[&<>"']/g, m => map[m]);
+                };
+                
+                const formatCurrency = (value) => `$${Number(value || 0).toFixed(2)}`;
+                
+                const itemsList = orderDetails.items.map((item) => {
+                    // Create structured HTML rows using CSS classes with inline styles for email compatibility
+                    return `<tr>
+  <td class="item-col" style="padding: 12px 14px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700;">${escapeHtml(item.name)}</td>
+  <td class="qty-col" align="center" style="padding: 12px 8px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; width:70px; text-align: center;">${item.quantity}</td>
+  <td class="price-col" align="right" style="padding: 12px 10px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; width:110px; text-align: right;">${formatCurrency(item.price)}</td>
+  <td class="total-col" align="right" style="padding: 12px 14px; font-family: Arial, sans-serif; font-size: 15px; color:#D4A574; font-weight: 800; width:120px; text-align: right;">${formatCurrency(item.subtotal)}</td>
+</tr>`;
+                }).join('');
                 
                 const templateParams = {
                     to_email: orderDetails.customerEmail,

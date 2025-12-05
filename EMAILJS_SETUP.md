@@ -138,7 +138,7 @@ Your POS system is now configured to use **EmailJS** for sending emails on GitHu
                             <!-- Items Container -->
                             <div style="background: #FAF7F3; border: 2px solid #E8D5B7; border-radius: 20px; padding: 24px; box-shadow: 0 2px 8px rgba(180, 148, 95, 0.1);">
                                 <div style="font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-size: 15px; color: #5C4A37; line-height: 1.9; white-space: pre-wrap; word-wrap: break-word; font-weight: 500;">
-{{items_list}}
+{{{items_list}}}
                                 </div>
                             </div>
                         </td>
@@ -400,7 +400,7 @@ Make sure your template uses these exact variable names:
 - `{{customer_name}}`
 - `{{order_id}}`
 - `{{order_date}}`
-- `{{items_list}}`
+- `{{{items_list}}}` (triple braces to allow HTML rendering)
 - `{{subtotal}}`
 - `{{discount}}`
 - `{{total}}`

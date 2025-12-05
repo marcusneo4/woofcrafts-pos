@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta name="x-apple-disable-message-reformatting">
+
+  <title>Order Confirmed - WoofCrafts</title>
+
+  <style>
+
+    /* CLIENT RESETS */
+
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+
+    table { border-collapse: collapse !important; }
+
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+
+    /* ITEM TABLE COLUMNS */
+
+    .item-col { padding: 12px 14px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; }
+
+    .qty-col { padding: 12px 8px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; width:70px; text-align: center; }
+
+    .price-col { padding: 12px 10px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; width:110px; text-align: right; }
+
+    .total-col { padding: 12px 14px; font-family: Arial, sans-serif; font-size: 15px; color:#D4A574; font-weight: 800; width:120px; text-align: right; }
+
+    /* MOBILE */
+
+    @media only screen and (max-width: 600px) {
+
+      .container { width: 100% !important; }
+
+      .px-32 { padding-left: 20px !important; padding-right: 20px !important; }
+
+      .px-24 { padding-left: 16px !important; padding-right: 16px !important; }
+
+      .py-32 { padding-top: 24px !important; padding-bottom: 24px !important; }
+
+      .stack { display: block !important; width: 100% !important; }
+
+      .stack-pad-top { padding-top: 12px !important; }
+
+      .text-center-mobile { text-align: center !important; }
+
+      .hide-mobile { display: none !important; }
+
+    }
+
+  </style>
+
+</head>
+
+<body style="background-color:#FAF7F3;">
+
+  <!-- PREHEADER (hidden) -->
+
+  <div style="display:none; font-size:1px; color:#FAF7F3; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">
+
+    Your WoofCrafts order is confirmed! Here's your order summary and total.
+
+  </div>
+
+  <!-- OUTER WRAPPER -->
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FAF7F3;">
+
+    <tr>
+
+      <td align="center" style="padding: 32px 16px;">
+
+        <!-- CONTAINER -->
+
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; background:#FFFFFF; border-radius:22px; overflow:hidden; box-shadow: 0 14px 40px rgba(180,148,95,0.20);">
+
+          <!-- HEADER -->
+
+          <tr>
+
+            <td align="center" style="background:#D4A574; background-image: linear-gradient(135deg, #D4A574 0%, #C9A961 50%, #E8D5B7 100%); padding: 36px 24px;">
+
+              <div style="font-family: Arial, sans-serif; font-size: 14px; opacity: 0.25; color:#FFFFFF; letter-spacing: 10px; font-weight: 700;">
+
+                🐾 🐾 🐾 🐾 🐾
+
+              </div>
+
+              <div style="font-size:54px; line-height:1; margin: 10px 0 8px 0;">🐕</div>
+
+              <div style="font-family: 'Trebuchet MS', Arial, sans-serif; font-size: 32px; color:#FFFFFF; font-weight: 800; letter-spacing: 1px; margin-bottom: 10px;">
+
+                WoofCrafts
+
+              </div>
+
+              <div style="display:inline-block; background: rgba(255,255,255,0.22); padding: 8px 18px; border-radius: 999px;">
+
+                <span style="font-family: Arial, sans-serif; font-size: 14px; color:#FFFFFF; font-weight: 700; letter-spacing: 0.4px;">
+
+                  🎉 Order Confirmed
+
+                </span>
+
+              </div>
+
+              <div style="font-family: Arial, sans-serif; font-size: 14px; opacity: 0.25; color:#FFFFFF; letter-spacing: 10px; font-weight: 700; margin-top: 12px;">
+
+                🐾 🐾 🐾 🐾 🐾
+
+              </div>
+
+            </td>
+
+          </tr>
+
+          <!-- GREETING / INTRO -->
+
+          <tr>
+
+            <td class="px-32 py-32" style="padding: 32px 36px 20px 36px;">
+
+              <div style="font-family: Arial, sans-serif; font-size: 20px; color:#5C4A37; font-weight: 800; margin-bottom: 10px;">
+
+                Woof woof, <span style="color:#D4A574;">{{customer_name}}</span>! 🐶
+
+              </div>
+
+              <div style="font-family: Arial, sans-serif; font-size: 15.5px; color:#8B7355; line-height: 1.6;">
+
+                Your furry friend is in for a treat! We've received your order and we're getting your pawsome items ready.
+
+              </div>
+
+            </td>
+
+          </tr>
+
+          <!-- ORDER META (2-UP, STACK ON MOBILE) -->
+
+          <tr>
+
+            <td class="px-32" style="padding: 0 36px 12px 36px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+
+                <tr>
+
+                  <td class="stack" valign="top" width="50%" style="padding-right: 8px;">
+
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+
+                      style="background:#FAF3E9; border:1px solid #E8D5B7; border-radius: 14px;">
+
+                      <tr>
+
+                        <td style="padding: 16px 16px;">
+
+                          <div style="font-family: Arial, sans-serif; font-size: 11px; color:#8B7355; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
+
+                            Order ID
+
+                          </div>
+
+                          <div style="font-family: Arial, sans-serif; font-size: 20px; color:#D4A574; font-weight: 800; margin-top: 6px;">
+
+                            #{{order_id}}
+
+                          </div>
+
+                        </td>
+
+                      </tr>
+
+                    </table>
+
+                  </td>
+
+                  <td class="stack stack-pad-top" valign="top" width="50%" style="padding-left: 8px;">
+
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+
+                      style="background:#FAF3E9; border:1px solid #E8D5B7; border-radius: 14px;">
+
+                      <tr>
+
+                        <td style="padding: 16px 16px;">
+
+                          <div style="font-family: Arial, sans-serif; font-size: 11px; color:#8B7355; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
+
+                            Order Date
+
+                          </div>
+
+                          <div style="font-family: Arial, sans-serif; font-size: 16px; color:#5C4A37; font-weight: 800; margin-top: 6px;">
+
+                            {{order_date}}
+
+                          </div>
+
+                        </td>
+
+                      </tr>
+
+                    </table>
+
+                  </td>
+
+                </tr>
+
+              </table>
+
+            </td>
+
+          </tr>
+
+          <!-- ORDER SUMMARY HEADER -->
+
+          <tr>
+
+            <td class="px-32" style="padding: 18px 36px 8px 36px;">
+
+              <div style="font-family: Arial, sans-serif; font-size: 18px; color:#5C4A37; font-weight: 800;">
+
+                🦴 Order Summary
+
+              </div>
+
+              <div style="height: 2px; background:#E8D5B7; margin-top: 10px;"></div>
+
+            </td>
+
+          </tr>
+
+          <!-- ORDER SUMMARY TABLE -->
+
+          <tr>
+
+            <td class="px-32" style="padding: 0 36px 8px 36px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+
+                style="border:1px solid #E8D5B7; border-radius: 14px; overflow:hidden;">
+
+                
+
+                <tr style="background: linear-gradient(90deg, #8B6F47 0%, #C9A961 50%, #D4A574 100%);">
+
+                  <th align="left" style="padding: 12px 14px; font-family: Arial, sans-serif; font-size: 12px; color:#FFFFFF; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;">
+
+                    Item
+
+                  </th>
+
+                  <th align="center" style="padding: 12px 8px; font-family: Arial, sans-serif; font-size: 12px; color:#FFFFFF; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; width:70px;">
+
+                    Qty
+
+                  </th>
+
+                  <th align="right" style="padding: 12px 10px; font-family: Arial, sans-serif; font-size: 12px; color:#FFFFFF; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; width:110px;">
+
+                    Price
+
+                  </th>
+
+                  <th align="right" style="padding: 12px 14px; font-family: Arial, sans-serif; font-size: 12px; color:#FFFFFF; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; width:120px;">
+
+                    Subtotal
+
+                  </th>
+
+                </tr>
+
+                <!-- Separator line after header -->
+                <tr><td colspan="4" style="padding: 0; height: 1px; background-color: #E8D5B7;"></td></tr>
+
+                <!-- 
+
+                  EXPECTED FORMAT FOR {{{items_list}}}:
+
+                  <tr>
+                    <td class="item-col">{{item_name}}</td>
+                    <td class="qty-col">{{quantity}}</td>
+                    <td class="price-col">{{price_each}}</td>
+                    <td class="total-col">{{line_total}}</td>
+                  </tr>
+
+                  Multiple rows will be generated, one per item.
+
+                  Using triple braces {{{ }}} allows HTML to render without escaping.
+
+                -->
+
+                {{{items_list}}}
+
+              </table>
+
+            </td>
+
+          </tr>
+
+          <!-- TOTALS -->
+
+          <tr>
+
+            <td class="px-32" style="padding: 10px 36px 26px 36px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+
+                style="background:#FBF6EF; border:1px solid #E8D5B7; border-radius: 14px;">
+
+                <tr>
+
+                  <td style="padding: 16px 16px;">
+
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+
+                      <tr>
+
+                        <td style="font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; padding: 4px 0;">
+
+                          Subtotal
+
+                        </td>
+
+                        <td align="right" style="font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; padding: 4px 0;">
+
+                          {{subtotal}}
+
+                        </td>
+
+                      </tr>
+
+                      <tr>
+
+                        <td style="font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; padding: 4px 0;">
+
+                          Discount
+
+                        </td>
+
+                        <td align="right" style="font-family: Arial, sans-serif; font-size: 14.5px; color:#2E7D32; font-weight: 800; padding: 4px 0;">
+
+                          {{discount}}
+
+                        </td>
+
+                      </tr>
+
+                      <tr>
+
+                        <td colspan="2" style="padding: 10px 0;">
+
+                          <div style="height:1px; background:#E8D5B7;"></div>
+
+                        </td>
+
+                      </tr>
+
+                      <tr>
+
+                        <td style="font-family: Arial, sans-serif; font-size: 18px; color:#5C4A37; font-weight: 900; padding: 2px 0;">
+
+                          Grand Total
+
+                        </td>
+
+                        <td align="right" style="font-family: Arial, sans-serif; font-size: 22px; color:#D4A574; font-weight: 900; padding: 2px 0;">
+
+                          {{total}}
+
+                        </td>
+
+                      </tr>
+
+                    </table>
+
+                  </td>
+
+                </tr>
+
+              </table>
+
+            </td>
+
+          </tr>
+
+          <!-- OPTIONAL NOTE -->
+
+          <tr>
+
+            <td class="px-32" style="padding: 0 36px 18px 36px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+
+                style="background:#FAF3E9; border:1px solid #E8D5B7; border-radius: 14px;">
+
+                <tr>
+
+                  <td style="padding: 16px 16px;">
+
+                    <div style="font-family: Arial, sans-serif; font-size: 11px; color:#8B7355; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;">
+
+                      🐾 Special Note for Your Pup
+
+                    </div>
+
+                    <div style="font-family: Arial, sans-serif; font-size: 15px; color:#5C4A37; line-height: 1.6; font-style: italic;">
+
+                      {{customer_note}}
+
+                    </div>
+
+                  </td>
+
+                </tr>
+
+              </table>
+
+            </td>
+
+          </tr>
+
+          <!-- OPTIONAL CONTACT -->
+
+          <tr>
+
+            <td class="px-32" style="padding: 0 36px 22px 36px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+
+                style="background:#FAF3E9; border:1px solid #D4A574; border-radius: 14px;">
+
+                <tr>
+
+                  <td style="padding: 14px 16px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 800;">
+
+                    📞 Contact Number
+
+                  </td>
+
+                  <td align="right" style="padding: 14px 16px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700;">
+
+                    {{contact_number}}
+
+                  </td>
+
+                </tr>
+
+              </table>
+
+            </td>
+
+          </tr>
+
+          <!-- SUPPORT -->
+
+          <tr>
+
+            <td class="px-32" style="padding: 0 36px 30px 36px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+
+                style="background:#F1F8E9; border:1px solid #A0B58F; border-radius: 14px;">
+
+                <tr>
+
+                  <td align="center" style="padding: 22px 18px;">
+
+                    <div style="font-size: 28px; line-height:1; margin-bottom: 8px;">💬</div>
+
+                    <div style="font-family: Arial, sans-serif; font-size: 16px; color:#2E7D32; font-weight: 800; margin-bottom: 6px;">
+
+                      Questions? Woof for us!
+
+                    </div>
+
+                    <div style="font-family: Arial, sans-serif; font-size: 14.5px; color:#388E3C; line-height: 1.6;">
+
+                      Just reply to this email and our pack will fetch answers for you right away.
+
+                    </div>
+
+                  </td>
+
+                </tr>
+
+              </table>
+
+            </td>
+
+          </tr>
+
+          <!-- FOOTER -->
+
+          <tr>
+
+            <td align="center" style="padding: 28px 24px 36px 24px; background:#FFFFFF;">
+
+              <div style="font-family: Arial, sans-serif; font-size: 14.5px; color:#8B7355; font-weight: 700; margin-bottom: 10px;">
+
+                Tail wags and thanks for supporting our small business!
+
+              </div>
+
+              <div style="font-family: 'Trebuchet MS', Arial, sans-serif; font-size: 22px; color:#D4A574; font-weight: 800; margin-bottom: 8px;">
+
+                The WoofCrafts Team 🐕
+
+              </div>
+
+              <div style="font-family: Arial, sans-serif; font-size: 13.5px; color:#8B7355; font-style: italic;">
+
+                Crafting pawsome accessories for good dogs everywhere
+
+              </div>
+
+            </td>
+
+          </tr>
+
+        </table>
+
+        <!-- /CONTAINER -->
+
+      </td>
+
+    </tr>
+
+  </table>
+
+</body>
+
+</html>
