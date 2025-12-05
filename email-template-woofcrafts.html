@@ -252,8 +252,6 @@
 
                 style="border:1px solid #E8D5B7; border-radius: 14px; overflow:hidden;">
 
-                
-
                 <tr style="background: linear-gradient(90deg, #8B6F47 0%, #C9A961 50%, #D4A574 100%);">
 
                   <th align="left" style="padding: 12px 14px; font-family: Arial, sans-serif; font-size: 12px; color:#FFFFFF; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;">
@@ -282,25 +280,7 @@
 
                 </tr>
 
-                <!-- Separator line after header -->
                 <tr><td colspan="4" style="padding: 0; height: 1px; background-color: #E8D5B7;"></td></tr>
-
-                <!-- 
-
-                  EXPECTED FORMAT FOR {{{items_list}}}:
-
-                  <tr>
-                    <td class="item-col">{{item_name}}</td>
-                    <td class="qty-col">{{quantity}}</td>
-                    <td class="price-col">{{price_each}}</td>
-                    <td class="total-col">{{line_total}}</td>
-                  </tr>
-
-                  Multiple rows will be generated, one per item.
-
-                  Using triple braces {{{ }}} allows HTML to render without escaping.
-
-                -->
 
                 {{{items_list}}}
 

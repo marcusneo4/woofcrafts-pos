@@ -43,37 +43,13 @@ class POSApp {
     }
 
     async loadProducts() {
-        // Get fixed/default products first
+        // Get fixed/default products - these are the only products we use now
         const fixedProducts = this.getFixedProducts();
         
-        // Load from localStorage
-        const storedProducts = localStorage.getItem('woofcrafts_products');
-        if (storedProducts) {
-            try {
-                const parsed = JSON.parse(storedProducts);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    // Merge fixed products with stored products (avoid duplicates)
-                    // Fixed products always take precedence to ensure correct image paths
-                    const fixedIds = fixedProducts.map(p => p.id);
-                    const otherProducts = parsed.filter(p => !fixedIds.includes(p.id));
-                    this.products = [...fixedProducts, ...otherProducts];
-                    
-                    // Update localStorage with correct fixed products to prevent future issues
-                    const updatedStored = [...fixedProducts, ...otherProducts];
-                    localStorage.setItem('woofcrafts_products', JSON.stringify(updatedStored));
-                    
-                    console.log(`Loaded ${otherProducts.length} custom products + ${fixedProducts.length} fixed products`);
-                    return;
-                }
-            } catch (e) {
-                console.error('Error parsing stored products:', e);
-            }
-        }
-        
-        // Default to fixed products only
+        // Always use fixed products only (replacing any old products)
         this.products = [...fixedProducts];
         localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-        console.log(`Loaded ${this.products.length} fixed products`);
+        console.log(`Loaded ${this.products.length} products from price list`);
     }
     
     async refreshProducts() {
@@ -112,105 +88,91 @@ class POSApp {
     }
 
     getFixedProducts() {
+        // Placeholder image (no PNGs/images)
+        const placeholderImage = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E';
+        
         // These are the fixed products that should ALWAYS be included
         return [
-            {
-                id: 'prod_charm_3for8',
-                name: '3 Charms',
-                price: 8.00,
-                category: 'tags',
-                image: this.getProductImagePath('3 Charms')
-            },
-            {
-                id: 'prod_nfc_additional',
-                name: 'Additional NFC (5 SGD)',
-                price: 5.00,
-                category: 'tags',
-                image: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E'
-            },
-            {
-                id: 'prod_charm_takehome',
-                name: 'Charm Take Home Already',
-                price: 0.00,
-                category: 'tags',
-                image: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E'
-            },
-            {
-                id: 'prod_charm_reserved',
-                name: 'Charm Reserved',
-                price: 0.00,
-                category: 'tags',
-                image: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E'
-            },
-            {
-                id: 'prod_big_alphabet_tag',
-                name: 'Big Alphabet Tag',
-                price: 22.00,
-                category: 'tags',
-                image: this.getProductImagePath('Big Alphabet Tag')
-            },
-            {
-                id: 'prod_christmas_tag_brown',
-                name: 'Christmas Tag - Brown',
-                price: 25.00,
-                category: 'tags',
-                image: this.getProductImagePath('Christmas Tag - Brown')
-            },
-            {
-                id: 'prod_christmas_tag_green',
-                name: 'Christmas Tag - Green',
-                price: 25.00,
-                category: 'tags',
-                image: this.getProductImagePath('Christmas Tag - Green')
-            },
+            // PET TAG Category
             {
                 id: 'prod_big_identification_tag',
                 name: 'Big Identification Tag',
                 price: 35.00,
                 category: 'tags',
-                image: this.getProductImagePath('Big Identification Tag')
-            },
-            {
-                id: 'prod_photo_stand',
-                name: 'Photo Stand',
-                price: 10.00,
-                category: 'accessories',
-                image: this.getProductImagePath('Photo Stand')
-            },
-            {
-                id: 'prod_christmas_socks_ornament',
-                name: 'Christmas Socks Ornament',
-                price: 20.00,
-                category: 'accessories',
-                image: this.getProductImagePath('Christmas Socks Ornament')
-            },
-            {
-                id: 'prod_small_alphabet_tag',
-                name: 'Small Alphabet Tag',
-                price: 20.00,
-                category: 'tags',
-                image: this.getProductImagePath('Small Alphabet Tag')
+                image: placeholderImage
             },
             {
                 id: 'prod_small_identification_tag',
                 name: 'Small Identification Tag',
                 price: 30.00,
                 category: 'tags',
-                image: this.getProductImagePath('Small Identification Tag')
+                image: placeholderImage
+            },
+            {
+                id: 'prod_big_alphabet_tag',
+                name: 'Big Alphabet Tag',
+                price: 22.00,
+                category: 'tags',
+                image: placeholderImage
+            },
+            {
+                id: 'prod_small_alphabet_tag',
+                name: 'Small Alphabet Tag',
+                price: 20.00,
+                category: 'tags',
+                image: placeholderImage
+            },
+            // ADD ONS Category
+            {
+                id: 'prod_nfc',
+                name: 'NFC',
+                price: 5.00,
+                category: 'addons',
+                image: placeholderImage
             },
             {
                 id: 'prod_charms',
                 name: 'Charms',
-                price: 3.00,
-                category: 'tags',
-                image: this.getProductImagePath('Charms')
+                price: 4.00,
+                category: 'addons',
+                image: placeholderImage
             },
             {
-                id: 'prod_christmas_photo_frame',
-                name: 'Christmas Photo Frame',
+                id: 'prod_photo_stand',
+                name: 'Photo Stand',
+                price: 10.00,
+                category: 'addons',
+                image: placeholderImage
+            },
+            // CHRISTMAS SPECIALS Category
+            {
+                id: 'prod_christmas_tag',
+                name: 'Christmas Tag',
+                price: 25.00,
+                category: 'christmas',
+                image: placeholderImage
+            },
+            {
+                id: 'prod_christmas_socks',
+                name: 'Christmas Socks',
+                price: 20.00,
+                category: 'christmas',
+                image: placeholderImage
+            },
+            {
+                id: 'prod_christmas_photoframe',
+                name: 'Christmas Photoframe',
                 price: 15.00,
-                category: 'accessories',
-                image: this.getProductImagePath('Christmas Photo Frame')
+                category: 'christmas',
+                image: placeholderImage
+            },
+            // PROMOTION - 3 Charms Option
+            {
+                id: 'prod_3_charms',
+                name: '3 Charms',
+                price: 10.00,
+                category: 'promotion',
+                image: placeholderImage
             }
         ];
     }
@@ -537,13 +499,8 @@ class POSApp {
                 const formatCurrency = (value) => `$${Number(value || 0).toFixed(2)}`;
                 
                 const itemsList = orderDetails.items.map((item) => {
-                    // Create structured HTML rows using CSS classes with inline styles for email compatibility
-                    return `<tr>
-  <td class="item-col" style="padding: 12px 14px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700;">${escapeHtml(item.name)}</td>
-  <td class="qty-col" align="center" style="padding: 12px 8px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; width:70px; text-align: center;">${item.quantity}</td>
-  <td class="price-col" align="right" style="padding: 12px 10px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; width:110px; text-align: right;">${formatCurrency(item.price)}</td>
-  <td class="total-col" align="right" style="padding: 12px 14px; font-family: Arial, sans-serif; font-size: 15px; color:#D4A574; font-weight: 800; width:120px; text-align: right;">${formatCurrency(item.subtotal)}</td>
-</tr>`;
+                    // Create structured HTML rows as compact single-line for email compatibility
+                    return `<tr><td class="item-col" style="padding: 12px 14px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700;">${escapeHtml(item.name)}</td><td class="qty-col" align="center" style="padding: 12px 8px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; width:70px; text-align: center;">${item.quantity}</td><td class="price-col" align="right" style="padding: 12px 10px; font-family: Arial, sans-serif; font-size: 14.5px; color:#5C4A37; font-weight: 700; width:110px; text-align: right;">${formatCurrency(item.price)}</td><td class="total-col" align="right" style="padding: 12px 14px; font-family: Arial, sans-serif; font-size: 15px; color:#D4A574; font-weight: 800; width:120px; text-align: right;">${formatCurrency(item.subtotal)}</td></tr>`;
                 }).join('');
                 
                 const templateParams = {
