@@ -230,19 +230,25 @@ class POSApp {
             
             // Ensure image path is valid - handle both data URLs and file paths
             let imageSrc = product.image || '';
-            if (imageSrc && !imageSrc.startsWith('data:') && !imageSrc.startsWith('http') && !imageSrc.startsWith('/')) {
-                // If it's a relative path, ensure it starts with /
-                imageSrc = '/' + imageSrc;
-            }
-            
             const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E';
+            
+            // If no image provided, use fallback immediately
+            if (!imageSrc) {
+                imageSrc = fallbackImage;
+            } else if (imageSrc && !imageSrc.startsWith('data:') && !imageSrc.startsWith('http://') && !imageSrc.startsWith('https://')) {
+                // For relative paths, ensure they work correctly
+                // Remove leading slash if present to make it relative to current page
+                if (imageSrc.startsWith('/')) {
+                    imageSrc = imageSrc.substring(1);
+                }
+            }
             
             return `
                 <div class="product-card" onclick="posApp.addToCart('${product.id}')">
                     ${category !== 'general' ? `<div class="product-category-badge">${categoryLabel}</div>` : ''}
                     <img src="${imageSrc}" alt="${product.name}" class="product-image" 
-                         onerror="console.error('Image failed to load for product: ${product.name}', this.src); this.src='${fallbackImage}'"
-                         onload="console.log('Image loaded successfully for: ${product.name}')">
+                         onerror="this.onerror=null; this.src='${fallbackImage}'; console.warn('Image failed to load for product: ${product.name.replace(/'/g, "\\'")}')"
+                         onload="console.log('Image loaded successfully for: ${product.name.replace(/'/g, "\\'")}')">
                     <div class="product-name">${product.name}</div>
                     <div class="product-price">$${parseFloat(product.price).toFixed(2)}</div>
                     <button class="quick-add-btn" onclick="event.stopPropagation(); posApp.addToCart('${product.id}')" title="Quick Add">+</button>
