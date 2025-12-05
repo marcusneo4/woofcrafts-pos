@@ -466,7 +466,7 @@ class POSApp {
             if (typeof emailjs !== 'undefined') {
                 // Using EmailJS for client-side email sending
                 // Initialize EmailJS with your public key
-                emailjs.init('YOUR_EMAILJS_PUBLIC_KEY'); // Replace with your actual EmailJS public key
+                emailjs.init('pItLrmthOdxpZRMEw');
                 
                 // Format items for email
                 const itemsList = orderDetails.items.map(item => 
@@ -493,7 +493,7 @@ class POSApp {
                 };
                 
                 // Send using EmailJS
-                await emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams);
+                await emailjs.send('service_t1mlwir', 'template_iqb8umq', templateParams);
                 
                 alert('🐾 Order email sent successfully to ' + orderDetails.customerEmail + '! 🐶\n\nOrder ID: #' + orderDetails.orderId);
                 this.clearCart();
