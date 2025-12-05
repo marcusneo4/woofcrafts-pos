@@ -257,9 +257,11 @@ class ProductManager {
         list.innerHTML = this.products.map(product => {
             // Ensure image path is valid - handle both data URLs and file paths
             let imageSrc = product.image || '';
-            if (imageSrc && !imageSrc.startsWith('data:') && !imageSrc.startsWith('http') && !imageSrc.startsWith('/')) {
+            if (imageSrc && !imageSrc.startsWith('data:') && !imageSrc.startsWith('http')) {
                 // If it's a relative path, ensure it starts with /
-                imageSrc = '/' + imageSrc;
+                if (!imageSrc.startsWith('/')) {
+                    imageSrc = '/' + imageSrc;
+                }
             }
             
             const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'90\' height=\'90\'%3E%3Crect fill=\'%23FAF7F3\' width=\'90\' height=\'90\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'20\'%3E🐕%3C/text%3E%3C/svg%3E';
@@ -267,15 +269,15 @@ class ProductManager {
             return `
             <div class="product-list-item">
                 <img src="${imageSrc}" alt="${product.name}" class="product-list-image"
-                     onerror="console.error('Image failed to load for product: ${product.name}', this.src); this.src='${fallbackImage}'"
-                     onload="console.log('Image loaded successfully for: ${product.name}')">
+                     onerror="console.error('Image failed to load for product: ${product.name.replace(/'/g, "\\'")}', this.src); this.src='${fallbackImage}'"
+                     onload="console.log('Image loaded successfully for: ${product.name.replace(/'/g, "\\'")}')">
                 <div class="product-list-info">
                     <div class="product-list-name">${product.name}</div>
                     <div class="product-list-price">$${parseFloat(product.price).toFixed(2)}</div>
                 </div>
                 <div class="product-list-actions">
-                    <button class="btn-edit" onclick="productManager.editProduct('${product.id}')">✏️ Edit</button>
-                    <button class="btn-delete" onclick="productManager.deleteProduct('${product.id}')">🗑️ Delete</button>
+                    <button class="btn-edit" onclick="productManager.editProduct('${product.id}')" title="Edit product details and image">✏️ Edit</button>
+                    <button class="btn-delete" onclick="productManager.deleteProduct('${product.id}')" title="Delete this product">🗑️ Delete</button>
                 </div>
             </div>
         `;

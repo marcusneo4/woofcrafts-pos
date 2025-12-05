@@ -84,6 +84,33 @@ class POSApp {
         console.log(`✓ Products refreshed: ${this.products.length} total`);
     }
 
+    // Helper function to get image path for a product name
+    getProductImagePath(productName) {
+        // Map product names to image filenames
+        const imageMap = {
+            '3 Charms': '3 Charms  $8.00.jpg',
+            'Big Alphabet Tag': 'Big Alphabet Tag  $22.00.jpg',
+            'Big Identification Tag': 'Big Identification Tag  $35.00.jpg',
+            'Charms': 'Charms  $3.00.jpg',
+            'Christmas Photo Frame': 'Christmas Photo Frame  $15.00.jpg',
+            'Christmas Socks Ornament': 'Christmas Socks Ornament  $20.00.jpg',
+            'Christmas Tag - Brown': 'Christmas Tag – Brown  $25.00.jpg',
+            'Christmas Tag - Green': 'Christmas Tag – Green  $25.00.jpg',
+            'Photo Stand': 'Photo Stand  $10.00.jpg',
+            'Small Alphabet Tag': 'Small Alphabet Tag  $20.00.jpg',
+            'Small Identification Tag': 'Small Identification Tag  $30.00.jpg'
+        };
+        
+        const imageFilename = imageMap[productName];
+        if (imageFilename) {
+            // Encode the filename for URL
+            return `/product-images/${encodeURIComponent(imageFilename)}`;
+        }
+        
+        // Fallback to placeholder
+        return 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E';
+    }
+
     getFixedProducts() {
         // These are the fixed products that should ALWAYS be included
         return [
@@ -92,7 +119,7 @@ class POSApp {
                 name: '3 Charms',
                 price: 8.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_3_Charms___8.00-e557d364-6043-4af4-9678-3a7f4f5b9986.png'
+                image: this.getProductImagePath('3 Charms')
             },
             {
                 id: 'prod_nfc_additional',
@@ -120,70 +147,70 @@ class POSApp {
                 name: 'Big Alphabet Tag',
                 price: 22.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Big_Alphabet_Tag___22.00-919e5f2a-e2f3-4dbd-a565-fd9ba831adec.png'
+                image: this.getProductImagePath('Big Alphabet Tag')
             },
             {
                 id: 'prod_christmas_tag_brown',
                 name: 'Christmas Tag - Brown',
                 price: 25.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Tag___Brown___25.00-3cccbaba-36a0-44a6-a3cc-54b55bca8539.png'
+                image: this.getProductImagePath('Christmas Tag - Brown')
             },
             {
                 id: 'prod_christmas_tag_green',
                 name: 'Christmas Tag - Green',
                 price: 25.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Tag___Green___25.00-c24b7a3b-e3da-455b-a0d2-e1a3834d914.png'
+                image: this.getProductImagePath('Christmas Tag - Green')
             },
             {
                 id: 'prod_big_identification_tag',
                 name: 'Big Identification Tag',
                 price: 35.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Big_Identification_Tag___35.00-4ae9918e-1856-4a8b-a7ff-58df038f1a31.png'
+                image: this.getProductImagePath('Big Identification Tag')
             },
             {
                 id: 'prod_photo_stand',
                 name: 'Photo Stand',
                 price: 10.00,
                 category: 'accessories',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Photo_Stand___10.00-15027dbe-a4cb-4ba1-94d1-32b1f15a4b7d.png'
+                image: this.getProductImagePath('Photo Stand')
             },
             {
                 id: 'prod_christmas_socks_ornament',
                 name: 'Christmas Socks Ornament',
                 price: 20.00,
                 category: 'accessories',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Socks_Ornament___20.00-7c93398d-0a26-44fc-bb4b-e19cc2ec0c20.png'
+                image: this.getProductImagePath('Christmas Socks Ornament')
             },
             {
                 id: 'prod_small_alphabet_tag',
                 name: 'Small Alphabet Tag',
                 price: 20.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Small_Alphabet_Tag___20.00-53a0d5bd-3575-4bea-a20e-3721359a0536.png'
+                image: this.getProductImagePath('Small Alphabet Tag')
             },
             {
                 id: 'prod_small_identification_tag',
                 name: 'Small Identification Tag',
                 price: 30.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Small_Identification_Tag___30.00-518d1f70-7d1f-4116-855e-8dfb0eaa32b2.png'
+                image: this.getProductImagePath('Small Identification Tag')
             },
             {
                 id: 'prod_charms',
                 name: 'Charms',
                 price: 3.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Charms___3.00-8bc0e6bc-cebd-4234-aa73-60e9bb687749.png'
+                image: this.getProductImagePath('Charms')
             },
             {
                 id: 'prod_christmas_photo_frame',
                 name: 'Christmas Photo Frame',
                 price: 15.00,
                 category: 'accessories',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Photo_Frame___15.00-07757b83-ef17-4146-8ef0-bc5c3c450508.png'
+                image: this.getProductImagePath('Christmas Photo Frame')
             }
         ];
     }

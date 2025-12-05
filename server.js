@@ -9,6 +9,9 @@ const querystring = require('querystring');
 const PORT = process.env.PORT || 8001;
 const PUBLIC_DIR = __dirname;
 
+// External product images directory
+const EXTERNAL_IMAGES_DIR = 'C:\\Users\\e0775081\\Downloads\\Dog product images';
+
 // Import email functionality
 let transporter, generateOrderEmail, generatePlainTextEmail;
 try {
@@ -38,6 +41,13 @@ const IMAGES_DIR = path.join(PUBLIC_DIR, 'assets', 'images');
 if (!fs.existsSync(IMAGES_DIR)) {
     fs.mkdirSync(IMAGES_DIR, { recursive: true });
     console.log('✓ Created assets/images directory');
+}
+
+// Check if external images directory exists
+if (fs.existsSync(EXTERNAL_IMAGES_DIR)) {
+    console.log(`✓ External images directory found: ${EXTERNAL_IMAGES_DIR}`);
+} else {
+    console.log(`⚠️  External images directory not found: ${EXTERNAL_IMAGES_DIR}`);
 }
 
 const server = http.createServer((req, res) => {
@@ -168,6 +178,40 @@ const server = http.createServer((req, res) => {
             }
         });
         
+        return;
+    }
+
+    // Serve product images from external directory
+    if (pathname.startsWith('/product-images/')) {
+        const imageFilename = decodeURIComponent(pathname.replace('/product-images/', ''));
+        const imagePath = path.join(EXTERNAL_IMAGES_DIR, imageFilename);
+        
+        // Security check: ensure the file is within the external images directory
+        if (!imagePath.startsWith(EXTERNAL_IMAGES_DIR)) {
+            res.writeHead(403, { 'Content-Type': 'text/html' });
+            res.end('<h1>403 - Forbidden</h1>', 'utf-8');
+            return;
+        }
+        
+        const extname = String(path.extname(imagePath)).toLowerCase();
+        const contentType = mimeTypes[extname] || 'application/octet-stream';
+        
+        fs.readFile(imagePath, (error, content) => {
+            if (error) {
+                if (error.code === 'ENOENT') {
+                    console.log(`Image not found: ${imagePath}`);
+                    res.writeHead(404, { 'Content-Type': 'text/html' });
+                    res.end('<h1>404 - Image Not Found</h1>', 'utf-8');
+                } else {
+                    console.error(`Server error for ${imagePath}:`, error);
+                    res.writeHead(500);
+                    res.end(`Server Error: ${error.code}`, 'utf-8');
+                }
+            } else {
+                res.writeHead(200, { 'Content-Type': contentType });
+                res.end(content, 'utf-8');
+            }
+        });
         return;
     }
 
