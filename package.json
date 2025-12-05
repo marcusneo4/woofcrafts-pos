@@ -1,0 +1,17 @@
+{
+  "name": "woofcrafts-pos-system",
+  "version": "1.0.0",
+  "description": "WoofCrafts POS System with Email Notifications",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["pos", "email", "nodemailer", "woofcrafts"],
+  "author": "WoofCrafts",
+  "license": "MIT",
+  "dependencies": {
+    "nodemailer": "^6.9.7",
+    "dotenv": "^16.3.1"
+  }
+}

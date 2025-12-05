@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Email Sending - WoofCrafts</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(180deg, #FAF7F3 0%, #F5EFE7 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(92, 74, 55, 0.2);
+        }
+        
+        h1 {
+            color: #5C4A37;
+            font-size: 32px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .subtitle {
+            color: #8B7355;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #5C4A37;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #E8D5C4;
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #D4A574;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #D4A574 0%, #C9A961 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 165, 116, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 12px;
+            display: none;
+        }
+        
+        .status.success {
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+            border: 2px solid #A5D6A7;
+            color: #2E7D32;
+            display: block;
+        }
+        
+        .status.error {
+            background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+            border: 2px solid #EF9A9A;
+            color: #C62828;
+            display: block;
+        }
+        
+        .status.loading {
+            background: linear-gradient(135deg, #FFF4E6 0%, #FFE8CC 100%);
+            border: 2px solid #F0C78D;
+            color: #8B4513;
+            display: block;
+        }
+        
+        .note {
+            background: linear-gradient(135deg, #FFF9F5 0%, #FFF4E6 100%);
+            border: 2px solid #E8D5C4;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            color: #6B5D52;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .note strong {
+            color: #5C4A37;
+        }
+        
+        code {
+            background: #F5EFE7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #D4A574;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐾 Test Email Sending</h1>
+        <p class="subtitle">Send a test order confirmation email with your beautiful dog theme!</p>
+        
+        <div class="note">
+            <strong>📝 Before sending:</strong> Make sure you've completed the setup:
+            <br>1. Run <code>npm install</code> in your project folder
+            <br>2. Create a <code>.env</code> file with your email credentials
+            <br>3. Restart your server with <code>node server.js</code>
+        </div>
+        
+        <form id="emailForm">
+            <div class="form-group">
+                <label for="customerEmail">Customer Email Address *</label>
+                <input type="email" id="customerEmail" placeholder="customer@example.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="customerName">Customer Name *</label>
+                <input type="text" id="customerName" placeholder="John Doe" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="contactNumber">Contact Number (Optional)</label>
+                <input type="tel" id="contactNumber" placeholder="(555) 123-4567">
+            </div>
+            
+            <div class="form-group">
+                <label for="customerNote">Special Note (Optional)</label>
+                <textarea id="customerNote" placeholder="Any special instructions or notes..."></textarea>
+            </div>
+            
+            <button type="submit" class="btn">🚀 Send Test Email</button>
+        </form>
+        
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        document.getElementById('emailForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const statusDiv = document.getElementById('status');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
+            // Show loading state
+            statusDiv.className = 'status loading';
+            statusDiv.textContent = '📧 Sending email... Please wait...';
+            submitBtn.disabled = true;
+            
+            // Prepare order data
+            const orderData = {
+                customerEmail: document.getElementById('customerEmail').value,
+                customerName: document.getElementById('customerName').value,
+                orderId: 'TEST' + Math.floor(Math.random() * 100000),
+                orderDate: new Date().toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                }),
+                items: [
+                    {
+                        name: 'Premium NFC Dog Tag - Custom Engraved',
+                        quantity: 2,
+                        price: 24.99
+                    },
+                    {
+                        name: 'Deluxe Collar with Paw Print Design',
+                        quantity: 1,
+                        price: 34.99
+                    },
+                    {
+                        name: 'Dog Bandana Set (3-Pack)',
+                        quantity: 1,
+                        price: 19.99
+                    }
+                ],
+                subtotal: 104.96,
+                discount: 10.50,
+                total: 94.46,
+                customerNote: document.getElementById('customerNote').value,
+                contactNumber: document.getElementById('contactNumber').value
+            };
+            
+            try {
+                const response = await fetch('/api/send-order-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.className = 'status success';
+                    statusDiv.innerHTML = `
+                        ✅ <strong>Email sent successfully!</strong><br>
+                        Sent to: ${result.recipient}<br>
+                        Message ID: ${result.messageId}<br>
+                        Check your inbox (and spam folder)!
+                    `;
+                } else {
+                    throw new Error(result.error || 'Unknown error occurred');
+                }
+                
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = `
+                    ❌ <strong>Failed to send email</strong><br>
+                    Error: ${error.message}<br><br>
+                    <strong>Common issues:</strong><br>
+                    • Make sure you ran <code>npm install</code><br>
+                    • Check your .env file has correct email credentials<br>
+                    • Restart the server after creating .env<br>
+                    • For Gmail, make sure you're using an App Password
+                `;
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

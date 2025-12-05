@@ -1,0 +1,20 @@
+# Email Configuration for Nodemailer
+# Rename this file to .env and fill in your actual credentials
+
+# For Gmail:
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASS=your-app-password-here
+
+# For Outlook/Hotmail:
+# EMAIL_HOST=smtp-mail.outlook.com
+# EMAIL_PORT=587
+# EMAIL_USER=your-email@outlook.com
+# EMAIL_PASS=your-password
+
+# Your business email that appears as sender
+EMAIL_FROM=WoofCrafts <your-email@gmail.com>
+
+# Server Port (optional)
+PORT=8000
