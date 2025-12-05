@@ -462,43 +462,80 @@ class POSApp {
         this.showEmailPreview(orderDetails);
 
         try {
-            // Send email using Nodemailer backend
-            const response = await fetch('/api/send-order-email', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    customerName: orderDetails.customerName,
-                    customerEmail: orderDetails.customerEmail,
-                    orderId: orderDetails.orderId,
-                    orderDate: new Date().toLocaleDateString('en-US', { 
+            // Check if EmailJS is available (for GitHub Pages deployment)
+            if (typeof emailjs !== 'undefined') {
+                // Using EmailJS for client-side email sending
+                // Initialize EmailJS with your public key
+                emailjs.init('YOUR_EMAILJS_PUBLIC_KEY'); // Replace with your actual EmailJS public key
+                
+                // Format items for email
+                const itemsList = orderDetails.items.map(item => 
+                    `${item.name} - Qty: ${item.quantity} - $${item.price.toFixed(2)} each = $${item.subtotal.toFixed(2)}`
+                ).join('\n');
+                
+                const templateParams = {
+                    to_email: orderDetails.customerEmail,
+                    customer_name: orderDetails.customerName,
+                    order_id: orderDetails.orderId,
+                    order_date: new Date().toLocaleDateString('en-US', { 
                         year: 'numeric', 
                         month: 'long', 
                         day: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit'
                     }),
-                    items: orderDetails.items,
-                    subtotal: orderDetails.subtotal,
-                    discount: orderDetails.discountAmount,
-                    total: orderDetails.total,
-                    customerNote: orderDetails.customerComment,
-                    contactNumber: orderDetails.customerPhone
-                })
-            });
-
-            const result = await response.json();
-            
-            if (result.success) {
-                alert('🐾 Order email sent successfully to ' + orderDetails.customerEmail + '! 🐶\n\nMessage ID: ' + result.messageId);
+                    items_list: itemsList,
+                    subtotal: `$${orderDetails.subtotal.toFixed(2)}`,
+                    discount: orderDetails.discountAmount > 0 ? `$${orderDetails.discountAmount.toFixed(2)} (${orderDetails.discountPercent}%)` : 'None',
+                    total: `$${orderDetails.total.toFixed(2)}`,
+                    customer_note: orderDetails.customerComment || 'No special instructions',
+                    contact_number: orderDetails.customerPhone || 'Not provided'
+                };
+                
+                // Send using EmailJS
+                await emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams);
+                
+                alert('🐾 Order email sent successfully to ' + orderDetails.customerEmail + '! 🐶\n\nOrder ID: #' + orderDetails.orderId);
                 this.clearCart();
             } else {
-                throw new Error(result.error || 'Failed to send email');
+                // Fallback: Try Node.js backend (for local development)
+                const response = await fetch('/api/send-order-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        customerName: orderDetails.customerName,
+                        customerEmail: orderDetails.customerEmail,
+                        orderId: orderDetails.orderId,
+                        orderDate: new Date().toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }),
+                        items: orderDetails.items,
+                        subtotal: orderDetails.subtotal,
+                        discount: orderDetails.discountAmount,
+                        total: orderDetails.total,
+                        customerNote: orderDetails.customerComment,
+                        contactNumber: orderDetails.customerPhone
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('🐾 Order email sent successfully to ' + orderDetails.customerEmail + '! 🐶\n\nMessage ID: ' + result.messageId);
+                    this.clearCart();
+                } else {
+                    throw new Error(result.error || 'Failed to send email');
+                }
             }
         } catch (error) {
             console.error('Error sending email:', error);
-            alert('❌ Failed to send email: ' + (error.message || 'Please check your email configuration.\n\nMake sure the server is running with: npm start'));
+            alert('❌ Failed to send email: ' + (error.message || 'Unknown error') + '\n\n💡 Please check:\n1. EmailJS configuration is correct\n2. Internet connection is stable\n3. Email address is valid');
         }
     }
 
