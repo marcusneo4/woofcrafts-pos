@@ -85,7 +85,7 @@ class POSApp {
                 name: '3 Charms',
                 price: 8.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_3_Charms___8.00-03abd3dc-cf65-4586-83d4-b4e8b9b878ba.png'
+                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_3_Charms___8.00-5bb80cf9-64df-48e7-80a4-7d9cb494f07f.png'
             },
             {
                 id: 'prod_nfc_additional',
@@ -113,70 +113,70 @@ class POSApp {
                 name: 'Big Alphabet Tag',
                 price: 22.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Big_Alphabet_Tag___22.00-272916bd-5deb-4392-b0be-55646bfe8b23.png'
+                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Big_Alphabet_Tag___22.00-68d5f68c-98af-439b-8918-35f3404dca2c.png'
             },
             {
                 id: 'prod_christmas_tag_brown',
                 name: 'Christmas Tag - Brown',
                 price: 25.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Tag___Brown___25.00-e7e512ab-3871-4b87-b6eb-9be0fbb55773.png'
+                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Tag___Brown___25.00-577bc64d-7a12-4ef1-9311-923de6416d92.png'
             },
             {
                 id: 'prod_christmas_tag_green',
                 name: 'Christmas Tag - Green',
                 price: 25.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Tag___Green___25.00-9a7f6549-b5d0-4991-aed4-88e5b03228e8.png'
+                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Tag___Green___25.00-ea28e55c-03db-4731-bc9c-e976543afd6b.png'
             },
             {
                 id: 'prod_big_identification_tag',
                 name: 'Big Identification Tag',
                 price: 35.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Big_Identification_Tag___35.00-ce1bf829-5714-4969-8b58-516cc15a61c7.png'
+                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Big_Identification_Tag___35.00-4c0e20fc-a6b6-4ce8-b273-098da7a286ab.png'
             },
             {
                 id: 'prod_photo_stand',
                 name: 'Photo Stand',
                 price: 10.00,
                 category: 'accessories',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Photo_Stand___10.00-40da5852-39f2-4e4c-a12e-117ca5adb72a.png'
+                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Photo_Stand___10.00-56650876-18f1-46ac-bfba-537473a87a65.png'
             },
             {
                 id: 'prod_christmas_socks_ornament',
                 name: 'Christmas Socks Ornament',
                 price: 20.00,
                 category: 'accessories',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Socks_Ornament___20.00-556fe47b-f209-4682-b114-d1e5bad7dd6e.png'
+                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Socks_Ornament___20.00-11f9aa32-7c89-4ffd-9614-f171b2a7378c.png'
             },
             {
                 id: 'prod_small_alphabet_tag',
                 name: 'Small Alphabet Tag',
                 price: 20.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Small_Alphabet_Tag___20.00-9f649218-ac68-41c7-a808-7cc69f798289.png'
+                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Small_Alphabet_Tag___20.00-b0856786-71c0-4e74-9028-7d5be951549a.png'
             },
             {
                 id: 'prod_small_identification_tag',
                 name: 'Small Identification Tag',
                 price: 30.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Small_Identification_Tag___30.00-f9ac5c05-0308-40f2-95bc-89b137878514.png'
+                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Small_Identification_Tag___30.00-6ceee347-2644-4059-a361-baae39e29b9d.png'
             },
             {
                 id: 'prod_charms',
                 name: 'Charms',
                 price: 3.00,
                 category: 'tags',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Charms___3.00-66ca6a92-b528-4169-866a-d68a8dd2200c.png'
+                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Charms___3.00-2de7aec9-960d-43a2-9728-dfc6e6d77f1c.png'
             },
             {
                 id: 'prod_christmas_photo_frame',
                 name: 'Christmas Photo Frame',
                 price: 15.00,
                 category: 'accessories',
-                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Photo_Frame___15.00-539d5964-757a-4969-9930-48b5fd0c187d.png'
+                image: 'assets/c__Users_e0775081_AppData_Roaming_Cursor_User_workspaceStorage_89a4e33640f1fcbbb8cbbefca162406f_images_Christmas_Photo_Frame___15.00-8522a0f6-847d-4ecb-9732-386dc5d59325.png'
             }
         ];
     }
@@ -227,11 +227,22 @@ class POSApp {
         grid.innerHTML = validProducts.map(product => {
             const category = product.category || 'general';
             const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
+            
+            // Ensure image path is valid - handle both data URLs and file paths
+            let imageSrc = product.image || '';
+            if (imageSrc && !imageSrc.startsWith('data:') && !imageSrc.startsWith('http') && !imageSrc.startsWith('/')) {
+                // If it's a relative path, ensure it starts with /
+                imageSrc = '/' + imageSrc;
+            }
+            
+            const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E';
+            
             return `
                 <div class="product-card" onclick="posApp.addToCart('${product.id}')">
                     ${category !== 'general' ? `<div class="product-category-badge">${categoryLabel}</div>` : ''}
-                    <img src="${product.image}" alt="${product.name}" class="product-image" 
-                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E'">
+                    <img src="${imageSrc}" alt="${product.name}" class="product-image" 
+                         onerror="console.error('Image failed to load for product: ${product.name}', this.src); this.src='${fallbackImage}'"
+                         onload="console.log('Image loaded successfully for: ${product.name}')">
                     <div class="product-name">${product.name}</div>
                     <div class="product-price">$${parseFloat(product.price).toFixed(2)}</div>
                     <button class="quick-add-btn" onclick="event.stopPropagation(); posApp.addToCart('${product.id}')" title="Quick Add">+</button>

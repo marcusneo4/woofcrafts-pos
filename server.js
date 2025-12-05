@@ -33,9 +33,76 @@ const mimeTypes = {
     '.ico': 'image/x-icon'
 };
 
+// Ensure assets/images directory exists
+const IMAGES_DIR = path.join(PUBLIC_DIR, 'assets', 'images');
+if (!fs.existsSync(IMAGES_DIR)) {
+    fs.mkdirSync(IMAGES_DIR, { recursive: true });
+    console.log('✓ Created assets/images directory');
+}
+
 const server = http.createServer((req, res) => {
     const parsedUrl = url.parse(req.url);
     const pathname = parsedUrl.pathname;
+
+    // API Endpoint: Upload Product Image
+    if (pathname === '/api/upload-image' && req.method === 'POST') {
+        let body = '';
+        
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
+        
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                
+                if (!data.imageData || !data.filename) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ 
+                        success: false, 
+                        error: 'Missing required fields: imageData and filename are required' 
+                    }));
+                    return;
+                }
+
+                // Extract base64 data (remove data:image/...;base64, prefix if present)
+                const base64Data = data.imageData.replace(/^data:image\/\w+;base64,/, '');
+                const imageBuffer = Buffer.from(base64Data, 'base64');
+                
+                // Sanitize filename
+                const sanitizedFilename = data.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const timestamp = Date.now();
+                const fileExtension = sanitizedFilename.split('.').pop() || 'png';
+                const finalFilename = `${timestamp}_${sanitizedFilename}`;
+                const filePath = path.join(IMAGES_DIR, finalFilename);
+                
+                // Save file
+                fs.writeFileSync(filePath, imageBuffer);
+                
+                // Return relative path for use in img src
+                const relativePath = `assets/images/${finalFilename}`;
+                
+                console.log(`✅ Image uploaded: ${finalFilename}`);
+                
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ 
+                    success: true, 
+                    imagePath: relativePath,
+                    filename: finalFilename
+                }));
+
+            } catch (error) {
+                console.error('❌ Image upload error:', error);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ 
+                    success: false, 
+                    error: error.message 
+                }));
+            }
+        });
+        
+        return;
+    }
 
     // API Endpoint: Send Order Confirmation Email
     if (pathname === '/api/send-order-email' && req.method === 'POST') {

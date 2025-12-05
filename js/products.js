@@ -83,6 +83,46 @@ class ProductManager {
         });
     }
 
+    async uploadImageToServer(file) {
+        try {
+            // First, convert file to data URL
+            const imageDataUrl = await this.saveImageAsDataURL(file);
+            
+            // Generate a safe filename
+            const originalName = file.name || 'product-image';
+            const sanitizedFilename = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+            
+            // Upload to server
+            const response = await fetch('/api/upload-image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    imageData: imageDataUrl,
+                    filename: sanitizedFilename
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to upload image');
+            }
+
+            const result = await response.json();
+            if (result.success && result.imagePath) {
+                return result.imagePath;
+            } else {
+                throw new Error('Server did not return image path');
+            }
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            // Fallback to data URL if server upload fails
+            console.warn('Falling back to data URL storage');
+            return await this.saveImageAsDataURL(file);
+        }
+    }
+
     async handleFormSubmit(event) {
         event.preventDefault();
 
@@ -98,18 +138,19 @@ class ProductManager {
         }
 
         // For new products, image is required. For editing, image is optional (keep existing)
-        let imageDataUrl = null;
+        let imagePath = null;
         if (imageFile && imageFile.size > 0) {
-            imageDataUrl = await this.saveImageAsDataURL(imageFile);
+            // Upload image to server
+            imagePath = await this.uploadImageToServer(imageFile);
         } else if (this.editingId) {
             // If editing and no new image, keep the existing image
             const existingProduct = this.products.find(p => p.id === this.editingId);
             if (existingProduct) {
-                imageDataUrl = existingProduct.image;
+                imagePath = existingProduct.image;
             }
         }
 
-        if (!imageDataUrl) {
+        if (!imagePath) {
             alert('Please select an image');
             return;
         }
@@ -122,7 +163,7 @@ class ProductManager {
                 name: name,
                 price: price,
                 category: category,
-                image: imageDataUrl
+                image: imagePath
             };
 
             if (this.editingId) {
@@ -213,10 +254,21 @@ class ProductManager {
             return;
         }
 
-        list.innerHTML = this.products.map(product => `
+        list.innerHTML = this.products.map(product => {
+            // Ensure image path is valid - handle both data URLs and file paths
+            let imageSrc = product.image || '';
+            if (imageSrc && !imageSrc.startsWith('data:') && !imageSrc.startsWith('http') && !imageSrc.startsWith('/')) {
+                // If it's a relative path, ensure it starts with /
+                imageSrc = '/' + imageSrc;
+            }
+            
+            const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'90\' height=\'90\'%3E%3Crect fill=\'%23FAF7F3\' width=\'90\' height=\'90\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'20\'%3E🐕%3C/text%3E%3C/svg%3E';
+            
+            return `
             <div class="product-list-item">
-                <img src="${product.image}" alt="${product.name}" class="product-list-image"
-                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'90\' height=\'90\'%3E%3Crect fill=\'%23FAF7F3\' width=\'90\' height=\'90\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'20\'%3E🐕%3C/text%3E%3C/svg%3E'">
+                <img src="${imageSrc}" alt="${product.name}" class="product-list-image"
+                     onerror="console.error('Image failed to load for product: ${product.name}', this.src); this.src='${fallbackImage}'"
+                     onload="console.log('Image loaded successfully for: ${product.name}')">
                 <div class="product-list-info">
                     <div class="product-list-name">${product.name}</div>
                     <div class="product-list-price">$${parseFloat(product.price).toFixed(2)}</div>
@@ -226,7 +278,8 @@ class ProductManager {
                     <button class="btn-delete" onclick="productManager.deleteProduct('${product.id}')">🗑️ Delete</button>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
 
     showMessage(message, type) {

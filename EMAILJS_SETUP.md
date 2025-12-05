@@ -23,48 +23,263 @@ Your POS system is now configured to use **EmailJS** for sending emails on GitHu
 1. Go to **"Email Templates"**
 2. Click **"Create New Template"**
 3. **Template Name**: `WoofCrafts Order Confirmation`
-4. **Use this template content**:
+4. **Subject Line**: `🐾 Your WoofCrafts Order #{{order_id}} - Order Confirmed!`
+5. **Switch to HTML mode** (click the "HTML" button in the editor)
+6. **Copy and paste this beautifully formatted HTML template**:
 
-```
-Subject: 🐾 Your WoofCrafts Order #{{order_id}}
+```html
+<div style="margin:0; padding:0; width:100%; background: #FAF7F3; font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 650px; background:#FFFFFF; border-radius:25px; overflow:hidden; box-shadow: 0 20px 60px rgba(180, 148, 95, 0.25);">
+                    
+                    <!-- HEADER WITH GRADIENT -->
+                    <tr>
+                        <td style="padding: 0; background: linear-gradient(135deg, #D4A574 0%, #C9A961 50%, #E8D5B7 100%); position: relative;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td style="padding: 40px 35px; text-align: center; position: relative;">
+                                        <!-- Decorative Paw Prints -->
+                                        <div style="font-size: 14px; opacity: 0.25; color: #FFFFFF; margin-bottom: 12px; letter-spacing: 14px; font-weight: 600;">
+                                            🐾 🐾 🐾 🐾 🐾
+                                        </div>
+                                        
+                                        <!-- Dog Icon -->
+                                        <div style="font-size: 64px; line-height: 1; margin-bottom: 16px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));">🐕</div>
+                                        
+                                        <!-- Brand Name -->
+                                        <div style="font-family: 'Fredoka One', 'Arial Black', sans-serif; font-size: 36px; color: #FFFFFF; font-weight: 400; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.15); margin-bottom: 12px;">
+                                            WoofCrafts
+                                        </div>
+                                        
+                                        <!-- Order Confirmed Badge -->
+                                        <div style="display: inline-block; background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px); padding: 10px 24px; border-radius: 50px; margin-bottom: 12px;">
+                                            <span style="font-size: 16px; color: #FFFFFF; font-weight: 700; letter-spacing: 0.5px;">🎉 Order Confirmed! 🎉</span>
+                                        </div>
+                                        
+                                        <!-- Bottom Paw Prints -->
+                                        <div style="font-size: 14px; opacity: 0.25; color: #FFFFFF; margin-top: 12px; letter-spacing: 14px; font-weight: 600;">
+                                            🐾 🐾 🐾 🐾 🐾
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-Hi {{customer_name}},
+                    <!-- GREETING SECTION -->
+                    <tr>
+                        <td style="padding: 40px 35px 24px 35px; background: #FFFFFF;">
+                            <p style="margin: 0 0 20px 0; font-size: 20px; color: #5C4A37; font-weight: 800; line-height: 1.4;">
+                                Woof woof, <span style="color: #D4A574; font-weight: 900;">{{customer_name}}</span>! 🐶
+                            </p>
+                            <p style="margin: 0; font-size: 16px; color: #8B7355; line-height: 1.8; font-weight: 400;">
+                                Your furry friend is in for a treat! We've received your order and we're wagging our tails with excitement to get your pawsome items ready. Here's everything you ordered:
+                            </p>
+                        </td>
+                    </tr>
 
-Thank you for your order from WoofCrafts! 
+                    <!-- ORDER INFO CARDS -->
+                    <tr>
+                        <td style="padding: 0 35px 30px 35px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <!-- Order ID Card -->
+                                    <td width="50%" style="padding-right: 10px;">
+                                        <table role="presentation" width="100%" style="background: linear-gradient(135deg, #F4E6D7 0%, #E8D5B7 100%); border: 2px solid #E8D5B7; border-radius:20px; padding:22px 20px; box-shadow: 0 4px 15px rgba(180, 148, 95, 0.15);">
+                                            <tr>
+                                                <td style="font-size:11px; color:#8B7355; letter-spacing:1px; text-transform:uppercase; font-weight: 700; padding-bottom: 8px;">
+                                                    🎫 Order ID
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="font-size:22px; color:#D4A574; font-weight:900; padding-top:4px; letter-spacing: 0.5px;">
+                                                    #{{order_id}}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    
+                                    <!-- Date Card -->
+                                    <td width="50%" style="padding-left: 10px;">
+                                        <table role="presentation" width="100%" style="background: linear-gradient(135deg, #E8D5B7 0%, #F4E6D7 100%); border: 2px solid #E8D5B7; border-radius:20px; padding:22px 20px; box-shadow: 0 4px 15px rgba(180, 148, 95, 0.15);">
+                                            <tr>
+                                                <td style="font-size:11px; color:#8B7355; letter-spacing:1px; text-transform:uppercase; font-weight: 700; padding-bottom: 8px;">
+                                                    📅 Order Date
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="font-size:17px; color:#5C4A37; font-weight:800; padding-top:4px; line-height: 1.4;">
+                                                    {{order_date}}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-ORDER DETAILS
--------------
-Order ID: #{{order_id}}
-Date: {{order_date}}
-
-ITEMS
------
+                    <!-- ITEMS SECTION -->
+                    <tr>
+                        <td style="padding: 0 35px 24px 35px;">
+                            <!-- Section Header -->
+                            <div style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 3px solid #E8D5B7; position: relative;">
+                                <div style="position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); background: #FFFFFF; padding: 0 15px;">
+                                    <span style="font-size: 20px;">🐾</span>
+                                </div>
+                                <div style="font-family: 'Fredoka One', 'Arial Black', sans-serif; font-size: 22px; color: #5C4A37; font-weight: 400; text-align: center; display: flex; align-items: center; justify-content: center; gap: 12px;">
+                                    <span style="font-size: 28px;">🦴</span>
+                                    <span>Your Pawsome Items</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Items Container -->
+                            <div style="background: #FAF7F3; border: 2px solid #E8D5B7; border-radius: 20px; padding: 24px; box-shadow: 0 2px 8px rgba(180, 148, 95, 0.1);">
+                                <div style="font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-size: 15px; color: #5C4A37; line-height: 1.9; white-space: pre-wrap; word-wrap: break-word; font-weight: 500;">
 {{items_list}}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
 
-SUMMARY
--------
-Subtotal: {{subtotal}}
-Discount: {{discount}}
-Total: {{total}}
+                    <!-- TOTALS SECTION -->
+                    <tr>
+                        <td style="padding: 0 35px 24px 35px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #5C4A37 0%, #4A3828 100%); border-radius:20px; padding: 28px 26px; box-shadow: 0 8px 25px rgba(92, 74, 55, 0.35);">
+                                <!-- Subtotal -->
+                                <tr>
+                                    <td style="font-size:17px; color:#F4E6D7; font-weight: 700; padding-bottom: 12px; letter-spacing: 0.3px;">Subtotal</td>
+                                    <td align="right" style="font-size:17px; color:#F4E6D7; font-weight: 700; padding-bottom: 12px;">{{subtotal}}</td>
+                                </tr>
+                                
+                                <!-- Discount -->
+                                <tr>
+                                    <td style="padding: 8px 0; font-size: 17px; color: #A0B58F; font-weight: 700; letter-spacing: 0.3px;">
+                                        🐾 Discount
+                                    </td>
+                                    <td align="right" style="padding: 8px 0; font-size: 17px; color: #A0B58F; font-weight: 700;">
+                                        {{discount}}
+                                    </td>
+                                </tr>
+                                
+                                <!-- Divider -->
+                                <tr>
+                                    <td colspan="2" style="padding: 16px 0 8px 0;">
+                                        <div style="height: 2px; background: linear-gradient(90deg, transparent, rgba(212, 165, 116, 0.6), transparent);"></div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Grand Total -->
+                                <tr>
+                                    <td style="padding-top: 8px; font-size:22px; color:#F4E6D7; font-weight:900; letter-spacing: 0.5px;">
+                                        🦴 Grand Total
+                                    </td>
+                                    <td align="right" style="padding-top: 8px; font-size:28px; color:#D4A574; font-weight:900; letter-spacing: 0.5px;">
+                                        {{total}}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-{{#customer_note}}
-SPECIAL INSTRUCTIONS
--------------------
-{{customer_note}}
-{{/customer_note}}
+                    <!-- CUSTOMER NOTE (if provided) -->
+                    <tr>
+                        <td style="padding: 0 35px 20px 35px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #F4E6D7 0%, #E8D5B7 100%); border: 2px solid #E8D5B7; border-radius: 20px; padding: 22px 24px; box-shadow: 0 4px 15px rgba(180, 148, 95, 0.15);">
+                                <tr>
+                                    <td style="font-size: 12px; color: #8B7355; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; padding-bottom: 10px;">
+                                        🐾 Special Note for Your Pup
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="font-size: 16px; color: #5C4A37; line-height: 1.8; font-weight: 500; font-style: italic;">
+                                        {{customer_note}}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-{{#contact_number}}
-Contact: {{contact_number}}
-{{/contact_number}}
+                    <!-- CONTACT INFO (if provided) -->
+                    <tr>
+                        <td style="padding: 0 35px 24px 35px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #E8D5B7 0%, #F4E6D7 100%); border: 2px solid #D4A574; border-radius: 20px; padding: 20px 24px; box-shadow: 0 4px 15px rgba(180, 148, 95, 0.15);">
+                                <tr>
+                                    <td style="font-size: 15px; color: #5C4A37; font-weight: 800; letter-spacing: 0.3px;">
+                                        📞 Contact Number
+                                    </td>
+                                    <td align="right" style="font-size: 16px; color: #5C4A37; font-weight: 700;">
+                                        {{contact_number}}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-Thank you for shopping with WoofCrafts! 🐕
+                    <!-- SUPPORT SECTION -->
+                    <tr>
+                        <td style="padding: 0 35px 30px 35px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #E8F5E9 0%, #F1F8E9 100%); border: 3px solid #A0B58F; border-radius:20px; padding:26px 24px; box-shadow: 0 4px 15px rgba(160, 181, 143, 0.2);">
+                                <tr>
+                                    <td style="text-align:center;">
+                                        <div style="font-size: 32px; margin-bottom: 12px;">💬</div>
+                                        <div style="font-size:17px; color:#2E7D32; font-weight: 800; margin-bottom: 8px; letter-spacing: 0.3px;">
+                                            Questions? Woof for us!
+                                        </div>
+                                        <div style="font-size:15px; color:#388E3C; line-height: 1.6; font-weight: 500;">
+                                            Just reply to this email and our pack will fetch answers for you right away! 🐕
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
----
-WoofCrafts Pet Products
+                    <!-- FOOTER -->
+                    <tr>
+                        <td style="padding: 0 35px 40px 35px; text-align: center; background: linear-gradient(180deg, #FFFFFF 0%, #FAF7F3 100%);">
+                            <!-- Decorative Paw Print -->
+                            <div style="margin-bottom: 16px; opacity: 0.3;">
+                                <span style="font-size: 24px; margin: 0 8px;">🐾</span>
+                                <span style="font-size: 18px; margin: 0 6px;">🐾</span>
+                                <span style="font-size: 24px; margin: 0 8px;">🐾</span>
+                            </div>
+                            
+                            <!-- Thank You Message -->
+                            <div style="font-size:16px; color:#8B7355; margin-bottom:12px; font-weight: 700; line-height: 1.6;">
+                                Tail wags and thanks for supporting our small business!
+                            </div>
+                            
+                            <!-- Team Signature -->
+                            <div style="font-family: 'Fredoka One', 'Arial Black', sans-serif; font-size:24px; color:#D4A574; font-weight:400; margin-bottom: 10px; letter-spacing: 1px;">
+                                The WoofCrafts Team 🐕
+                            </div>
+                            
+                            <!-- Tagline -->
+                            <div style="font-size:15px; color:#8B7355; font-style: italic; font-weight: 500; line-height: 1.6;">
+                                Crafting pawsome accessories for good dogs everywhere
+                            </div>
+                            
+                            <!-- Bottom Decorative Paw Print -->
+                            <div style="margin-top: 16px; opacity: 0.3;">
+                                <span style="font-size: 24px; margin: 0 8px;">🐾</span>
+                                <span style="font-size: 18px; margin: 0 6px;">🐾</span>
+                                <span style="font-size: 24px; margin: 0 8px;">🐾</span>
+                            </div>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</div>
 ```
 
-5. **Save** the template
-6. **Copy your Template ID** (looks like `template_xxxxxxx`)
+7. **Save** the template
+8. **Copy your Template ID** (looks like `template_xxxxxxx`)
 
 ### Step 4: Get Your Public Key
 
@@ -114,58 +329,53 @@ Wait 1-2 minutes for GitHub Pages to rebuild, then test!
 4. Click "Send Email"
 5. Check your inbox!
 
-## 🎨 Customizing the Email Template
+## 🎨 Email Template Features
 
-You can make your email template prettier by:
+The template above includes:
 
-1. Going back to EmailJS Email Templates
-2. Clicking on your template
-3. Using the **"Template Editor"** to add HTML styling
-4. Adding your logo, colors, etc.
+✨ **Beautiful Structure & Readability**
+- Professional header with gradient matching your POS theme
+- Clean, spacious card-based layout with proper padding
+- Clear visual hierarchy with section headers
+- Improved typography using Nunito font family (matching your site)
+- Better contrast and readability throughout
+- Generous spacing for easy scanning
 
-### Example HTML Template (Optional):
+🐾 **Perfect Theme Match**
+- Exact color scheme from your POS system:
+  - Primary: `#D4A574` (Warm Beige)
+  - Secondary: `#C9A961` (Golden Beige)
+  - Accent: `#E8D5B7` (Light Beige)
+  - Text: `#5C4A37` (Brown) and `#8B7355` (Light Brown)
+  - Background: `#FAF7F3` (Soft Beige)
+- Fredoka One font for headers (matching your site)
+- Consistent border radius (20px, 25px) matching your design
+- Same gradient patterns and shadow styles
 
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .header { background: #D4A574; color: white; padding: 20px; text-align: center; }
-        .content { padding: 20px; }
-        .items { background: #f9f9f9; padding: 15px; margin: 15px 0; }
-        .total { font-size: 20px; font-weight: bold; color: #D4A574; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🐾 WoofCrafts Order Confirmation</h1>
-    </div>
-    <div class="content">
-        <p>Hi {{customer_name}},</p>
-        <p>Thank you for your order!</p>
-        
-        <h3>Order #{{order_id}}</h3>
-        <p>Date: {{order_date}}</p>
-        
-        <div class="items">
-            <h3>Your Items:</h3>
-            <pre>{{items_list}}</pre>
-        </div>
-        
-        <p>Subtotal: {{subtotal}}</p>
-        <p>Discount: {{discount}}</p>
-        <p class="total">Total: {{total}}</p>
-        
-        {{#customer_note}}
-        <p><strong>Special Instructions:</strong><br>{{customer_note}}</p>
-        {{/customer_note}}
-        
-        <p>Thank you for shopping with WoofCrafts! 🐶</p>
-    </div>
-</body>
-</html>
-```
+📱 **Mobile-Friendly & Email-Safe**
+- Uses table-based layout (works in all email clients)
+- Properly formatted for Gmail, Outlook, Apple Mail
+- Inline CSS for maximum compatibility
+- Responsive design that looks great on all devices
+- Optimized font sizes for readability
+
+### Customization Tips:
+
+1. **Change Colors**: Replace the color values with your brand colors:
+   - `#D4A574` → Your primary color
+   - `#5C4A37` → Your dark text color
+   - `#E8D5B7` → Your accent/border color
+
+2. **Update Text**: Modify the greeting, footer, and support messages to match your brand voice
+
+3. **Add Your Logo**: Replace the 🐕 emoji in the header with:
+   ```html
+   <img src="your-logo-url" style="width:80px; height:auto; display:block; margin:0 auto 12px;">
+   ```
+
+4. **Remove Optional Sections**: Delete the customer note or contact sections if not needed (remove entire `<tr>` blocks)
+
+5. **Adjust Spacing**: Modify padding values (currently 35px, 24px, etc.) to adjust spacing
 
 ## 🔧 Troubleshooting
 
