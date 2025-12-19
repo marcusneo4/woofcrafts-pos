@@ -121,7 +121,7 @@ class POSApp {
                 name: 'Big Identification Tag',
                 price: 35.00,
                 category: 'tags',
-                image: '/assets/Dog product images/Big Identification Tag.jpg',
+                image: 'assets/Dog product images/Big Identification Tag.jpg',
                 description: 'Large identification tag for your furry friend'
             },
             {
@@ -129,7 +129,7 @@ class POSApp {
                 name: 'Small Identification Tag',
                 price: 30.00,
                 category: 'tags',
-                image: '/assets/Dog product images/Small Identification Tag.jpg',
+                image: 'assets/Dog product images/Small Identification Tag.jpg',
                 description: 'Compact identification tag for smaller pets'
             },
             {
@@ -137,7 +137,7 @@ class POSApp {
                 name: 'Big Alphabet Tag',
                 price: 22.00,
                 category: 'tags',
-                image: '/assets/Dog product images/Big Alphabet Tag.jpg',
+                image: 'assets/Dog product images/Big Alphabet Tag.jpg',
                 description: 'Large alphabet-style pet tag'
             },
             {
@@ -145,7 +145,7 @@ class POSApp {
                 name: 'Small Alphabet Tag',
                 price: 20.00,
                 category: 'tags',
-                image: '/assets/Dog product images/Small Alphabet Tag.jpg',
+                image: 'assets/Dog product images/Small Alphabet Tag.jpg',
                 description: 'Small alphabet-style pet tag'
             },
             // ADD ONS Category
@@ -154,7 +154,7 @@ class POSApp {
                 name: 'NFC',
                 price: 5.00,
                 category: 'addons',
-                image: '/assets/dog-placeholder.png',
+                image: 'assets/dog-placeholder.png',
                 description: 'NFC chip addon for smart pet tracking'
             },
             {
@@ -162,7 +162,7 @@ class POSApp {
                 name: 'Charms',
                 price: 4.00,
                 category: 'addons',
-                image: '/assets/Dog product images/Charms.jpg',
+                image: 'assets/Dog product images/Charms.jpg',
                 description: 'Decorative charms for pet accessories'
             },
             {
@@ -170,7 +170,7 @@ class POSApp {
                 name: 'Photo Stand',
                 price: 10.00,
                 category: 'addons',
-                image: '/assets/Dog product images/Photo Stand.jpg',
+                image: 'assets/Dog product images/Photo Stand.jpg',
                 description: 'Display stand for your pet\'s photo'
             },
             // CHRISTMAS SPECIALS Category
@@ -179,7 +179,7 @@ class POSApp {
                 name: 'Christmas Tag',
                 price: 25.00,
                 category: 'christmas',
-                image: '/assets/Dog product images/Christmas Tag – Brown.jpg',
+                image: 'assets/Dog product images/Christmas Tag – Brown.jpg',
                 description: 'Festive Christmas-themed pet tag'
             },
             {
@@ -187,7 +187,7 @@ class POSApp {
                 name: 'Christmas Socks',
                 price: 20.00,
                 category: 'christmas',
-                image: '/assets/Dog product images/Christmas Socks Ornament.jpg',
+                image: 'assets/Dog product images/Christmas Socks Ornament.jpg',
                 description: 'Holiday socks ornament for your pet'
             },
             {
@@ -195,7 +195,7 @@ class POSApp {
                 name: 'Christmas Photoframe',
                 price: 15.00,
                 category: 'christmas',
-                image: '/assets/Dog product images/Christmas Photo Frame.jpg',
+                image: 'assets/Dog product images/Christmas Photo Frame.jpg',
                 description: 'Festive photo frame for pet pictures'
             },
             // PROMOTION - 3 Charms Option
@@ -204,7 +204,7 @@ class POSApp {
                 name: '3 Charms',
                 price: 10.00,
                 category: 'promotion',
-                image: '/assets/Dog product images/3 Charms.jpg',
+                image: 'assets/Dog product images/3 Charms.jpg',
                 description: 'Special set of 3 charms - promotional offer'
             }
         ];
