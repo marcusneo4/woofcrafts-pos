@@ -41,5 +41,12 @@ js/email.js
 js/sheets.js
 test-sheets-api.js
 login.html
+emailjs-credentials.txt
+*-credentials.txt
+credentials.txt
+
+# Test files with potential sensitive data
+test-env.js
+test-*.html
 
 
