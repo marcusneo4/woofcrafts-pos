@@ -1,4 +1,102 @@
 {
-  "products": []
+  "products": [
+    {
+      "id": 1,
+      "name": "Big Identification Tag",
+      "price": 35.00,
+      "category": "Tags",
+      "image": "/assets/Dog product images/Big Identification Tag.jpg",
+      "description": "Large identification tag for your furry friend"
+    },
+    {
+      "id": 2,
+      "name": "Small Identification Tag",
+      "price": 30.00,
+      "category": "Tags",
+      "image": "/assets/Dog product images/Small Identification Tag.jpg",
+      "description": "Compact identification tag for smaller pets"
+    },
+    {
+      "id": 3,
+      "name": "Big Alphabet Tag",
+      "price": 22.00,
+      "category": "Tags",
+      "image": "/assets/Dog product images/Big Alphabet Tag.jpg",
+      "description": "Large alphabet-style pet tag"
+    },
+    {
+      "id": 4,
+      "name": "Small Alphabet Tag",
+      "price": 20.00,
+      "category": "Tags",
+      "image": "/assets/Dog product images/Small Alphabet Tag.jpg",
+      "description": "Small alphabet-style pet tag"
+    },
+    {
+      "id": 5,
+      "name": "NFC",
+      "price": 5.00,
+      "category": "Addons",
+      "image": "/assets/dog-placeholder.png",
+      "description": "NFC chip addon for smart pet tracking"
+    },
+    {
+      "id": 6,
+      "name": "Charms",
+      "price": 4.00,
+      "category": "Addons",
+      "image": "/assets/Dog product images/Charms.jpg",
+      "description": "Decorative charms for pet accessories"
+    },
+    {
+      "id": 7,
+      "name": "Photo Stand",
+      "price": 10.00,
+      "category": "Addons",
+      "image": "/assets/Dog product images/Photo Stand.jpg",
+      "description": "Display stand for your pet's photo"
+    },
+    {
+      "id": 8,
+      "name": "Christmas Tag",
+      "price": 25.00,
+      "category": "Christmas",
+      "image": "/assets/Dog product images/Christmas Tag – Brown.jpg",
+      "description": "Festive Christmas-themed pet tag",
+      "variants": [
+        {
+          "name": "Brown",
+          "image": "/assets/Dog product images/Christmas Tag – Brown.jpg"
+        },
+        {
+          "name": "Green",
+          "image": "/assets/Dog product images/Christmas Tag – Green.jpg"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Christmas Socks",
+      "price": 20.00,
+      "category": "Christmas",
+      "image": "/assets/Dog product images/Christmas Socks Ornament.jpg",
+      "description": "Holiday socks ornament for your pet"
+    },
+    {
+      "id": 10,
+      "name": "Christmas Photoframe",
+      "price": 15.00,
+      "category": "Christmas",
+      "image": "/assets/Dog product images/Christmas Photo Frame.jpg",
+      "description": "Festive photo frame for pet pictures"
+    },
+    {
+      "id": 11,
+      "name": "3 Charms",
+      "price": 10.00,
+      "category": "Promotion",
+      "image": "/assets/Dog product images/3 Charms.jpg",
+      "description": "Special set of 3 charms - promotional offer"
+    }
+  ]
 }
-

@@ -15,14 +15,31 @@ class ProductManager {
     }
 
     async loadProducts() {
-        // Load from localStorage
+        try {
+            // First, try to load from products.json
+            const response = await fetch('data/products.json');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.products && Array.isArray(data.products)) {
+                    this.products = data.products;
+                    // Sync to localStorage
+                    localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+                    console.log(`✓ Loaded ${this.products.length} products from products.json`);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.warn('Could not load products.json, trying localStorage:', error);
+        }
+        
+        // Fallback to localStorage
         const storedProducts = localStorage.getItem('woofcrafts_products');
         if (storedProducts) {
             try {
                 const parsed = JSON.parse(storedProducts);
                 if (Array.isArray(parsed)) {
                     this.products = parsed;
-                    console.log(`✓ Loaded ${this.products.length} products`);
+                    console.log(`✓ Loaded ${this.products.length} products from localStorage`);
                 } else {
                     console.warn('Invalid products data in localStorage');
                     this.products = [];
@@ -257,20 +274,21 @@ class ProductManager {
         list.innerHTML = this.products.map(product => {
             // Ensure image path is valid - handle both data URLs and file paths
             let imageSrc = product.image || '';
-            if (imageSrc && !imageSrc.startsWith('data:') && !imageSrc.startsWith('http')) {
-                // If it's a relative path, ensure it starts with /
-                if (!imageSrc.startsWith('/')) {
-                    imageSrc = '/' + imageSrc;
-                }
-            }
-            
             const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'90\' height=\'90\'%3E%3Crect fill=\'%23FAF7F3\' width=\'90\' height=\'90\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'20\'%3E🐕%3C/text%3E%3C/svg%3E';
+            
+            // If no image, use fallback
+            if (!imageSrc) {
+                imageSrc = fallbackImage;
+            } else if (imageSrc && !imageSrc.startsWith('data:') && !imageSrc.startsWith('http')) {
+                // For file paths, keep them as-is (they should start with /)
+                console.log(`📸 Product image path: ${imageSrc}`);
+            }
             
             return `
             <div class="product-list-item">
                 <img src="${imageSrc}" alt="${product.name}" class="product-list-image"
-                     onerror="console.error('Image failed to load for product: ${product.name.replace(/'/g, "\\'")}', this.src); this.src='${fallbackImage}'"
-                     onload="console.log('Image loaded successfully for: ${product.name.replace(/'/g, "\\'")}')">
+                     onerror="console.error('❌ Image failed to load: ${imageSrc}'); this.src='${fallbackImage}'"
+                     onload="console.log('✓ Image loaded for: ${product.name.replace(/'/g, "\\'")}')">
                 <div class="product-list-info">
                     <div class="product-list-name">${product.name}</div>
                     <div class="product-list-price">$${parseFloat(product.price).toFixed(2)}</div>

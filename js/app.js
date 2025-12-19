@@ -43,13 +43,38 @@ class POSApp {
     }
 
     async loadProducts() {
-        // Get fixed/default products - these are the only products we use now
-        const fixedProducts = this.getFixedProducts();
+        try {
+            // First, try to load from products.json
+            const response = await fetch('data/products.json');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.products && Array.isArray(data.products)) {
+                    this.products = data.products;
+                    localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+                    console.log(`✓ Loaded ${this.products.length} products from products.json`);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.warn('Could not load products.json, falling back to localStorage:', error);
+        }
         
-        // Always use fixed products only (replacing any old products)
-        this.products = [...fixedProducts];
+        // Fallback to localStorage if products.json fails
+        const storedProducts = localStorage.getItem('woofcrafts_products');
+        if (storedProducts) {
+            try {
+                this.products = JSON.parse(storedProducts);
+                console.log(`✓ Loaded ${this.products.length} products from localStorage`);
+                return;
+            } catch (error) {
+                console.error('Error parsing stored products:', error);
+            }
+        }
+        
+        // Last resort: use fixed products
+        this.products = this.getFixedProducts();
         localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-        console.log(`Loaded ${this.products.length} products from price list`);
+        console.log(`✓ Using ${this.products.length} default products`);
     }
     
     async refreshProducts() {
@@ -88,91 +113,99 @@ class POSApp {
     }
 
     getFixedProducts() {
-        // Placeholder image (no PNGs/images)
-        const placeholderImage = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E';
-        
-        // These are the fixed products that should ALWAYS be included
+        // Fallback products with real image paths (just in case products.json doesn't load)
         return [
             // PET TAG Category
             {
-                id: 'prod_big_identification_tag',
+                id: 1,
                 name: 'Big Identification Tag',
                 price: 35.00,
                 category: 'tags',
-                image: placeholderImage
+                image: '/assets/Dog product images/Big Identification Tag.jpg',
+                description: 'Large identification tag for your furry friend'
             },
             {
-                id: 'prod_small_identification_tag',
+                id: 2,
                 name: 'Small Identification Tag',
                 price: 30.00,
                 category: 'tags',
-                image: placeholderImage
+                image: '/assets/Dog product images/Small Identification Tag.jpg',
+                description: 'Compact identification tag for smaller pets'
             },
             {
-                id: 'prod_big_alphabet_tag',
+                id: 3,
                 name: 'Big Alphabet Tag',
                 price: 22.00,
                 category: 'tags',
-                image: placeholderImage
+                image: '/assets/Dog product images/Big Alphabet Tag.jpg',
+                description: 'Large alphabet-style pet tag'
             },
             {
-                id: 'prod_small_alphabet_tag',
+                id: 4,
                 name: 'Small Alphabet Tag',
                 price: 20.00,
                 category: 'tags',
-                image: placeholderImage
+                image: '/assets/Dog product images/Small Alphabet Tag.jpg',
+                description: 'Small alphabet-style pet tag'
             },
             // ADD ONS Category
             {
-                id: 'prod_nfc',
+                id: 5,
                 name: 'NFC',
                 price: 5.00,
                 category: 'addons',
-                image: placeholderImage
+                image: '/assets/dog-placeholder.png',
+                description: 'NFC chip addon for smart pet tracking'
             },
             {
-                id: 'prod_charms',
+                id: 6,
                 name: 'Charms',
                 price: 4.00,
                 category: 'addons',
-                image: placeholderImage
+                image: '/assets/Dog product images/Charms.jpg',
+                description: 'Decorative charms for pet accessories'
             },
             {
-                id: 'prod_photo_stand',
+                id: 7,
                 name: 'Photo Stand',
                 price: 10.00,
                 category: 'addons',
-                image: placeholderImage
+                image: '/assets/Dog product images/Photo Stand.jpg',
+                description: 'Display stand for your pet\'s photo'
             },
             // CHRISTMAS SPECIALS Category
             {
-                id: 'prod_christmas_tag',
+                id: 8,
                 name: 'Christmas Tag',
                 price: 25.00,
                 category: 'christmas',
-                image: placeholderImage
+                image: '/assets/Dog product images/Christmas Tag – Brown.jpg',
+                description: 'Festive Christmas-themed pet tag'
             },
             {
-                id: 'prod_christmas_socks',
+                id: 9,
                 name: 'Christmas Socks',
                 price: 20.00,
                 category: 'christmas',
-                image: placeholderImage
+                image: '/assets/Dog product images/Christmas Socks Ornament.jpg',
+                description: 'Holiday socks ornament for your pet'
             },
             {
-                id: 'prod_christmas_photoframe',
+                id: 10,
                 name: 'Christmas Photoframe',
                 price: 15.00,
                 category: 'christmas',
-                image: placeholderImage
+                image: '/assets/Dog product images/Christmas Photo Frame.jpg',
+                description: 'Festive photo frame for pet pictures'
             },
             // PROMOTION - 3 Charms Option
             {
-                id: 'prod_3_charms',
+                id: 11,
                 name: '3 Charms',
                 price: 10.00,
                 category: 'promotion',
-                image: placeholderImage
+                image: '/assets/Dog product images/3 Charms.jpg',
+                description: 'Special set of 3 charms - promotional offer'
             }
         ];
     }
@@ -232,24 +265,19 @@ class POSApp {
             if (!imageSrc) {
                 imageSrc = fallbackImage;
             } else if (imageSrc && !imageSrc.startsWith('data:') && !imageSrc.startsWith('http://') && !imageSrc.startsWith('https://')) {
-                // For relative paths, ensure they work correctly
-                // Remove leading slash if present to make it relative to current page
-                if (imageSrc.startsWith('/')) {
-                    imageSrc = imageSrc.substring(1);
-                }
-                // Log the image path for debugging
-                console.log(`Loading image for ${product.name}: ${imageSrc}`);
+                // For file paths, keep them as-is (they should start with /)
+                console.log(`📸 Loading image for ${product.name}: ${imageSrc}`);
             }
             
             return `
-                <div class="product-card" onclick="posApp.addToCart('${product.id}')">
+                <div class="product-card" onclick="safeAddToCart(${product.id})">
                     ${category !== 'general' ? `<div class="product-category-badge">${categoryLabel}</div>` : ''}
                     <img src="${imageSrc}" alt="${product.name}" class="product-image" 
-                         onerror="this.onerror=null; this.src='${fallbackImage}'; console.warn('Image failed to load for product: ${product.name.replace(/'/g, "\\'")}')"
-                         onload="console.log('Image loaded successfully for: ${product.name.replace(/'/g, "\\'")}')">
+                         onerror="this.onerror=null; this.src='${fallbackImage}'; console.warn('❌ Image failed to load: ${imageSrc}')"
+                         onload="console.log('✓ Image loaded: ${product.name}')">
                     <div class="product-name">${product.name}</div>
                     <div class="product-price">$${parseFloat(product.price).toFixed(2)}</div>
-                    <button class="quick-add-btn" onclick="event.stopPropagation(); posApp.addToCart('${product.id}')" title="Quick Add">+</button>
+                    <button class="quick-add-btn" onclick="event.stopPropagation(); safeAddToCart(${product.id})" title="Quick Add">+</button>
                 </div>
             `;
         }).join('');
@@ -258,44 +286,71 @@ class POSApp {
     }
 
     addToCart(productId) {
-        const product = this.products.find(p => p.id === productId);
-        if (!product) return;
+        try {
+            console.log('🛒 addToCart called with productId:', productId);
+            
+            // Convert productId to number if it's a string (from HTML onclick)
+            const numericId = typeof productId === 'string' ? parseInt(productId) : productId;
+            console.log('🔍 Looking for product with ID:', numericId);
+            console.log('📦 Available products:', this.products.length);
+            
+            const product = this.products.find(p => p.id == numericId);
+            if (!product) {
+                console.error(`❌ Product not found: ${productId}`, 'Available IDs:', this.products.map(p => p.id));
+                alert('Product not found! Please refresh the page.');
+                return;
+            }
 
-        const existingItem = this.cart.find(item => item.productId === productId);
-        
-        if (existingItem) {
-            existingItem.quantity += 1;
-        } else {
-            this.cart.push({
-                productId: product.id,
-                name: product.name,
-                price: parseFloat(product.price),
-                image: product.image,
-                quantity: 1
-            });
-        }
+            console.log('✓ Found product:', product.name);
 
-        this.saveCart();
-        this.renderCart();
-        
-        // Visual feedback
-        const cartBadge = document.getElementById('cart-count');
-        if (cartBadge) {
-            cartBadge.style.animation = 'none';
-            setTimeout(() => {
-                cartBadge.style.animation = 'scaleIn 0.3s';
-            }, 10);
+            const existingItem = this.cart.find(item => item.productId == numericId);
+            
+            if (existingItem) {
+                existingItem.quantity += 1;
+                console.log(`✓ Updated quantity for ${product.name}: ${existingItem.quantity}`);
+            } else {
+                this.cart.push({
+                    productId: product.id,
+                    name: product.name,
+                    price: parseFloat(product.price),
+                    image: product.image,
+                    quantity: 1
+                });
+                console.log(`✓ Added new item to cart: ${product.name}`);
+            }
+
+            console.log('💾 Saving cart...');
+            this.saveCart();
+            
+            console.log('🎨 Rendering cart...');
+            this.renderCart();
+            
+            console.log('✅ Cart updated successfully! Total items:', this.cart.length);
+            
+            // Visual feedback
+            const cartBadge = document.getElementById('cart-count');
+            if (cartBadge) {
+                cartBadge.style.animation = 'none';
+                setTimeout(() => {
+                    cartBadge.style.animation = 'scaleIn 0.3s';
+                }, 10);
+            }
+        } catch (error) {
+            console.error('❌ Error in addToCart:', error);
+            alert('Error adding to cart: ' + error.message);
         }
     }
 
     removeFromCart(productId) {
-        this.cart = this.cart.filter(item => item.productId !== productId);
+        const numericId = typeof productId === 'string' ? parseInt(productId) : productId;
+        this.cart = this.cart.filter(item => item.productId != numericId);
         this.saveCart();
         this.renderCart();
     }
 
     updateQuantity(productId, change) {
-        const item = this.cart.find(item => item.productId === productId);
+        const numericId = typeof productId === 'string' ? parseInt(productId) : productId;
+        const item = this.cart.find(item => item.productId == numericId);
         if (!item) return;
 
         item.quantity += change;
@@ -331,23 +386,24 @@ class POSApp {
 
         cartItems.innerHTML = this.cart.map(item => {
             const subtotal = item.price * item.quantity;
-            const imageSrc = item.image || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'70\' height=\'70\'%3E%3Crect fill=\'%23FAF7F3\' width=\'70\' height=\'70\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'20\'%3E🐕%3C/text%3E%3C/svg%3E';
+            const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'70\' height=\'70\'%3E%3Crect fill=\'%23FAF7F3\' width=\'70\' height=\'70\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'20\'%3E🐕%3C/text%3E%3C/svg%3E';
+            const imageSrc = item.image || fallbackImage;
             return `
                 <div class="cart-item">
                     <img src="${imageSrc}" alt="${item.name}" class="cart-item-thumbnail" 
-                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'70\' height=\'70\'%3E%3Crect fill=\'%23FAF7F3\' width=\'70\' height=\'70\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'20\'%3E🐕%3C/text%3E%3C/svg%3E'">
+                         onerror="this.src='${fallbackImage}'">
                     <div class="cart-item-main">
                         <div class="cart-item-details">
                             <div class="cart-item-name">${item.name}</div>
                             <div class="cart-item-price">$${item.price.toFixed(2)} each</div>
                         </div>
                         <div class="cart-item-controls">
-                            <button class="quantity-btn" onclick="posApp.updateQuantity('${item.productId}', -1)">-</button>
+                            <button class="quantity-btn" onclick="(window.posApp || posApp).updateQuantity(${item.productId}, -1)">-</button>
                             <span class="quantity-display">${item.quantity}</span>
-                            <button class="quantity-btn" onclick="posApp.updateQuantity('${item.productId}', 1)">+</button>
+                            <button class="quantity-btn" onclick="(window.posApp || posApp).updateQuantity(${item.productId}, 1)">+</button>
                         </div>
                         <div class="cart-item-total">$${subtotal.toFixed(2)}</div>
-                        <button class="remove-btn" onclick="posApp.removeFromCart('${item.productId}')" title="Remove">🗑️</button>
+                        <button class="remove-btn" onclick="(window.posApp || posApp).removeFromCart(${item.productId})" title="Remove">🗑️</button>
                     </div>
                 </div>
             `;
@@ -891,24 +947,49 @@ class POSApp {
     }
 }
 
-// Initialize the POS app
-let posApp;
-document.addEventListener('DOMContentLoaded', async () => {
-    posApp = new POSApp();
+// Global helper function to safely add to cart
+function safeAddToCart(productId) {
+    if (!window.posApp && !posApp) {
+        console.error('❌ POS App not initialized yet!');
+        alert('Please wait for the app to load, then try again.');
+        return;
+    }
     
-    // Double-check that products are rendered after a short delay
-    // This helps catch any timing issues
-    setTimeout(() => {
-        if (posApp && posApp.products && posApp.products.length > 0) {
-            const grid = document.getElementById('products-grid');
-            if (grid) {
-                const hasProducts = grid.querySelector('.product-card');
-                if (!hasProducts) {
-                    console.warn('Products exist but not rendered! Forcing re-render...');
-                    posApp.renderProducts();
+    const app = window.posApp || posApp;
+    console.log('🛒 safeAddToCart called for product:', productId);
+    app.addToCart(productId);
+}
+
+// Initialize the POS app - declared globally
+var posApp;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 Initializing POS App...');
+    
+    try {
+        posApp = new POSApp();
+        window.posApp = posApp; // Also set on window for extra safety
+        console.log('✅ POS App initialized successfully');
+        
+        // Double-check that products are rendered after a short delay
+        // This helps catch any timing issues
+        setTimeout(() => {
+            if (posApp && posApp.products && posApp.products.length > 0) {
+                const grid = document.getElementById('products-grid');
+                if (grid) {
+                    const hasProducts = grid.querySelector('.product-card');
+                    if (!hasProducts) {
+                        console.warn('⚠️ Products exist but not rendered! Forcing re-render...');
+                        posApp.renderProducts();
+                    } else {
+                        console.log(`✅ ${posApp.products.length} products displayed successfully`);
+                    }
                 }
             }
-        }
-    }, 500);
+        }, 500);
+    } catch (error) {
+        console.error('❌ Failed to initialize POS App:', error);
+        alert('Failed to initialize the app. Please refresh the page.');
+    }
 });
 

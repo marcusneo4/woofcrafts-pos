@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Cart Function</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #console-log {
+            background: #222;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐕 WoofCrafts Cart Test Page</h1>
+    
+    <div class="test-box">
+        <h2>Test Authentication</h2>
+        <p>Current authentication status: <span id="auth-status"></span></p>
+        <button onclick="setAuth()">Set Authentication</button>
+        <button onclick="clearAuth()">Clear Authentication</button>
+    </div>
+
+    <div class="test-box">
+        <h2>Direct Cart Test</h2>
+        <p>This will test if the cart functions work when called directly:</p>
+        <button onclick="testDirectCartAdd()">Test Add Product #1</button>
+        <button onclick="testDirectCartAdd2()">Test Add Product #5</button>
+        <button onclick="checkCart()">Check Cart Contents</button>
+    </div>
+
+    <div class="test-box">
+        <h2>Test Logs</h2>
+        <button onclick="document.getElementById('console-log').innerHTML = ''">Clear Logs</button>
+        <div id="console-log">Logs will appear here...\n</div>
+    </div>
+
+    <div class="test-box">
+        <h2>Go to POS System</h2>
+        <button onclick="window.location.href='pos.html'">Open POS System</button>
+    </div>
+
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const logDiv = document.getElementById('console-log');
+
+        function addLog(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f44' : type === 'warn' ? '#fa0' : '#0f0';
+            logDiv.innerHTML += `<span style="color:${color}">[${timestamp}] ${message}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog(args.join(' '), 'log');
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog('ERROR: ' + args.join(' '), 'error');
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog('WARN: ' + args.join(' '), 'warn');
+        };
+
+        // Check auth status on load
+        function updateAuthStatus() {
+            const isAuth = sessionStorage.getItem('woofcrafts_authenticated') === 'true';
+            const statusEl = document.getElementById('auth-status');
+            if (isAuth) {
+                statusEl.innerHTML = '<span class="success">✅ Authenticated</span>';
+            } else {
+                statusEl.innerHTML = '<span class="error">❌ Not Authenticated</span>';
+            }
+            console.log('Auth status:', isAuth);
+        }
+
+        function setAuth() {
+            sessionStorage.setItem('woofcrafts_authenticated', 'true');
+            console.log('✅ Authentication set');
+            updateAuthStatus();
+        }
+
+        function clearAuth() {
+            sessionStorage.removeItem('woofcrafts_authenticated');
+            console.log('❌ Authentication cleared');
+            updateAuthStatus();
+        }
+
+        function testDirectCartAdd() {
+            console.log('🧪 Testing direct cart add...');
+            
+            // Simulate what the POS system does
+            let cart = [];
+            const cartData = localStorage.getItem('woofcrafts_cart');
+            if (cartData) {
+                cart = JSON.parse(cartData);
+                console.log('📦 Loaded existing cart:', cart.length, 'items');
+            }
+
+            // Add test product
+            const testProduct = {
+                productId: 1,
+                name: 'Big Identification Tag',
+                price: 35.00,
+                quantity: 1
+            };
+
+            const existing = cart.find(item => item.productId === 1);
+            if (existing) {
+                existing.quantity += 1;
+                console.log('✅ Updated quantity:', existing.quantity);
+            } else {
+                cart.push(testProduct);
+                console.log('✅ Added new item to cart');
+            }
+
+            localStorage.setItem('woofcrafts_cart', JSON.stringify(cart));
+            console.log('💾 Saved cart to localStorage');
+            console.log('Current cart:', cart);
+        }
+
+        function testDirectCartAdd2() {
+            console.log('🧪 Testing add product #5...');
+            
+            let cart = [];
+            const cartData = localStorage.getItem('woofcrafts_cart');
+            if (cartData) {
+                cart = JSON.parse(cartData);
+            }
+
+            const testProduct = {
+                productId: 5,
+                name: 'NFC',
+                price: 5.00,
+                quantity: 1
+            };
+
+            const existing = cart.find(item => item.productId === 5);
+            if (existing) {
+                existing.quantity += 1;
+                console.log('✅ Updated quantity:', existing.quantity);
+            } else {
+                cart.push(testProduct);
+                console.log('✅ Added new item to cart');
+            }
+
+            localStorage.setItem('woofcrafts_cart', JSON.stringify(cart));
+            console.log('💾 Saved cart to localStorage');
+        }
+
+        function checkCart() {
+            const cartData = localStorage.getItem('woofcrafts_cart');
+            if (cartData) {
+                const cart = JSON.parse(cartData);
+                console.log('🛒 Cart contents:', cart);
+                alert('Cart has ' + cart.length + ' different items\n\nCheck console for details');
+            } else {
+                console.log('🛒 Cart is empty');
+                alert('Cart is empty');
+            }
+        }
+
+        // Run on load
+        updateAuthStatus();
+        console.log('🚀 Test page loaded');
+        console.log('Click the buttons above to test cart functionality');
+    </script>
+</body>
+</html>
