@@ -9,8 +9,11 @@ const querystring = require('querystring');
 const PORT = process.env.PORT || 8001;
 const PUBLIC_DIR = __dirname;
 
-// External product images directory
-const EXTERNAL_IMAGES_DIR = 'C:\\Users\\e0775081\\Downloads\\Dog product images';
+// Request body size limit (10MB for base64 images, 1MB for JSON)
+const MAX_BODY_SIZE = 10 * 1024 * 1024;
+
+// External product images directory (set PRODUCT_IMAGES_DIR in .env for your path)
+const EXTERNAL_IMAGES_DIR = process.env.PRODUCT_IMAGES_DIR || path.join(__dirname, 'assets', 'Dog product images');
 
 // Import email functionality
 let transporter, generateOrderEmail, generatePlainTextEmail;
@@ -57,26 +60,52 @@ const server = http.createServer((req, res) => {
     // API Endpoint: Upload Product Image
     if (pathname === '/api/upload-image' && req.method === 'POST') {
         let body = '';
-        
+        let bodySize = 0;
+        let responded = false;
+        const sendResponse = (status, obj) => {
+            if (responded) return;
+            responded = true;
+            res.writeHead(status, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(obj));
+        };
+
         req.on('data', chunk => {
-            body += chunk.toString();
+            bodySize += chunk.length;
+            if (bodySize > MAX_BODY_SIZE) {
+                req.destroy();
+            } else {
+                body += chunk.toString();
+            }
         });
-        
+
+        req.on('error', () => {
+            if (!responded) sendResponse(413, { success: false, error: 'Request body too large (max 10MB)' });
+        });
+
         req.on('end', () => {
+            if (bodySize > MAX_BODY_SIZE) {
+                sendResponse(413, { success: false, error: 'Request body too large (max 10MB)' });
+                return;
+            }
             try {
                 const data = JSON.parse(body);
                 
                 if (!data.imageData || !data.filename) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ 
-                        success: false, 
-                        error: 'Missing required fields: imageData and filename are required' 
-                    }));
+                    sendResponse(400, { success: false, error: 'Missing required fields: imageData and filename are required' });
                     return;
                 }
 
-                // Extract base64 data (remove data:image/...;base64, prefix if present)
-                const base64Data = data.imageData.replace(/^data:image\/\w+;base64,/, '');
+                // Validate base64 format
+                const base64Match = String(data.imageData).match(/^data:image\/(\w+);base64,(.+)$/);
+                if (!base64Match) {
+                    sendResponse(400, { success: false, error: 'Invalid image data format. Expected data:image/xxx;base64,...' });
+                    return;
+                }
+                const base64Data = base64Match[2];
+                if (!/^[A-Za-z0-9+/=]+$/.test(base64Data)) {
+                    sendResponse(400, { success: false, error: 'Invalid base64 data' });
+                    return;
+                }
                 const imageBuffer = Buffer.from(base64Data, 'base64');
                 
                 // Sanitize filename
@@ -93,45 +122,59 @@ const server = http.createServer((req, res) => {
                 const relativePath = `assets/images/${finalFilename}`;
                 
                 console.log(`✅ Image uploaded: ${finalFilename}`);
-                
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ 
-                    success: true, 
-                    imagePath: relativePath,
-                    filename: finalFilename
-                }));
-
+                sendResponse(200, { success: true, imagePath: relativePath, filename: finalFilename });
             } catch (error) {
                 console.error('❌ Image upload error:', error);
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ 
-                    success: false, 
-                    error: error.message 
-                }));
+                const safeMessage = error instanceof SyntaxError ? 'Invalid JSON in request body' : error.message;
+                sendResponse(500, { success: false, error: safeMessage });
             }
         });
-        
+
         return;
     }
 
     // API Endpoint: Send Order Confirmation Email
     if (pathname === '/api/send-order-email' && req.method === 'POST') {
         let body = '';
-        
+        let bodySize = 0;
+
         req.on('data', chunk => {
+            bodySize += chunk.length;
+            if (bodySize > 1024 * 1024) { // 1MB for order JSON
+                req.destroy();
+                return;
+            }
             body += chunk.toString();
         });
-        
+
         req.on('end', async () => {
+            if (bodySize > 1024 * 1024) {
+                res.writeHead(413, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: false, error: 'Request body too large (max 1MB)' }));
+                return;
+            }
             try {
                 const orderData = JSON.parse(body);
                 
                 // Validate required fields
-                if (!orderData.customerEmail || !orderData.items || orderData.items.length === 0) {
+                if (!orderData.customerEmail || !orderData.items || !Array.isArray(orderData.items) || orderData.items.length === 0) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ 
-                        success: false, 
-                        error: 'Missing required fields: customerEmail and items are required' 
+                    res.end(JSON.stringify({
+                        success: false,
+                        error: 'Missing required fields: customerEmail and items (non-empty array) are required'
+                    }));
+                    return;
+                }
+
+                // Validate each item has required fields
+                const validItems = orderData.items.filter(item =>
+                    item && typeof item.name === 'string' && typeof item.quantity === 'number' && typeof item.price === 'number'
+                );
+                if (validItems.length !== orderData.items.length) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: false,
+                        error: 'Each item must have name (string), quantity (number), and price (number)'
                     }));
                     return;
                 }
@@ -146,9 +189,10 @@ const server = http.createServer((req, res) => {
                     return;
                 }
 
-                // Generate HTML and plain text versions of the email
-                const emailHTML = generateOrderEmail(orderData);
-                const emailText = generatePlainTextEmail(orderData);
+                // Generate HTML and plain text versions (use validated items)
+                const sanitizedOrderData = { ...orderData, items: validItems };
+                const emailHTML = generateOrderEmail(sanitizedOrderData);
+                const emailText = generatePlainTextEmail(sanitizedOrderData);
 
                 // Send email with both HTML and plain text versions
                 const info = await transporter.sendMail({
@@ -170,24 +214,30 @@ const server = http.createServer((req, res) => {
 
             } catch (error) {
                 console.error('❌ Email sending error:', error);
+                const safeMessage = error instanceof SyntaxError ? 'Invalid JSON in request body' : error.message;
                 res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ 
-                    success: false, 
-                    error: error.message 
-                }));
+                res.end(JSON.stringify({ success: false, error: safeMessage }));
             }
         });
-        
+
         return;
     }
 
     // Serve product images from external directory
     if (pathname.startsWith('/product-images/')) {
-        const imageFilename = decodeURIComponent(pathname.replace('/product-images/', ''));
+        const rawFilename = pathname.replace(/^\/product-images\//, '');
+        const imageFilename = decodeURIComponent(rawFilename).replace(/\.\./g, '').replace(/[\/\\]/g, '');
+        if (!imageFilename) {
+            res.writeHead(400, { 'Content-Type': 'text/plain' });
+            res.end('Invalid filename');
+            return;
+        }
         const imagePath = path.join(EXTERNAL_IMAGES_DIR, imageFilename);
-        
-        // Security check: ensure the file is within the external images directory
-        if (!imagePath.startsWith(EXTERNAL_IMAGES_DIR)) {
+        const resolvedImagePath = path.resolve(imagePath);
+        const resolvedBaseDir = path.resolve(EXTERNAL_IMAGES_DIR);
+
+        // Security check: ensure the file is within the external images directory (path traversal protection)
+        if (!resolvedImagePath.startsWith(resolvedBaseDir)) {
             res.writeHead(403, { 'Content-Type': 'text/html' });
             res.end('<h1>403 - Forbidden</h1>', 'utf-8');
             return;

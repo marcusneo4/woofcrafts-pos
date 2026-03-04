@@ -18,8 +18,11 @@ function generateOrderEmail(orderData) {
         contactNumber = ''
     } = orderData;
 
-    // Generate items HTML
+    // Generate items HTML (defensive: coerce quantity/price to numbers)
     const itemsHTML = items.map((item, index) => {
+        const qty = Number(item.quantity) || 0;
+        const price = Number(item.price) || 0;
+        const name = String(item.name || 'Item');
         const colors = [
             { bg: '#FFF9F5', border: '#E8D5C4', price: '#D4A574' },
             { bg: '#FFFAF0', border: '#F5DEB3', price: '#CD853F' },
@@ -34,14 +37,14 @@ function generateOrderEmail(orderData) {
                                             <tr>
                                                 <td style="padding: 18px 20px 12px 20px;">
                                                     <div style="font-size: 16px; color: #5C4A37; font-weight: 800;">
-                                                        🐾 ${item.name}
+                                                        🐾 ${name}
                                                     </div>
                                                     <div style="margin-top: 8px; font-size: 14px; color: #8B7355; font-weight: 600;">
-                                                        Quantity: ${item.quantity} × $${item.price.toFixed(2)} each
+                                                        Quantity: ${qty} × $${price.toFixed(2)} each
                                                     </div>
                                                 </td>
                                                 <td align="right" valign="top" style="padding: 18px 20px 12px 20px; white-space: nowrap;">
-                                                    <div style="font-size: 18px; color: ${color.price}; font-weight: 900;">$${(item.quantity * item.price).toFixed(2)}</div>
+                                                    <div style="font-size: 18px; color: ${color.price}; font-weight: 900;">$${(qty * price).toFixed(2)}</div>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -54,11 +57,12 @@ function generateOrderEmail(orderData) {
                                 </tr>`;
     }).join('');
 
-    // Optional discount section
+    // Optional discount section (guard against divide-by-zero when subtotal is 0)
+    const discountPct = subtotal > 0 ? ((discount / subtotal) * 100).toFixed(0) : '0';
     const discountHTML = discount > 0 ? `
                                 <tr>
                                     <td style="padding: 10px 0; font-size: 16px; color: #2F855A; font-weight: 700;">
-                                        🐾 Discount (${((discount / subtotal) * 100).toFixed(0)}%)
+                                        🐾 Discount (${discountPct}%)
                                     </td>
                                     <td align="right" style="padding: 10px 0; font-size: 16px; color: #2F855A; font-weight: 700;">
                                         -$${discount.toFixed(2)}
@@ -307,9 +311,12 @@ function generatePlainTextEmail(orderData) {
         contactNumber = ''
     } = orderData;
 
-    const itemsList = items.map(item => 
-        `${item.name}\nQty: ${item.quantity} x $${item.price.toFixed(2)} = $${(item.quantity * item.price).toFixed(2)}`
-    ).join('\n\n');
+    const itemsList = items.map(item => {
+        const qty = Number(item.quantity) || 0;
+        const price = Number(item.price) || 0;
+        const name = String(item.name || 'Item');
+        return `${name}\nQty: ${qty} x $${price.toFixed(2)} = $${(qty * price).toFixed(2)}`;
+    }).join('\n\n');
 
     const discountText = discount > 0 ? `Discount: -$${discount.toFixed(2)}\n` : '';
     const noteText = customerNote ? `\n\nSpecial Note:\n"${customerNote}"\n` : '';

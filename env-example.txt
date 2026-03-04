@@ -18,3 +18,7 @@ EMAIL_FROM=WoofCrafts <your-email@gmail.com>
 
 # Server Port (optional)
 PORT=8000
+
+# Product images folder (optional - for /product-images/ API)
+# Windows: PRODUCT_IMAGES_DIR=C:\\Path\\To\\Dog product images
+# Mac/Linux: PRODUCT_IMAGES_DIR=/path/to/Dog product images

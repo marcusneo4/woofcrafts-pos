@@ -1,4 +1,5 @@
 // WoofCrafts POS System - Main Application Logic
+// Requires js/utils.js (escapeHtml, safeImageSrc, PLACEHOLDER_IMAGE, PLACEHOLDER_THUMB)
 
 class POSApp {
     constructor() {
@@ -83,33 +84,6 @@ class POSApp {
         await this.loadProducts();
         this.renderProducts();
         console.log(`✓ Products refreshed: ${this.products.length} total`);
-    }
-
-    // Helper function to get image path for a product name
-    getProductImagePath(productName) {
-        // Map product names to image filenames
-        const imageMap = {
-            '3 Charms': '3 Charms  $8.00.jpg',
-            'Big Alphabet Tag': 'Big Alphabet Tag  $22.00.jpg',
-            'Big Identification Tag': 'Big Identification Tag  $35.00.jpg',
-            'Charms': 'Charms  $3.00.jpg',
-            'Christmas Photo Frame': 'Christmas Photo Frame  $15.00.jpg',
-            'Christmas Socks Ornament': 'Christmas Socks Ornament  $20.00.jpg',
-            'Christmas Tag - Brown': 'Christmas Tag – Brown  $25.00.jpg',
-            'Christmas Tag - Green': 'Christmas Tag – Green  $25.00.jpg',
-            'Photo Stand': 'Photo Stand  $10.00.jpg',
-            'Small Alphabet Tag': 'Small Alphabet Tag  $20.00.jpg',
-            'Small Identification Tag': 'Small Identification Tag  $30.00.jpg'
-        };
-        
-        const imageFilename = imageMap[productName];
-        if (imageFilename) {
-            // Encode the filename for URL
-            return `/product-images/${encodeURIComponent(imageFilename)}`;
-        }
-        
-        // Fallback to placeholder
-        return 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E';
     }
 
     getFixedProducts() {
@@ -220,7 +194,16 @@ class POSApp {
     loadCart() {
         const storedCart = localStorage.getItem('woofcrafts_cart');
         if (storedCart) {
-            this.cart = JSON.parse(storedCart);
+            try {
+                this.cart = JSON.parse(storedCart);
+                if (!Array.isArray(this.cart)) {
+                    this.cart = [];
+                }
+            } catch (e) {
+                console.warn('Corrupted cart data in localStorage, resetting:', e);
+                this.cart = [];
+                localStorage.removeItem('woofcrafts_cart');
+            }
         }
     }
 
@@ -255,29 +238,20 @@ class POSApp {
 
         grid.innerHTML = validProducts.map(product => {
             const category = product.category || 'general';
-            const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
-            
-            // Ensure image path is valid - handle both data URLs and file paths
-            let imageSrc = product.image || '';
-            const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E';
-            
-            // If no image provided, use fallback immediately
-            if (!imageSrc) {
-                imageSrc = fallbackImage;
-            } else if (imageSrc && !imageSrc.startsWith('data:') && !imageSrc.startsWith('http://') && !imageSrc.startsWith('https://')) {
-                // For file paths, keep them as-is (they should start with /)
-                console.log(`📸 Loading image for ${product.name}: ${imageSrc}`);
-            }
-            
+            const categoryLabel = escapeHtml(category.charAt(0).toUpperCase() + category.slice(1));
+            const productName = escapeHtml(product.name || '');
+            let imageSrc = safeImageSrc(product.image) || PLACEHOLDER_IMAGE;
+            if (!imageSrc) imageSrc = PLACEHOLDER_IMAGE;
+
+            const safeId = JSON.stringify(product.id);
             return `
-                <div class="product-card" onclick="safeAddToCart(${product.id})">
+                <div class="product-card" onclick="safeAddToCart(${safeId})">
                     ${category !== 'general' ? `<div class="product-category-badge">${categoryLabel}</div>` : ''}
-                    <img src="${imageSrc}" alt="${product.name}" class="product-image" 
-                         onerror="this.onerror=null; this.src='${fallbackImage}'; console.warn('❌ Image failed to load: ${imageSrc}')"
-                         onload="console.log('✓ Image loaded: ${product.name}')">
-                    <div class="product-name">${product.name}</div>
+                    <img src="${escapeHtml(imageSrc)}" alt="${productName}" class="product-image" 
+                         onerror="this.onerror=null; this.src='${PLACEHOLDER_IMAGE}'">
+                    <div class="product-name">${productName}</div>
                     <div class="product-price">$${parseFloat(product.price).toFixed(2)}</div>
-                    <button class="quick-add-btn" onclick="event.stopPropagation(); safeAddToCart(${product.id})" title="Quick Add">+</button>
+                    <button class="quick-add-btn" onclick="event.stopPropagation(); safeAddToCart(${safeId})" title="Quick Add">+</button>
                 </div>
             `;
         }).join('');
@@ -287,27 +261,20 @@ class POSApp {
 
     addToCart(productId) {
         try {
-            console.log('🛒 addToCart called with productId:', productId);
-            
-            // Convert productId to number if it's a string (from HTML onclick)
-            const numericId = typeof productId === 'string' ? parseInt(productId) : productId;
-            console.log('🔍 Looking for product with ID:', numericId);
-            console.log('📦 Available products:', this.products.length);
-            
-            const product = this.products.find(p => p.id == numericId);
+            // Normalize ID: support both numeric and string IDs from products.json vs form-added products
+            const normalizedId = (typeof productId === 'string' && /^\d+$/.test(productId))
+                ? parseInt(productId, 10) : productId;
+
+            const product = this.products.find(p => p.id == normalizedId || String(p.id) === String(normalizedId));
             if (!product) {
-                console.error(`❌ Product not found: ${productId}`, 'Available IDs:', this.products.map(p => p.id));
                 alert('Product not found! Please refresh the page.');
                 return;
             }
 
-            console.log('✓ Found product:', product.name);
-
-            const existingItem = this.cart.find(item => item.productId == numericId);
+            const existingItem = this.cart.find(item => item.productId == normalizedId || String(item.productId) === String(normalizedId));
             
             if (existingItem) {
                 existingItem.quantity += 1;
-                console.log(`✓ Updated quantity for ${product.name}: ${existingItem.quantity}`);
             } else {
                 this.cart.push({
                     productId: product.id,
@@ -316,16 +283,10 @@ class POSApp {
                     image: product.image,
                     quantity: 1
                 });
-                console.log(`✓ Added new item to cart: ${product.name}`);
             }
 
-            console.log('💾 Saving cart...');
             this.saveCart();
-            
-            console.log('🎨 Rendering cart...');
             this.renderCart();
-            
-            console.log('✅ Cart updated successfully! Total items:', this.cart.length);
             
             // Visual feedback
             const cartBadge = document.getElementById('cart-count');
@@ -342,15 +303,17 @@ class POSApp {
     }
 
     removeFromCart(productId) {
-        const numericId = typeof productId === 'string' ? parseInt(productId) : productId;
-        this.cart = this.cart.filter(item => item.productId != numericId);
+        const normalizedId = (typeof productId === 'string' && /^\d+$/.test(productId))
+            ? parseInt(productId, 10) : productId;
+        this.cart = this.cart.filter(item => item.productId != normalizedId && String(item.productId) !== String(normalizedId));
         this.saveCart();
         this.renderCart();
     }
 
     updateQuantity(productId, change) {
-        const numericId = typeof productId === 'string' ? parseInt(productId) : productId;
-        const item = this.cart.find(item => item.productId == numericId);
+        const normalizedId = (typeof productId === 'string' && /^\d+$/.test(productId))
+            ? parseInt(productId, 10) : productId;
+        const item = this.cart.find(i => i.productId == normalizedId || String(i.productId) === String(normalizedId));
         if (!item) return;
 
         item.quantity += change;
@@ -384,26 +347,27 @@ class POSApp {
             return;
         }
 
+        const safeId = (id) => JSON.stringify(id);
         cartItems.innerHTML = this.cart.map(item => {
             const subtotal = item.price * item.quantity;
-            const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'70\' height=\'70\'%3E%3Crect fill=\'%23FAF7F3\' width=\'70\' height=\'70\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'20\'%3E🐕%3C/text%3E%3C/svg%3E';
-            const imageSrc = item.image || fallbackImage;
+            const itemName = escapeHtml(item.name || '');
+            const imageSrc = safeImageSrc(item.image) || PLACEHOLDER_THUMB;
             return `
                 <div class="cart-item">
-                    <img src="${imageSrc}" alt="${item.name}" class="cart-item-thumbnail" 
-                         onerror="this.src='${fallbackImage}'">
+                    <img src="${escapeHtml(imageSrc)}" alt="${itemName}" class="cart-item-thumbnail" 
+                         onerror="this.src='${PLACEHOLDER_THUMB}'">
                     <div class="cart-item-main">
                         <div class="cart-item-details">
-                            <div class="cart-item-name">${item.name}</div>
+                            <div class="cart-item-name">${itemName}</div>
                             <div class="cart-item-price">$${item.price.toFixed(2)} each</div>
                         </div>
                         <div class="cart-item-controls">
-                            <button class="quantity-btn" onclick="(window.posApp || posApp).updateQuantity(${item.productId}, -1)">-</button>
+                            <button class="quantity-btn" onclick="(window.posApp || posApp).updateQuantity(${safeId(item.productId)}, -1)">-</button>
                             <span class="quantity-display">${item.quantity}</span>
-                            <button class="quantity-btn" onclick="(window.posApp || posApp).updateQuantity(${item.productId}, 1)">+</button>
+                            <button class="quantity-btn" onclick="(window.posApp || posApp).updateQuantity(${safeId(item.productId)}, 1)">+</button>
                         </div>
                         <div class="cart-item-total">$${subtotal.toFixed(2)}</div>
-                        <button class="remove-btn" onclick="(window.posApp || posApp).removeFromCart(${item.productId})" title="Remove">🗑️</button>
+                        <button class="remove-btn" onclick="(window.posApp || posApp).removeFromCart(${safeId(item.productId)})" title="Remove">🗑️</button>
                     </div>
                 </div>
             `;
@@ -423,15 +387,19 @@ class POSApp {
         this.updateTotals();
         
         const discountBtn = document.getElementById('discount-btn');
-        discountBtn.disabled = true;
-        discountBtn.innerHTML = '<span>✅</span> Discount Applied <span class="discount-badge">5%</span>';
+        if (discountBtn) {
+            discountBtn.disabled = true;
+            discountBtn.innerHTML = '<span>✅</span> Discount Applied <span class="discount-badge">5%</span>';
+        }
     }
 
     clearDiscount() {
         this.discountApplied = false;
         const discountBtn = document.getElementById('discount-btn');
-        discountBtn.disabled = false;
-        discountBtn.innerHTML = '<span>🎁</span> Apply 5% Discount';
+        if (discountBtn) {
+            discountBtn.disabled = false;
+            discountBtn.innerHTML = '<span>🎁</span> Apply 5% Discount';
+        }
         this.updateTotals();
     }
 
@@ -441,15 +409,18 @@ class POSApp {
         const discountAmount = subtotal * discountPercent;
         const total = subtotal - discountAmount;
 
-        document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
-        document.getElementById('total').textContent = `$${total.toFixed(2)}`;
-
+        const subtotalEl = document.getElementById('subtotal');
+        const totalEl = document.getElementById('total');
         const discountAmountEl = document.getElementById('discount-amount');
-        if (this.discountApplied && discountAmount > 0) {
-            discountAmountEl.textContent = `-$${discountAmount.toFixed(2)}`;
-            discountAmountEl.classList.remove('hidden');
-        } else {
-            discountAmountEl.classList.add('hidden');
+        if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+        if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+        if (discountAmountEl) {
+            if (this.discountApplied && discountAmount > 0) {
+                discountAmountEl.textContent = `-$${discountAmount.toFixed(2)}`;
+                discountAmountEl.classList.remove('hidden');
+            } else {
+                discountAmountEl.classList.add('hidden');
+            }
         }
     }
 
@@ -482,7 +453,8 @@ class POSApp {
     }
 
     validateCheckout() {
-        const email = document.getElementById('customer-email').value.trim();
+        const emailEl = document.getElementById('customer-email');
+        const email = emailEl ? (emailEl.value || '').trim() : '';
         if (!email) {
             alert('Please enter customer email address');
             return false;
@@ -496,6 +468,12 @@ class POSApp {
 
     async sendOrderEmail() {
         if (!this.validateCheckout()) return;
+
+        const sendBtn = document.getElementById('send-email-btn');
+        if (sendBtn) {
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span>⏳</span> Sending...';
+        }
 
         const customerName = document.getElementById('customer-name').value.trim() || 'Customer';
         const customerEmail = document.getElementById('customer-email').value.trim();
@@ -622,14 +600,19 @@ class POSApp {
         } catch (error) {
             console.error('Error sending email:', error);
             alert('❌ Failed to send email: ' + (error.message || 'Unknown error') + '\n\n💡 Please check:\n1. EmailJS configuration is correct\n2. Internet connection is stable\n3. Email address is valid');
+        } finally {
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<span>📬</span> Send Email';
+            }
         }
     }
 
     showEmailPreview(orderDetails) {
-        // Generate simple table-based preview with WoofCrafts colors
+        // Generate simple table-based preview with WoofCrafts colors (escape all user content for XSS safety)
         const itemsTableRows = orderDetails.items.map(item => `
             <tr>
-                <td style="padding: 12px; border-bottom: 1px solid #E8D5B7;">${item.name}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #E8D5B7;">${escapeHtml(item.name)}</td>
                 <td style="padding: 12px; text-align: center; border-bottom: 1px solid #E8D5B7;">${item.quantity}</td>
                 <td style="padding: 12px; text-align: right; border-bottom: 1px solid #E8D5B7;">$${item.price.toFixed(2)}</td>
                 <td style="padding: 12px; text-align: right; border-bottom: 1px solid #E8D5B7; font-weight: 600; color: #D4A574;">$${item.subtotal.toFixed(2)}</td>
@@ -780,7 +763,7 @@ class POSApp {
                 </head>
                 <body>
                     <div class="header-bar">
-                        <h1>🐾 Order Summary - #${orderDetails.orderId}</h1>
+                        <h1>🐾 Order Summary - #${escapeHtml(String(orderDetails.orderId))}</h1>
                         <div class="button-group">
                             <button class="btn" onclick="downloadPDF()">💾 Download PDF</button>
                             <button class="btn" onclick="window.print()">🖨️ Print</button>
@@ -790,10 +773,10 @@ class POSApp {
                         <h2>WoofCrafts Order Confirmation</h2>
                         
                         <div class="order-info">
-                            <p><strong>Order ID:</strong> #${orderDetails.orderId}</p>
-                            <p><strong>Customer:</strong> ${orderDetails.customerName || 'Customer'}</p>
-                            <p><strong>Email:</strong> ${orderDetails.customerEmail}</p>
-                            ${orderDetails.customerPhone ? `<p><strong>Phone:</strong> ${orderDetails.customerPhone}</p>` : ''}
+                            <p><strong>Order ID:</strong> #${escapeHtml(String(orderDetails.orderId))}</p>
+                            <p><strong>Customer:</strong> ${escapeHtml(orderDetails.customerName || 'Customer')}</p>
+                            <p><strong>Email:</strong> ${escapeHtml(orderDetails.customerEmail)}</p>
+                            ${orderDetails.customerPhone ? `<p><strong>Phone:</strong> ${escapeHtml(orderDetails.customerPhone)}</p>` : ''}
                             <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                         </div>
 
@@ -831,7 +814,7 @@ class POSApp {
                         ${orderDetails.customerComment ? `
                         <div class="comments">
                             <h3>💬 Customer Comments</h3>
-                            <p style="color: #5C4A37; line-height: 1.6;">${orderDetails.customerComment}</p>
+                            <p style="color: #5C4A37; line-height: 1.6;">${escapeHtml(orderDetails.customerComment)}</p>
                         </div>
                         ` : ''}
                     </div>
@@ -839,9 +822,14 @@ class POSApp {
                     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
                     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
                     <script>
-                        function downloadPDF() {
+                        function downloadPDF(retryCount) {
+                            retryCount = retryCount || 0;
                             if (typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') {
-                                setTimeout(downloadPDF, 100);
+                                if (retryCount >= 30) {
+                                    alert('PDF libraries failed to load. Please try printing instead.');
+                                    return;
+                                }
+                                setTimeout(function() { downloadPDF(retryCount + 1); }, 100);
                                 return;
                             }
                             const { jsPDF } = window.jspdf;
@@ -878,28 +866,17 @@ class POSApp {
     }
 
     setupEventListeners() {
-        // Discount button
-        document.getElementById('discount-btn').addEventListener('click', () => {
-            this.applyDiscount();
-        });
+        const discountBtn = document.getElementById('discount-btn');
+        if (discountBtn) discountBtn.addEventListener('click', () => this.applyDiscount());
 
-        // Clear cart button (removed from HTML, keeping for compatibility)
         const clearCartBtn = document.getElementById('clear-cart-btn');
-        if (clearCartBtn) {
-            clearCartBtn.addEventListener('click', () => {
-                this.clearCart();
-            });
-        }
+        if (clearCartBtn) clearCartBtn.addEventListener('click', () => this.clearCart());
 
-        // Reset cart button
-        document.getElementById('reset-cart-btn').addEventListener('click', () => {
-            this.resetCart();
-        });
+        const resetCartBtn = document.getElementById('reset-cart-btn');
+        if (resetCartBtn) resetCartBtn.addEventListener('click', () => this.resetCart());
 
-        // Send email button
-        document.getElementById('send-email-btn').addEventListener('click', () => {
-            this.sendOrderEmail();
-        });
+        const sendEmailBtn = document.getElementById('send-email-btn');
+        if (sendEmailBtn) sendEmailBtn.addEventListener('click', () => this.sendOrderEmail());
 
 
         // Reload products when page becomes visible (in case products were added in another tab)
@@ -941,23 +918,19 @@ class POSApp {
             }
         };
         
-        // Check on load and periodically
+        // Check on load and every 5 seconds (reduced from 2s to limit refresh frequency)
         checkForUpdates();
-        setInterval(checkForUpdates, 2000); // Check every 2 seconds
+        setInterval(checkForUpdates, 5000);
     }
 }
 
 // Global helper function to safely add to cart
 function safeAddToCart(productId) {
     if (!window.posApp && !posApp) {
-        console.error('❌ POS App not initialized yet!');
         alert('Please wait for the app to load, then try again.');
         return;
     }
-    
-    const app = window.posApp || posApp;
-    console.log('🛒 safeAddToCart called for product:', productId);
-    app.addToCart(productId);
+    (window.posApp || posApp).addToCart(productId);
 }
 
 // Initialize the POS app - declared globally

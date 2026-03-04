@@ -64,6 +64,11 @@
             outline: none;
             border-color: var(--primary-color);
         }
+        .login-input:focus-visible,
+        .login-btn:focus-visible {
+            outline: 3px solid var(--primary-color);
+            outline-offset: 2px;
+        }
         .login-btn {
             width: 100%;
             padding: 15px;
@@ -99,6 +104,7 @@
     </style>
 </head>
 <body>
+    <div class="paw-bg-decoration"></div>
     <div class="login-container">
         <div class="login-box">
             <div class="login-logo">🐕</div>
@@ -119,8 +125,10 @@
         </div>
     </div>
 
+    <!-- Optional: load js/config.js (copy from config-example.js) to set login password -->
+    <script src="js/config.js"></script>
     <script>
-        const CORRECT_PASSWORD = 'hyper';
+        const CORRECT_PASSWORD = (window.POS_CONFIG && window.POS_CONFIG.loginPassword) || 'hyper';
         
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();

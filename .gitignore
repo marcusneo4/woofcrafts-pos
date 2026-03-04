@@ -39,6 +39,7 @@ start-server.ps1
 # Credentials - keep API keys safe
 js/email.js
 js/sheets.js
+js/config.js
 test-sheets-api.js
 login.html
 emailjs-credentials.txt

@@ -1,4 +1,5 @@
 // WoofCrafts POS System - Product Management Logic
+// Requires js/utils.js (escapeHtml, safeImageSrc, PLACEHOLDER_LIST)
 
 class ProductManager {
     constructor() {
@@ -144,9 +145,9 @@ class ProductManager {
         event.preventDefault();
 
         const formData = new FormData(event.target);
-        const name = formData.get('name').trim();
-        const price = parseFloat(formData.get('price'));
-        const category = formData.get('category') || 'general';
+        const name = (formData.get('name') || '').toString().trim();
+        const price = parseFloat(formData.get('price') || 0);
+        const category = (formData.get('category') || 'general').toLowerCase();
         const imageFile = formData.get('image');
 
         if (!name || !price || price <= 0) {
@@ -161,7 +162,7 @@ class ProductManager {
             imagePath = await this.uploadImageToServer(imageFile);
         } else if (this.editingId) {
             // If editing and no new image, keep the existing image
-            const existingProduct = this.products.find(p => p.id === this.editingId);
+            const existingProduct = this.products.find(p => p.id == this.editingId || String(p.id) === String(this.editingId));
             if (existingProduct) {
                 imagePath = existingProduct.image;
             }
@@ -185,7 +186,7 @@ class ProductManager {
 
             if (this.editingId) {
                 // Update existing product
-                const index = this.products.findIndex(p => p.id === this.editingId);
+                const index = this.products.findIndex(p => p.id == this.editingId || String(p.id) === String(this.editingId));
                 if (index !== -1) {
                     this.products[index] = product;
                 }
@@ -211,19 +212,20 @@ class ProductManager {
     }
 
     editProduct(productId) {
-        const product = this.products.find(p => p.id === productId);
+        const product = this.products.find(p => p.id == productId || String(p.id) === String(productId));
         if (!product) return;
 
         this.editingId = productId;
         document.getElementById('product-id').value = productId;
         document.getElementById('product-name').value = product.name;
         document.getElementById('product-price').value = product.price;
-        document.getElementById('product-category').value = product.category || 'general';
+        document.getElementById('product-category').value = (product.category || 'general').toLowerCase();
         
-        // Show image preview
-        // Show image preview
         const preview = document.getElementById('image-preview');
-        preview.innerHTML = `<img src="${product.image}" alt="Current image">`;
+        const imgSrc = safeImageSrc(product.image);
+        preview.innerHTML = imgSrc
+            ? `<img src="${escapeHtml(imgSrc)}" alt="Current image">`
+            : '<div class="preview-placeholder"><span>🐕</span><p>No image</p></div>';
         
         // Update form button
         document.getElementById('submit-btn').innerHTML = '<span>✏️</span> Update Product';
@@ -236,7 +238,7 @@ class ProductManager {
     async deleteProduct(productId) {
         if (!confirm('Are you sure you want to delete this product?')) return;
 
-        this.products = this.products.filter(p => p.id !== productId);
+        this.products = this.products.filter(p => p.id != productId);
         await this.saveProducts();
         this.renderProducts();
         this.showMessage('Product deleted successfully!', 'success');
@@ -259,7 +261,8 @@ class ProductManager {
 
     renderProducts() {
         const list = document.getElementById('products-list');
-        
+        if (!list) return;
+
         if (this.products.length === 0) {
             list.innerHTML = `
                 <div class="empty-state">
@@ -272,30 +275,21 @@ class ProductManager {
         }
 
         list.innerHTML = this.products.map(product => {
-            // Ensure image path is valid - handle both data URLs and file paths
-            let imageSrc = product.image || '';
-            const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'90\' height=\'90\'%3E%3Crect fill=\'%23FAF7F3\' width=\'90\' height=\'90\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'20\'%3E🐕%3C/text%3E%3C/svg%3E';
-            
-            // If no image, use fallback
-            if (!imageSrc) {
-                imageSrc = fallbackImage;
-            } else if (imageSrc && !imageSrc.startsWith('data:') && !imageSrc.startsWith('http')) {
-                // For file paths, keep them as-is (they should start with /)
-                console.log(`📸 Product image path: ${imageSrc}`);
-            }
-            
+            const productName = escapeHtml(product.name || '');
+            let imageSrc = safeImageSrc(product.image) || PLACEHOLDER_LIST;
+            if (!imageSrc) imageSrc = PLACEHOLDER_LIST;
+
             return `
             <div class="product-list-item">
-                <img src="${imageSrc}" alt="${product.name}" class="product-list-image"
-                     onerror="console.error('❌ Image failed to load: ${imageSrc}'); this.src='${fallbackImage}'"
-                     onload="console.log('✓ Image loaded for: ${product.name.replace(/'/g, "\\'")}')">
+                <img src="${escapeHtml(imageSrc)}" alt="${productName}" class="product-list-image"
+                     onerror="this.onerror=null; this.src='${PLACEHOLDER_LIST}'">
                 <div class="product-list-info">
-                    <div class="product-list-name">${product.name}</div>
+                    <div class="product-list-name">${productName}</div>
                     <div class="product-list-price">$${parseFloat(product.price).toFixed(2)}</div>
                 </div>
                 <div class="product-list-actions">
-                    <button class="btn-edit" onclick="productManager.editProduct('${product.id}')" title="Edit product details and image">✏️ Edit</button>
-                    <button class="btn-delete" onclick="productManager.deleteProduct('${product.id}')" title="Delete this product">🗑️ Delete</button>
+                    <button class="btn-edit" onclick="productManager.editProduct(${JSON.stringify(product.id)})" title="Edit product details and image">✏️ Edit</button>
+                    <button class="btn-delete" onclick="productManager.deleteProduct(${JSON.stringify(product.id)})" title="Delete this product">🗑️ Delete</button>
                 </div>
             </div>
         `;
