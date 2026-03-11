@@ -12,7 +12,7 @@
 <body>
     <div class="paw-bg-decoration"></div>
     <div class="container">
-        <header>
+        <header role="banner">
             <div class="header-content">
                 <div class="logo-section">
                     <span class="dog-icon">🐕</span>
@@ -25,18 +25,18 @@
             </div>
         </header>
 
-        <div class="products-management">
+        <main class="products-management" role="main">
             <!-- Add Product Form -->
-            <section class="add-product-section">
+            <section class="add-product-section" aria-labelledby="add-product-heading">
                 <div class="section-header">
-                    <h2>
+                    <h2 id="add-product-heading">
                         <span class="paw-icon">✨</span>
                         Add New Product
                         <span class="paw-icon">✨</span>
                     </h2>
                     <p class="section-subtitle">Add pawsome products to your store!</p>
                 </div>
-                <form id="product-form" class="product-form">
+                <form id="product-form" class="product-form" aria-label="Add or edit product form">
                     <input type="hidden" id="product-id" name="productId">
                     
                     <div class="form-group">
@@ -76,7 +76,7 @@
                         <label for="product-image">
                             <span>📷</span> Product Image *
                         </label>
-                        <input type="file" id="product-image" name="image" accept="image/*" class="input-field file-input">
+                        <input type="file" id="product-image" name="image" accept="image/*" class="input-field file-input" aria-label="Upload product image">
                         <div id="image-preview" class="image-preview">
                             <div class="preview-placeholder">
                                 <span>🐕</span>
@@ -100,9 +100,9 @@
             </section>
 
             <!-- Products List -->
-            <section class="products-list-section">
+            <section class="products-list-section" aria-labelledby="products-list-heading">
                 <div class="section-header">
-                    <h2>
+                    <h2 id="products-list-heading">
                         <span class="paw-icon">📦</span>
                         Your Products
                         <span class="paw-icon">📦</span>
@@ -113,7 +113,7 @@
                     <!-- Products will be loaded here -->
                 </div>
             </section>
-        </div>
+        </main>
     </div>
 
     <script src="js/utils.js"></script>

@@ -12,7 +12,7 @@
 <body>
     <div class="paw-bg-decoration"></div>
     <div class="container">
-        <header>
+        <header role="banner">
             <div class="header-content">
                 <div class="logo-section">
                     <span class="dog-icon">🐕</span>
@@ -25,11 +25,11 @@
             </div>
         </header>
 
-        <div class="main-content">
+        <main class="main-content" role="main">
             <!-- Product Grid Section -->
-            <section class="products-section">
+            <section class="products-section" aria-labelledby="products-heading">
                 <div class="section-header">
-                    <h2>
+                    <h2 id="products-heading">
                         <span class="paw-icon">🐾</span>
                         Browse Our Pawsome Products
                         <span class="paw-icon">🐾</span>
@@ -50,7 +50,7 @@
             </section>
 
             <!-- Cart and Checkout Section -->
-            <aside class="cart-section">
+            <aside class="cart-section" aria-label="Shopping cart and checkout">
                 <div class="cart-header">
                     <h2>
                         <span class="cart-icon">🛒</span>
@@ -102,7 +102,14 @@
                     </div>
                     <div class="input-group">
                         <label>📧 Customer Email *</label>
-                        <input type="email" id="customer-email" placeholder="owner@email.com" class="input-field" required>
+                        <input
+                            type="email"
+                            id="customer-email"
+                            placeholder="owner@email.com"
+                            class="input-field"
+                            required
+                            aria-required="true"
+                        >
                     </div>
                     <div class="input-group">
                         <label>📞 Phone Number</label>
@@ -120,7 +127,7 @@
                     </div>
                 </div>
             </aside>
-        </div>
+        </main>
     </div>
 
     <!-- Shared utilities (must load first) -->

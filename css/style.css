@@ -7,28 +7,33 @@
 }
 
 :root {
-    /* Beige/Natural Dog-Themed Colors */
+    /* Beige/Natural Dog-Themed Colors and Layout Tokens */
     --primary-color: #D4A574;      /* Warm Beige */
     --primary-dark: #B8945F;       /* Darker Beige */
     --secondary-color: #C9A961;    /* Golden Beige */
     --accent-color: #E8D5B7;       /* Light Beige */
     --accent-warm: #F4E6D7;        /* Cream */
     --success-color: #A0B58F;      /* Sage Green */
-    --danger-color: #D4A574;       /* Warm Beige Red */
+    --danger-color: #C96F4A;       /* Warm Red-Brown for destructive actions */
     --text-dark: #5C4A37;          /* Brown */
     --text-light: #8B7355;         /* Light Brown */
-    --bg-light: #FAF7F3;           /* Soft Beige Background */
-    --bg-white: #FFFFFF;
-    --border-color: #E8D5B7;       /* Light Beige Border */
-    --shadow: 0 4px 15px rgba(180, 148, 95, 0.15);
-    --shadow-hover: 0 8px 25px rgba(180, 148, 95, 0.25);
-    --gradient-primary: linear-gradient(135deg, #D4A574 0%, #C9A961 50%, #E8D5B7 100%);
+    /* 60-30-10 layout tokens */
+    --base-bg: #F5F0E9;            /* 60%: overall page background */
+    --surface-color: #FAF5EE;      /* 30%: cards and panels */
+    --bg-light: #FAF5EE;           /* Backwards-compatible alias */
+    --bg-white: #FDF8F3;           /* Off-white surface, never pure white */
+    --border-color: #E2D2BA;       /* Light Beige Border */
+    --shadow: 0 18px 45px rgba(53, 32, 16, 0.18);
+    --shadow-hover: 0 26px 60px rgba(53, 32, 16, 0.26);
+    --cta-color: #D4A574;
+    --cta-color-dark: #B8945F;
+    --gradient-primary: linear-gradient(135deg, #D4A574 0%, #C9A961 45%, #E8D5B7 100%);
     --gradient-secondary: linear-gradient(135deg, #C9A961 0%, #D4A574 100%);
 }
 
 body {
     font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg-light);
+    background: var(--base-bg);
     background-image: 
         radial-gradient(circle at 20% 50%, rgba(232, 213, 183, 0.2) 0%, transparent 50%),
         radial-gradient(circle at 80% 80%, rgba(196, 165, 116, 0.15) 0%, transparent 50%),
@@ -131,13 +136,15 @@ body::after {
 /* Cute Header */
 header {
     background: var(--gradient-primary);
-    color: white;
+    color: var(--bg-white);
     padding: 30px 35px;
     border-radius: 25px;
-    margin-bottom: 30px;
+    margin-bottom: 40px;
     box-shadow: var(--shadow);
     position: relative;
     overflow: hidden;
+    transform: translateY(12px);
+    z-index: 2;
 }
 
 header::before {
@@ -147,7 +154,7 @@ header::before {
     right: -50px;
     width: 200px;
     height: 200px;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(253, 248, 243, 0.22);
     border-radius: 50%;
 }
 
@@ -158,7 +165,7 @@ header::after {
     left: -30px;
     width: 150px;
     height: 150px;
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(253, 248, 243, 0.18);
     border-radius: 50%;
 }
 
@@ -215,7 +222,7 @@ header h1 {
 }
 
 .manage-products-btn {
-    background: white;
+    background: var(--bg-white);
     color: var(--primary-color);
     padding: 14px 28px;
     border-radius: 50px;
@@ -223,15 +230,15 @@ header h1 {
     font-weight: 700;
     font-size: 1rem;
     transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    box-shadow: 0 4px 15px rgba(212, 165, 116, 0.3);
+    box-shadow: 0 14px 35px rgba(53, 32, 16, 0.22);
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
 .manage-products-btn:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 20px rgba(255, 255, 255, 0.4);
+    transform: translateY(-4px) scale(1.04);
+    box-shadow: var(--shadow-hover);
 }
 
 .manage-products-btn span {
@@ -290,17 +297,21 @@ header h1 {
 /* Main Content Layout */
 .main-content {
     display: grid;
-    grid-template-columns: 1fr 500px;
-    gap: 30px;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.9fr);
+    align-items: flex-start;
+    gap: 32px;
+    margin-top: -12px;
 }
 
 /* Products Section */
 .products-section {
-    background: var(--bg-white);
-    padding: 35px;
-    border-radius: 25px;
+    background: var(--surface-color);
+    padding: 36px 34px 34px 34px;
+    border-radius: 28px;
     box-shadow: var(--shadow);
-    border: 3px solid var(--border-color);
+    border: 1px solid rgba(226, 210, 186, 0.6);
+    position: relative;
+    z-index: 1;
 }
 
 .products-grid {
@@ -316,13 +327,17 @@ header h1 {
 }
 
 .product-card {
-    background: linear-gradient(135deg, #ffffff 0%, #faf7f3 100%);
-    border: 3px solid var(--border-color);
+    background: linear-gradient(135deg, #fdf8f3 0%, #faf5ee 100%);
+    border: 1px solid rgba(226, 210, 186, 0.9);
     border-radius: 20px;
     padding: 20px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition:
+        transform 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+        box-shadow 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+        border-color 0.18s cubic-bezier(0.25, 1, 0.5, 1),
+        background 0.22s cubic-bezier(0.25, 1, 0.5, 1);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -352,7 +367,7 @@ header h1 {
     height: 45px;
     border-radius: 50%;
     background: var(--gradient-primary);
-    color: white;
+    color: var(--bg-white);
     border: none;
     font-size: 1.5rem;
     font-weight: bold;
@@ -360,18 +375,21 @@ header h1 {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    box-shadow: 0 4px 15px rgba(212, 165, 116, 0.3);
+    transition:
+        transform 0.18s cubic-bezier(0.25, 1, 0.5, 1),
+        box-shadow 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+        background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+    box-shadow: 0 14px 32px rgba(53, 32, 16, 0.28);
     z-index: 2;
 }
 
 .quick-add-btn:hover {
-    transform: scale(1.15) rotate(90deg);
-    box-shadow: 0 6px 20px rgba(212, 165, 116, 0.4);
+    transform: translateY(-2px) scale(1.08);
+    box-shadow: var(--shadow-hover);
 }
 
 .quick-add-btn:active {
-    transform: scale(0.95);
+    transform: translateY(0) scale(0.96);
 }
 
 .product-card::before {
@@ -396,9 +414,9 @@ header h1 {
 
 .product-card:hover {
     border-color: var(--primary-color);
-    transform: translateY(-8px) scale(1.02);
+    transform: translateY(-6px) scale(1.02);
     box-shadow: var(--shadow-hover);
-    background: linear-gradient(135deg, #ffffff 0%, #f4e6d7 100%);
+    background: linear-gradient(135deg, #faf5ee 0%, #f4e1ce 100%);
 }
 
 .product-card:active {
@@ -455,9 +473,9 @@ header h1 {
 }
 
 .empty-state {
-    background: linear-gradient(135deg, #faf7f3 0%, #f4e6d7 100%);
-    border-radius: 20px;
-    border: 3px dashed var(--border-color);
+    background: linear-gradient(135deg, #faf5ee 0%, #f4e1ce 100%);
+    border-radius: 22px;
+    border: 1px dashed rgba(226, 210, 186, 0.85);
 }
 
 .empty-icon {
@@ -480,7 +498,7 @@ header h1 {
     font-weight: 700;
     font-size: 1.1rem;
     padding: 12px 24px;
-    background: white;
+    background: var(--bg-white);
     border-radius: 50px;
     border: 2px solid var(--primary-color);
     transition: all 0.3s;
@@ -488,21 +506,21 @@ header h1 {
 
 .empty-link:hover {
     background: var(--primary-color);
-    color: white;
-    transform: scale(1.05);
+    color: var(--bg-white);
+    transform: translateY(-2px) scale(1.03);
 }
 
 /* Cart Section */
 .cart-section {
     background: var(--bg-white);
-    padding: 35px;
-    border-radius: 25px;
-    box-shadow: var(--shadow);
+    padding: 34px 30px 32px 30px;
+    border-radius: 30px;
+    box-shadow: var(--shadow-hover);
     position: sticky;
-    top: 20px;
+    top: 24px;
     max-height: calc(100vh - 100px);
     overflow-y: auto;
-    border: 3px solid var(--border-color);
+    border: 1px solid rgba(226, 210, 186, 0.75);
 }
 
 .cart-header {
@@ -606,10 +624,13 @@ header h1 {
     padding: 18px;
     border-bottom: 2px dashed var(--border-color);
     gap: 15px;
-    background: linear-gradient(135deg, #faf7f3 0%, #ffffff 100%);
-    border-radius: 15px;
+    background: linear-gradient(135deg, #faf5ee 0%, #fdf8f3 100%);
+    border-radius: 18px;
     margin-bottom: 12px;
-    transition: all 0.3s;
+    transition:
+        transform 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+        box-shadow 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+        background 0.22s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .cart-item-thumbnail {
@@ -623,8 +644,8 @@ header h1 {
 }
 
 .cart-item:hover {
-    background: linear-gradient(135deg, #f4e6d7 0%, #faf7f3 100%);
-    transform: translateX(5px);
+    background: linear-gradient(135deg, #f4e1ce 0%, #faf5ee 100%);
+    transform: translateX(6px);
 }
 
 .cart-item-info {
@@ -678,8 +699,8 @@ header h1 {
 .quantity-btn {
     background: var(--bg-light);
     border: 2px solid var(--border-color);
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     cursor: pointer;
     font-size: 1.3rem;
@@ -687,14 +708,19 @@ header h1 {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition:
+        transform 0.18s cubic-bezier(0.25, 1, 0.5, 1),
+        box-shadow 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+        background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+        color 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+        border-color 0.2s cubic-bezier(0.25, 1, 0.5, 1);
     touch-action: manipulation;
     color: var(--primary-color);
 }
 
 .quantity-btn:hover {
     background: var(--primary-color);
-    color: white;
+    color: var(--bg-white);
     border-color: var(--primary-color);
     transform: scale(1.1) rotate(5deg);
 }
@@ -719,7 +745,10 @@ header h1 {
     border-radius: 50%;
     cursor: pointer;
     font-size: 1.2rem;
-    transition: all 0.3s;
+    transition:
+        transform 0.18s cubic-bezier(0.25, 1, 0.5, 1),
+        background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+        color 0.2s cubic-bezier(0.25, 1, 0.5, 1);
     width: 35px;
     height: 35px;
     display: flex;
@@ -729,9 +758,9 @@ header h1 {
 }
 
 .remove-btn:hover {
-    background: rgba(255, 107, 107, 0.1);
-    color: #ff5252;
-    transform: scale(1.1) rotate(90deg);
+    background: rgba(201, 111, 74, 0.08);
+    color: var(--danger-color);
+    transform: translateY(-1px) scale(1.05);
 }
 
 .cart-item-total {
@@ -789,14 +818,18 @@ header h1 {
 
 .discount-btn {
     background: var(--gradient-secondary);
-    color: white;
+    color: var(--bg-white);
     border: none;
     padding: 12px 20px;
     border-radius: 50px;
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition:
+        transform 0.18s cubic-bezier(0.25, 1, 0.5, 1),
+        box-shadow 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+        background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+        color 0.2s cubic-bezier(0.25, 1, 0.5, 1);
     width: 100%;
     box-shadow: 0 3px 10px rgba(212, 165, 116, 0.25);
     display: flex;
@@ -817,8 +850,8 @@ header h1 {
 }
 
 .discount-btn:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 6px 20px rgba(212, 165, 116, 0.4);
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: var(--shadow-hover);
 }
 
 .discount-btn:disabled {
@@ -964,16 +997,20 @@ select.input-field option {
 
 .btn-primary {
     background: var(--gradient-primary);
-    color: white;
+    color: var(--bg-white);
     border: none;
     padding: 18px 30px;
     border-radius: 50px;
     font-size: 1.15rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition:
+        transform 0.18s cubic-bezier(0.25, 1, 0.5, 1),
+        box-shadow 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+        background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+        color 0.2s cubic-bezier(0.25, 1, 0.5, 1);
     touch-action: manipulation;
-    box-shadow: 0 4px 15px rgba(255, 107, 157, 0.3);
+    box-shadow: 0 16px 40px rgba(53, 32, 16, 0.28);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -981,8 +1018,8 @@ select.input-field option {
 }
 
 .btn-primary:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 6px 25px rgba(255, 107, 157, 0.4);
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: var(--shadow-hover);
 }
 
 .btn-primary:active {
@@ -1003,7 +1040,7 @@ select.input-field option {
 }
 
 .btn-secondary {
-    background: white;
+    background: var(--bg-white);
     color: var(--text-dark);
     border: 3px solid var(--border-color);
     padding: 14px 30px;
@@ -1045,17 +1082,19 @@ select.input-field option {
 /* Products Management Page */
 .products-management {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 32px;
+    align-items: flex-start;
 }
 
 .add-product-section,
 .products-list-section {
-    background: var(--bg-white);
-    padding: 35px;
-    border-radius: 25px;
+    background: var(--surface-color);
+    padding: 34px 32px;
+    border-radius: 28px;
     box-shadow: var(--shadow);
-    border: 3px solid var(--border-color);
+    border: 1px solid rgba(226, 210, 186, 0.7);
+    position: relative;
 }
 
 .product-form {
@@ -1128,14 +1167,14 @@ select.input-field option {
 }
 
 .product-list-item {
-    border: 3px solid var(--border-color);
-    border-radius: 20px;
+    border: 1px solid rgba(226, 210, 186, 0.9);
+    border-radius: 22px;
     padding: 20px;
     display: flex;
     gap: 18px;
     align-items: center;
     transition: all 0.3s;
-    background: linear-gradient(135deg, #faf7f3 0%, #ffffff 100%);
+    background: linear-gradient(135deg, #faf5ee 0%, #fdf8f3 100%);
 }
 
 .product-list-item:hover {
@@ -1352,12 +1391,48 @@ select.input-field option {
 /* Cute Animations */
 @keyframes float {
     0%, 100% {
-        transform: translateY(0px);
+        transform: translateY(2px);
+        opacity: 0.96;
     }
     50% {
-        transform: translateY(-10px);
+        transform: translateY(-6px);
+        opacity: 1;
     }
 }
+
+@keyframes staggerFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.products-grid .product-card {
+    animation: staggerFadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+.products-grid .product-card:nth-child(1) { animation-delay: 0.03s; }
+.products-grid .product-card:nth-child(2) { animation-delay: 0.06s; }
+.products-grid .product-card:nth-child(3) { animation-delay: 0.09s; }
+.products-grid .product-card:nth-child(4) { animation-delay: 0.12s; }
+.products-grid .product-card:nth-child(5) { animation-delay: 0.15s; }
+.products-grid .product-card:nth-child(6) { animation-delay: 0.18s; }
+.products-grid .product-card:nth-child(7) { animation-delay: 0.21s; }
+.products-grid .product-card:nth-child(8) { animation-delay: 0.24s; }
+
+.products-list .product-list-item {
+    animation: staggerFadeIn 0.36s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+.products-list .product-list-item:nth-child(1) { animation-delay: 0.04s; }
+.products-list .product-list-item:nth-child(2) { animation-delay: 0.08s; }
+.products-list .product-list-item:nth-child(3) { animation-delay: 0.12s; }
+.products-list .product-list-item:nth-child(4) { animation-delay: 0.16s; }
+.products-list .product-list-item:nth-child(5) { animation-delay: 0.2s; }
 
 /* Scrollbar Styling */
 ::-webkit-scrollbar {

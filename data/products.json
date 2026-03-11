@@ -62,17 +62,7 @@
       "price": 25.00,
       "category": "Christmas",
       "image": "assets/Dog product images/Christmas Tag – Brown.jpg",
-      "description": "Festive Christmas-themed pet tag",
-      "variants": [
-        {
-          "name": "Brown",
-          "image": "assets/Dog product images/Christmas Tag – Brown.jpg"
-        },
-        {
-          "name": "Green",
-          "image": "assets/Dog product images/Christmas Tag – Green.jpg"
-        }
-      ]
+      "description": "Festive Christmas-themed pet tag"
     },
     {
       "id": 9,
