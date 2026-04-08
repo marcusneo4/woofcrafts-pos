@@ -23,13 +23,7 @@ class POSApp {
         
         try {
             await this.loadProducts();
-            
-            // Ensure products array is always valid
-            if (!Array.isArray(this.products) || this.products.length === 0) {
-                console.log('No products found, initializing with fixed products...');
-                this.products = this.getFixedProducts();
-                localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-            }
+            if (!Array.isArray(this.products)) this.products = [];
             
             this.loadCart();
             console.log(`✓ Successfully loaded ${this.products.length} products`);
@@ -38,9 +32,7 @@ class POSApp {
             this.setupEventListeners();
         } catch (error) {
             console.error('Error initializing POS:', error);
-            // Fallback to fixed products
-            this.products = this.getFixedProducts();
-            localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+            this.products = [];
             this.renderProducts();
             this.renderCart();
             this.setupEventListeners();
@@ -72,52 +64,25 @@ class POSApp {
                             image: row.image_url || ''
                         };
                     });
-
-                    localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
                     console.log(`✓ Loaded ${this.products.length} products from Supabase`);
                     return;
                 }
 
                 if (Array.isArray(data) && data.length === 0) {
-                    console.log('Supabase products table is empty, falling back to products.json/localStorage');
+                    this.products = [];
+                    console.log('Supabase products table is empty');
+                    return;
                 }
             } catch (error) {
-                console.warn('Could not load products from Supabase, falling back:', error);
+                console.error('Could not load products from Supabase:', error);
+                this.products = [];
+                return;
             }
         }
 
-        try {
-            // First, try to load from products.json
-            const response = await fetch('data/products.json');
-            if (response.ok) {
-                const data = await response.json();
-                if (data.products && Array.isArray(data.products)) {
-                    this.products = data.products;
-                    localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-                    console.log(`✓ Loaded ${this.products.length} products from products.json`);
-                    return;
-                }
-            }
-        } catch (error) {
-            console.warn('Could not load products.json, falling back to localStorage:', error);
-        }
-        
-        // Fallback to localStorage if products.json fails
-        const storedProducts = localStorage.getItem('woofcrafts_products');
-        if (storedProducts) {
-            try {
-                this.products = JSON.parse(storedProducts);
-                console.log(`✓ Loaded ${this.products.length} products from localStorage`);
-                return;
-            } catch (error) {
-                console.error('Error parsing stored products:', error);
-            }
-        }
-        
-        // Last resort: use fixed products
-        this.products = this.getFixedProducts();
-        localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-        console.log(`✓ Using ${this.products.length} default products`);
+        // For shared product state across devices, require Supabase configuration.
+        console.warn('Supabase is not configured. Product list is unavailable.');
+        this.products = [];
     }
 
     getSupabaseConfig() {
@@ -1289,7 +1254,8 @@ class POSApp {
                     customerName: customerNameRaw,
                     purchaseDate: orderDateIso,
                     invoiceNumber: orderDetails.orderId,
-                    fileName
+                    fileName,
+                    orderDetails
                 })
             });
 
@@ -1298,17 +1264,26 @@ class POSApp {
                 throw new Error(result.error || 'Failed to send invoice email');
             }
 
-            try {
-                await this.logPurchase(orderDetails);
-
-                // If user is currently viewing purchases, refresh list immediately.
-                const purchasesView = document.getElementById('view-purchases');
-                if (purchasesView && !purchasesView.classList.contains('hidden')) {
-                    this.purchasesLoaded = false;
-                    await this.refreshPurchasesView();
+            const orderLoggedByServer = Boolean(result.orderLog && result.orderLog.saved);
+            if (!orderLoggedByServer) {
+                try {
+                    await this.logPurchase(orderDetails);
+                } catch (logError) {
+                    console.warn('Purchase logging failed:', logError);
                 }
-            } catch (logError) {
-                console.warn('Purchase logging failed:', logError);
+            } else {
+                this.lastPurchasesSource = 'supabase';
+            }
+
+            // If user is currently viewing purchases, refresh list immediately.
+            const purchasesView = document.getElementById('view-purchases');
+            if (purchasesView && !purchasesView.classList.contains('hidden')) {
+                this.purchasesLoaded = false;
+                await this.refreshPurchasesView();
+            }
+
+            if (result.orderLog && result.orderLog.attempted && !result.orderLog.saved) {
+                console.warn('[Checkout] Server order logging failed:', result.orderLog.reason);
             }
 
             alert('🐾 Invoice email sent successfully to ' + orderDetails.customerEmail + '! 🐶\n\nOrder ID: #' + orderDetails.orderId);
@@ -1608,13 +1583,6 @@ class POSApp {
         // Also reload when window gains focus (more reliable than visibility change)
         window.addEventListener('focus', async () => {
             await this.refreshProducts();
-        });
-        
-        // Listen for storage events (when products are updated in another tab)
-        window.addEventListener('storage', async (e) => {
-            if (e.key === 'woofcrafts_products') {
-                await this.refreshProducts();
-            }
         });
         
         // Also listen for custom event that can be triggered from products.html
