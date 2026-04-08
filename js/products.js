@@ -5,6 +5,7 @@ class ProductManager {
     constructor() {
         this.products = [];
         this.editingId = null;
+        this.supabaseClientPromise = null;
         
         this.init();
     }
@@ -16,6 +17,41 @@ class ProductManager {
     }
 
     async loadProducts() {
+        const supabaseClient = await this.getSupabaseClient();
+        if (supabaseClient) {
+            try {
+                const config = this.getSupabaseConfig();
+                const tableName = config.supabaseProductsTable || 'products';
+
+                const { data, error } = await supabaseClient
+                    .from(tableName)
+                    .select('id,title,description,price,category,image_url,created_at')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (Array.isArray(data)) {
+                    this.products = data.map((row) => {
+                        return {
+                            id: row.id,
+                            name: row.title,
+                            description: row.description || '',
+                            price: Number(row.price),
+                            category: (row.category || 'general'),
+                            image: row.image_url || ''
+                        };
+                    });
+
+                    // Sync to localStorage so POS can load quickly even if Supabase is down
+                    localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
+                    console.log(`✓ Loaded ${this.products.length} products from Supabase`);
+                    return;
+                }
+            } catch (error) {
+                console.warn('Could not load products from Supabase, falling back:', error);
+            }
+        }
+
         try {
             // First, try to load from products.json
             const response = await fetch('data/products.json');
@@ -32,7 +68,7 @@ class ProductManager {
         } catch (error) {
             console.warn('Could not load products.json, trying localStorage:', error);
         }
-        
+
         // Fallback to localStorage
         const storedProducts = localStorage.getItem('woofcrafts_products');
         if (storedProducts) {
@@ -74,6 +110,96 @@ class ProductManager {
         }
     }
 
+    getSupabaseConfig() {
+        const config = window.SUPABASE_CONFIG || {};
+        return {
+            supabaseUrl: config.supabaseUrl,
+            supabaseAnonKey: config.supabaseAnonKey,
+            supabaseStorageBucket: config.supabaseStorageBucket || 'product-images',
+            supabaseProductsTable: config.supabaseProductsTable || 'products'
+        };
+    }
+
+    generateUuidV4() {
+        if (typeof crypto !== 'undefined' && crypto && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+        }
+
+        if (typeof crypto !== 'undefined' && crypto && typeof crypto.getRandomValues === 'function') {
+            const bytes = new Uint8Array(16);
+            crypto.getRandomValues(bytes);
+
+            // UUID v4 version + variant bits
+            bytes[6] = (bytes[6] & 0x0f) | 0x40;
+            bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+            const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+            return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+        }
+
+        // Last resort for older browsers
+        return this.generateId();
+    }
+
+    async getSupabaseClient() {
+        if (this.supabaseClientPromise) return this.supabaseClientPromise;
+
+        const config = this.getSupabaseConfig();
+        const isConfigured = Boolean(config.supabaseUrl) && Boolean(config.supabaseAnonKey);
+        if (!isConfigured) {
+            this.supabaseClientPromise = Promise.resolve(null);
+            return this.supabaseClientPromise;
+        }
+
+        this.supabaseClientPromise = (async () => {
+            try {
+                const supabaseModule = await import('https://esm.sh/@supabase/supabase-js@2');
+                const { createClient } = supabaseModule;
+                return createClient(config.supabaseUrl, config.supabaseAnonKey);
+            } catch (error) {
+                console.warn('Failed to create Supabase client:', error);
+                return null;
+            }
+        })();
+
+        return this.supabaseClientPromise;
+    }
+
+    async upsertProduct({ productId, title, description, price, category, imageUrl }) {
+        const supabaseClient = await this.getSupabaseClient();
+        if (!supabaseClient) throw new Error('Supabase is not configured (missing window.SUPABASE_CONFIG)');
+
+        const config = this.getSupabaseConfig();
+        const tableName = config.supabaseProductsTable || 'products';
+
+        const payload = {
+            id: productId,
+            title: title,
+            description: description && description.trim().length > 0 ? description.trim() : null,
+            price: price,
+            category: category,
+            image_url: imageUrl
+        };
+
+        const { error } = await supabaseClient.from(tableName).upsert(payload, { onConflict: 'id' });
+        if (error) {
+            throw new Error(`Supabase upsert failed: ${error.message}`);
+        }
+    }
+
+    async deleteProductFromSupabase(productId) {
+        const supabaseClient = await this.getSupabaseClient();
+        if (!supabaseClient) throw new Error('Supabase is not configured (missing window.SUPABASE_CONFIG)');
+
+        const config = this.getSupabaseConfig();
+        const tableName = config.supabaseProductsTable || 'products';
+
+        const { error } = await supabaseClient.from(tableName).delete().eq('id', productId);
+        if (error) {
+            throw new Error(`Supabase delete failed: ${error.message}`);
+        }
+    }
+
     generateId() {
         return 'prod_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
@@ -101,41 +227,39 @@ class ProductManager {
         });
     }
 
-    async uploadImageToServer(file) {
+    async uploadProductImageToSupabase(file, productId) {
+        const supabaseClient = await this.getSupabaseClient();
+        if (!supabaseClient) throw new Error('Supabase is not configured (missing window.SUPABASE_CONFIG)');
+
+        const config = this.getSupabaseConfig();
+        const bucketName = config.supabaseStorageBucket || 'product-images';
+
+        const originalName = file.name || 'product-image';
+        const sanitizedFilename = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+        // Deterministic path: stable per product id + original filename
+        const storagePath = `products/${productId}/${sanitizedFilename}`;
+
         try {
-            // First, convert file to data URL
-            const imageDataUrl = await this.saveImageAsDataURL(file);
-            
-            // Generate a safe filename
-            const originalName = file.name || 'product-image';
-            const sanitizedFilename = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
-            
-            // Upload to server
-            const response = await fetch('/api/upload-image', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    imageData: imageDataUrl,
-                    filename: sanitizedFilename
-                })
-            });
+            const { error: uploadError } = await supabaseClient.storage
+                .from(bucketName)
+                .upload(storagePath, file, {
+                    contentType: file.type || 'application/octet-stream',
+                    upsert: true
+                });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to upload image');
+            if (uploadError) {
+                throw new Error(`Supabase storage upload failed: ${uploadError.message}`);
             }
 
-            const result = await response.json();
-            if (result.success && result.imagePath) {
-                return result.imagePath;
-            } else {
-                throw new Error('Server did not return image path');
+            const { data } = supabaseClient.storage.from(bucketName).getPublicUrl(storagePath);
+            if (!data || !data.publicUrl) {
+                throw new Error('Supabase storage did not return a publicUrl');
             }
+
+            return data.publicUrl;
         } catch (error) {
-            console.error('Error uploading image:', error);
-            // Fallback to data URL if server upload fails
+            console.error('Error uploading image to Supabase Storage:', error);
             console.warn('Falling back to data URL storage');
             return await this.saveImageAsDataURL(file);
         }
@@ -146,6 +270,7 @@ class ProductManager {
 
         const formData = new FormData(event.target);
         const name = (formData.get('name') || '').toString().trim();
+        const description = (formData.get('description') || '').toString().trim();
         const price = parseFloat(formData.get('price') || 0);
         const category = (formData.get('category') || 'general').toLowerCase();
         const imageFile = formData.get('image');
@@ -157,9 +282,21 @@ class ProductManager {
 
         // For new products, image is required. For editing, image is optional (keep existing)
         let imagePath = null;
+
+        const supabaseClient = await this.getSupabaseClient();
+
+        const isSupabaseConfigured = Boolean(supabaseClient);
+        const wasEditing = Boolean(this.editingId);
+        const productId = this.editingId || this.generateUuidV4();
         if (imageFile && imageFile.size > 0) {
-            // Upload image to server
-            imagePath = await this.uploadImageToServer(imageFile);
+            if (isSupabaseConfigured) {
+                // Upload image to Supabase Storage
+                imagePath = await this.uploadProductImageToSupabase(imageFile, productId);
+            } else {
+                // Local fallback mode (no Supabase config)
+                console.warn('Supabase not configured; saving product image as data URL');
+                imagePath = await this.saveImageAsDataURL(imageFile);
+            }
         } else if (this.editingId) {
             // If editing and no new image, keep the existing image
             const existingProduct = this.products.find(p => p.id == this.editingId || String(p.id) === String(this.editingId));
@@ -174,34 +311,45 @@ class ProductManager {
         }
 
         try {
-            const productId = this.editingId || this.generateId();
+            if (isSupabaseConfigured) {
+                await this.upsertProduct({
+                    productId,
+                    title: name,
+                    description: description,
+                    price: price,
+                    category: category,
+                    imageUrl: imagePath
+                });
 
-            const product = {
-                id: productId,
-                name: name,
-                price: price,
-                category: category,
-                image: imagePath
-            };
-
-            if (this.editingId) {
-                // Update existing product
-                const index = this.products.findIndex(p => p.id == this.editingId || String(p.id) === String(this.editingId));
-                if (index !== -1) {
-                    this.products[index] = product;
-                }
+                // Reload from Supabase to keep the local cache consistent
+                await this.loadProducts();
             } else {
-                // Add new product
-                this.products.push(product);
+                // Local fallback mode (keeps current behavior when Supabase config is missing)
+                const product = {
+                    id: productId,
+                    name: name,
+                    description: description,
+                    price: price,
+                    category: category,
+                    image: imagePath
+                };
+
+                if (wasEditing) {
+                    const index = this.products.findIndex(p => p.id == this.editingId || String(p.id) === String(this.editingId));
+                    if (index !== -1) this.products[index] = product;
+                } else {
+                    this.products.push(product);
+                }
+
+                await this.saveProducts();
             }
 
-            await this.saveProducts();
             this.renderProducts();
             this.resetForm();
-            
-            const action = this.editingId ? 'updated' : 'added';
+
+            const action = wasEditing ? 'updated' : 'added';
             this.showMessage(`✓ Product ${action} successfully!`, 'success');
-            
+
             // Notify other pages that products were updated
             window.dispatchEvent(new CustomEvent('productsUpdated'));
             sessionStorage.setItem('woofcrafts_products_updated', Date.now().toString());
@@ -220,6 +368,9 @@ class ProductManager {
         document.getElementById('product-name').value = product.name;
         document.getElementById('product-price').value = product.price;
         document.getElementById('product-category').value = (product.category || 'general').toLowerCase();
+
+        const descriptionEl = document.getElementById('product-description');
+        if (descriptionEl) descriptionEl.value = product.description || '';
         
         const preview = document.getElementById('image-preview');
         const imgSrc = safeImageSrc(product.image);
@@ -237,11 +388,30 @@ class ProductManager {
 
     async deleteProduct(productId) {
         if (!confirm('Are you sure you want to delete this product?')) return;
+        try {
+            const supabaseClient = await this.getSupabaseClient();
+            const isSupabaseConfigured = Boolean(supabaseClient);
 
-        this.products = this.products.filter(p => p.id != productId);
-        await this.saveProducts();
-        this.renderProducts();
-        this.showMessage('Product deleted successfully!', 'success');
+            if (isSupabaseConfigured) {
+                await this.deleteProductFromSupabase(productId);
+                await this.loadProducts();
+                this.renderProducts();
+            } else {
+                // Local fallback mode (no Supabase config)
+                this.products = this.products.filter(p => p.id != productId);
+                await this.saveProducts();
+                this.renderProducts();
+            }
+
+            this.showMessage('Product deleted successfully!', 'success');
+
+            // Notify other pages that products were updated
+            window.dispatchEvent(new CustomEvent('productsUpdated'));
+            sessionStorage.setItem('woofcrafts_products_updated', Date.now().toString());
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            alert('Error deleting product. Please try again.');
+        }
     }
 
     resetForm() {

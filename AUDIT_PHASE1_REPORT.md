@@ -18,7 +18,7 @@
 | 7 | Missing focus-visible styles for keyboard accessibility | Medium | css/style.css | Proposed |
 | 8 | Product image hover causes transform overflow clipping | Low | css/style.css | Proposed |
 | 9 | Long product names can overflow in cart and product cards | Medium | css/style.css | Proposed |
-| 10 | Remove console.log from production render paths | Low | js/app.js, js/products.js | Proposed |
+| 10 | Remove console.log from production render paths | Low | js/app.js, js/products.js | Proposed | 
 
 ---
 

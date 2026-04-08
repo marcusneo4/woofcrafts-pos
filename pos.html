@@ -19,121 +19,210 @@
                     <h1>WoofCrafts</h1>
                     <span class="paw-decoration">🐾</span>
                 </div>
-                <a href="products.html" class="manage-products-btn">
-                    <span>📦</span> Manage Products
-                </a>
+                <div class="header-actions" style="display:flex; align-items:center; gap:14px;">
+                    <div class="tab-buttons" role="tablist" aria-label="POS Views" style="display:flex; gap:10px;">
+                        <button
+                            type="button"
+                            class="btn-secondary"
+                            id="pos-tab-btn"
+                            role="tab"
+                            aria-controls="view-pos"
+                            aria-selected="true"
+                        >
+                            <span>🛍️</span> POS
+                        </button>
+                        <button
+                            type="button"
+                            class="btn-secondary"
+                            id="purchases-tab-btn"
+                            role="tab"
+                            aria-controls="view-purchases"
+                            aria-selected="false"
+                        >
+                            <span>📜</span> Purchases
+                        </button>
+                    </div>
+                    <a href="products.html" class="manage-products-btn">
+                        <span>📦</span> Manage Products
+                    </a>
+                </div>
             </div>
         </header>
 
         <main class="main-content" role="main">
-            <!-- Product Grid Section -->
-            <section class="products-section" aria-labelledby="products-heading">
-                <div class="section-header">
-                    <h2 id="products-heading">
-                        <span class="paw-icon">🐾</span>
-                        Browse Our Pawsome Products
-                        <span class="paw-icon">🐾</span>
-                    </h2>
-                    <p class="section-subtitle">Click on any product to add it to your cart!</p>
-                </div>
-                
-                <div id="products-grid" class="products-grid">
-                    <!-- Products will be loaded here -->
-                    <div class="no-products">
-                        <div class="empty-state">
-                            <span class="empty-icon">🐶</span>
-                            <p>No products available yet!</p>
-                            <a href="products.html" class="empty-link">Add your first product here 🎉</a>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Cart and Checkout Section -->
-            <aside class="cart-section" aria-label="Shopping cart and checkout">
-                <div class="cart-header">
-                    <h2>
-                        <span class="cart-icon">🛒</span>
-                        Your Cart
-                        <span class="cart-badge" id="cart-count">0</span>
-                    </h2>
-                </div>
-                
-                <div id="cart-items" class="cart-items">
-                    <div class="empty-cart">
-                        <span class="empty-cart-icon">🐕</span>
-                        <p>Your cart is empty</p>
-                        <p class="empty-cart-hint">Start shopping by clicking on products!</p>
-                    </div>
-                </div>
-
-                <div class="order-summary">
-                    <div class="summary-row">
-                        <span>Subtotal:</span>
-                        <span id="subtotal">$0.00</span>
-                    </div>
-                    <div class="discount-section">
-                        <button id="discount-btn" class="discount-btn">
-                            <span>🎁</span> Apply 5% Discount
-                        </button>
-                        <span id="discount-amount" class="discount-amount hidden">-$0.00</span>
-                    </div>
-                    <div class="summary-row total-row">
-                        <span>Total:</span>
-                        <span id="total">$0.00</span>
-                    </div>
-                </div>
-                
-                <!-- POS Actions -->
-                <div class="pos-actions">
-                    <button id="reset-cart-btn" class="btn-secondary">
-                        <span>🔄</span> Reset Cart
-                    </button>
-                </div>
-
-                <div class="checkout-section">
-                    <h3>
-                        <span>🐾</span>
-                        Customer Information
-                    </h3>
-                    <div class="input-group">
-                        <label>👤 Customer Name (Optional)</label>
-                        <input type="text" id="customer-name" placeholder="Fido's Owner" class="input-field">
-                    </div>
-                    <div class="input-group">
-                        <label>📧 Customer Email *</label>
-                        <input
-                            type="email"
-                            id="customer-email"
-                            placeholder="owner@email.com"
-                            class="input-field"
-                            required
-                            aria-required="true"
-                        >
-                    </div>
-                    <div class="input-group">
-                        <label>📞 Phone Number</label>
-                        <input type="tel" id="customer-phone" placeholder="(555) 123-4567" class="input-field">
-                    </div>
-                    <div class="input-group">
-                        <label>💬 Comments / Special Instructions</label>
-                        <textarea id="customer-comment" placeholder="Any special requests or notes..." class="input-field" rows="3" style="resize: vertical; min-height: 80px;"></textarea>
+            <div id="view-pos">
+                <!-- Product Grid Section -->
+                <section class="products-section" aria-labelledby="products-heading">
+                    <div class="section-header">
+                        <h2 id="products-heading">
+                            <span class="paw-icon">🐾</span>
+                            Browse Our Pawsome Products
+                            <span class="paw-icon">🐾</span>
+                        </h2>
+                        <p class="section-subtitle">Click on any product to add it to your cart!</p>
                     </div>
                     
-                    <div class="action-buttons">
-                        <button id="send-email-btn" class="btn-primary">
-                            <span>📬</span> Send Email
+                    <div id="products-grid" class="products-grid">
+                        <!-- Products will be loaded here -->
+                        <div class="no-products">
+                            <div class="empty-state">
+                                <span class="empty-icon">🐶</span>
+                                <p>No products available yet!</p>
+                                <a href="products.html" class="empty-link">Add your first product here 🎉</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Cart and Checkout Section -->
+                <aside class="cart-section" aria-label="Shopping cart and checkout">
+                    <div class="cart-header">
+                        <h2>
+                            <span class="cart-icon">🛒</span>
+                            Your Cart
+                            <span class="cart-badge" id="cart-count">0</span>
+                        </h2>
+                    </div>
+                    
+                    <div id="cart-items" class="cart-items">
+                        <div class="empty-cart">
+                            <span class="empty-cart-icon">🐕</span>
+                            <p>Your cart is empty</p>
+                            <p class="empty-cart-hint">Start shopping by clicking on products!</p>
+                        </div>
+                    </div>
+
+                    <div class="order-summary">
+                        <div class="summary-row">
+                            <span>Subtotal:</span>
+                            <span id="subtotal">$0.00</span>
+                        </div>
+                        <div class="discount-section">
+                            <button id="discount-btn" class="discount-btn">
+                                <span>🎁</span> Apply 5% Discount
+                            </button>
+                            <span id="discount-amount" class="discount-amount hidden">-$0.00</span>
+                        </div>
+                        <div class="summary-row total-row">
+                            <span>Total:</span>
+                            <span id="total">$0.00</span>
+                        </div>
+                    </div>
+                    
+                    <!-- POS Actions -->
+                    <div class="pos-actions">
+                        <button id="reset-cart-btn" class="btn-secondary">
+                            <span>🔄</span> Reset Cart
                         </button>
                     </div>
+
+                    <div class="checkout-section">
+                        <h3>
+                            <span>🐾</span>
+                            Customer Information
+                        </h3>
+                        <div class="input-group">
+                            <label>👤 Customer Name (Optional)</label>
+                            <input type="text" id="customer-name" placeholder="Fido's Owner" class="input-field">
+                        </div>
+                        <div class="input-group">
+                            <label>📧 Customer Email *</label>
+                            <div class="email-compose-row" aria-label="Customer email composer">
+                                <input
+                                    type="text"
+                                    id="customer-email-local"
+                                    placeholder="owner"
+                                    class="input-field email-local-input"
+                                    autocomplete="off"
+                                >
+                                <span class="email-at" aria-hidden="true">@</span>
+                                <span
+                                    id="customer-email-domain-selected"
+                                    class="email-domain-selected"
+                                    role="status"
+                                    aria-live="polite"
+                                >gmail.com</span>
+                            </div>
+
+                            <div class="email-domain-buttons" role="group" aria-label="Email domain buttons">
+                                <button type="button" class="domain-btn active" data-domain="gmail.com">
+                                    gmail.com
+                                </button>
+                                <button type="button" class="domain-btn" data-domain="yahoo.com">
+                                    yahoo.com
+                                </button>
+                                <button type="button" class="domain-btn" data-domain="outlook.com">
+                                    outlook.com
+                                </button>
+                                <button type="button" class="domain-btn" data-domain="hotmail.com">
+                                    hotmail.com
+                                </button>
+                                <button type="button" class="domain-btn" data-domain="aol.com">
+                                    aol.com
+                                </button>
+                                <button type="button" class="domain-btn" data-domain="__other__" id="email-domain-other-btn">
+                                    Other
+                                </button>
+                            </div>
+
+                            <input
+                                type="text"
+                                id="customer-email-domain-custom"
+                                class="input-field email-domain-custom hidden"
+                                placeholder="example.com"
+                                autocomplete="off"
+                            >
+
+                            <input
+                                type="email"
+                                id="customer-email"
+                                class="hidden"
+                                aria-label="Customer email (hidden)"
+                            >
+                        </div>
+                        <div class="input-group">
+                            <label>📞 Phone Number</label>
+                            <input type="tel" id="customer-phone" placeholder="9123 4567" class="input-field">
+                        </div>
+                        <div class="input-group">
+                            <label>💬 Comments / Special Instructions</label>
+                            <textarea id="customer-comment" placeholder="Any special requests or notes..." class="input-field" rows="3" style="resize: vertical; min-height: 80px;"></textarea>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button id="send-email-btn" class="btn-primary">
+                                <span>📬</span> Send Email
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <section id="view-purchases" class="hidden" aria-label="Purchase history">
+                <div class="section-header">
+                    <h2 id="purchases-heading">
+                        <span class="paw-icon">📜</span>
+                        Purchases
+                        <span class="paw-icon">📜</span>
+                    </h2>
+                    <p class="section-subtitle">Click a purchase to see line items.</p>
                 </div>
-            </aside>
+
+                <div id="purchases-list" class="products-grid"></div>
+
+                <div id="purchase-details" class="container" style="margin-top: 24px; display: none;"></div>
+            </section>
         </main>
     </div>
 
     <!-- Shared utilities (must load first) -->
+    <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
     <!-- EmailJS for client-side email sending -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <!-- PDF generation (invoice) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <!-- Main app script -->
     <script src="js/app.js"></script>
 </body>

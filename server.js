@@ -3,12 +3,15 @@ require('dotenv').config();
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const nodemailer = require('nodemailer');
 
 const PORT = process.env.PORT || 8001;
 const PUBLIC_DIR = __dirname;
 
 // Request body size limit (10MB for base64 images, 1MB for JSON)
 const MAX_BODY_SIZE = 10 * 1024 * 1024;
+// Extra limit for invoice PDF base64 payloads
+const MAX_PDF_BODY_SIZE = 20 * 1024 * 1024;
 
 // External product images directory (set PRODUCT_IMAGES_DIR in .env for your path)
 const EXTERNAL_IMAGES_DIR = process.env.PRODUCT_IMAGES_DIR || path.join(__dirname, 'assets', 'Dog product images');
@@ -17,6 +20,7 @@ const EXTERNAL_IMAGES_DIR = process.env.PRODUCT_IMAGES_DIR || path.join(__dirnam
 let transporter;
 let generateOrderEmail;
 let generatePlainTextEmail;
+let invoiceTransporter;
 try {
     transporter = require('./email-config');
     const emailTemplate = require('./email-template');
@@ -279,6 +283,185 @@ function handleSendOrderEmailRequest(req, res) {
 }
 
 /**
+ * Handle sending an invoice PDF as an email attachment.
+ * @param {import('http').IncomingMessage} req
+ * @param {import('http').ServerResponse} res
+ */
+function handleSendInvoiceRequest(req, res) {
+    let body = '';
+    let bodySize = 0;
+    let responded = false;
+
+    const sendResponse = (statusCode, payload) => {
+        if (responded) return;
+        responded = true;
+        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(payload));
+    };
+
+    req.on('data', (chunk) => {
+        bodySize += chunk.length;
+        if (bodySize > MAX_PDF_BODY_SIZE) {
+            req.destroy();
+            return;
+        }
+        body += chunk.toString();
+    });
+
+    req.on('error', () => {
+        if (!responded) {
+            sendResponse(500, { success: false, error: 'Request stream error' });
+        }
+    });
+
+    req.on('end', async () => {
+        if (bodySize > MAX_PDF_BODY_SIZE) {
+            sendResponse(413, { success: false, error: 'Request body too large for invoice PDF' });
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(body);
+            if (!parsed || typeof parsed !== 'object') {
+                sendResponse(400, { success: false, error: 'Request body must be a JSON object' });
+                return;
+            }
+
+            const pdfBase64Raw = parsed.pdfBase64;
+            const customerEmail = parsed.customerEmail;
+            const customerNameRaw = parsed.customerName;
+            const purchaseDateRaw = parsed.purchaseDate;
+            const invoiceNumberRaw = parsed.invoiceNumber;
+            const fileNameRaw = parsed.fileName;
+
+            if (!pdfBase64Raw || typeof pdfBase64Raw !== 'string') {
+                sendResponse(400, { success: false, error: 'Missing required field: pdfBase64 (string)' });
+                return;
+            }
+            if (!customerEmail || typeof customerEmail !== 'string') {
+                sendResponse(400, { success: false, error: 'Missing required field: customerEmail (string)' });
+                return;
+            }
+
+            const cleanedBase64 = pdfBase64Raw.replace(/\s/g, '');
+            // Basic base64 sanity check
+            if (!/^[A-Za-z0-9+/]+={0,2}$/.test(cleanedBase64)) {
+                sendResponse(400, { success: false, error: 'Invalid pdfBase64 (not valid base64)' });
+                return;
+            }
+
+            const pdfBuffer = Buffer.from(cleanedBase64, 'base64');
+            if (!pdfBuffer || pdfBuffer.length < 1000) {
+                sendResponse(400, { success: false, error: 'pdfBase64 decoded to an empty/invalid PDF' });
+                return;
+            }
+
+            const emailUser = process.env.GMAIL_USER || process.env.EMAIL_USER;
+            const emailPass = process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASS;
+            if (!emailUser || !emailPass) {
+                sendResponse(503, {
+                    success: false,
+                    error: 'Invoice email not configured. Set either (GMAIL_USER + GMAIL_APP_PASSWORD) or (EMAIL_USER + EMAIL_PASS) in .env.'
+                });
+                return;
+            }
+
+            if (!invoiceTransporter) {
+                const host = process.env.GMAIL_HOST || process.env.EMAIL_HOST || 'smtp.gmail.com';
+                const port = Number(process.env.GMAIL_PORT || process.env.EMAIL_PORT) || 587;
+                const secure = port === 465;
+
+                invoiceTransporter = nodemailer.createTransport({
+                    host,
+                    port,
+                    secure,
+                    auth: {
+                        user: emailUser,
+                        pass: String(emailPass).replace(/\s/g, '')
+                    }
+                });
+            }
+
+            const sanitizedFileNameBase = typeof fileNameRaw === 'string' && fileNameRaw.trim().length > 0
+                ? fileNameRaw.trim().replace(/[^a-zA-Z0-9._-]/g, '_')
+                : 'WoofCrafts_Invoice.pdf';
+            const sanitizedFileName = sanitizedFileNameBase.toLowerCase().endsWith('.pdf')
+                ? sanitizedFileNameBase
+                : `${sanitizedFileNameBase}.pdf`;
+
+            const mailFrom = process.env.GMAIL_FROM || process.env.EMAIL_FROM || emailUser;
+            const subject = process.env.INVOICE_SUBJECT || 'WoofCrafts Invoice';
+            const storeName = 'WoofCrafts';
+
+            const sanitizeInlineText = (value, fallback) => {
+                if (typeof value !== 'string') return fallback;
+                const trimmed = value.trim().replace(/\s+/g, ' ');
+                if (!trimmed) return fallback;
+                return trimmed.slice(0, 120);
+            };
+
+            const formatPurchaseDate = (value) => {
+                try {
+                    if (!value) return '';
+                    const date = (value instanceof Date) ? value : new Date(String(value));
+                    if (Number.isNaN(date.getTime())) return '';
+                    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                } catch {
+                    return '';
+                }
+            };
+
+            const safeCustomerName = sanitizeInlineText(customerNameRaw, '');
+            const greetingName = safeCustomerName || 'there';
+            const safeInvoiceNumber = sanitizeInlineText(invoiceNumberRaw, '');
+            const formattedPurchaseDate = formatPurchaseDate(purchaseDateRaw);
+
+            const emailLines = [
+                `Hi ${greetingName},`,
+                '',
+                `Thank you for shopping with ${storeName}.`,
+                '',
+                `Attached is your invoice${safeInvoiceNumber ? ` #${safeInvoiceNumber}` : ''}${formattedPurchaseDate ? ` for your recent in-store purchase on ${formattedPurchaseDate}` : ''}.`,
+                'It includes a full breakdown of the items, taxes, and payment details recorded in our point-of-sale system.',
+                '',
+                'Please keep this email and the attached PDF for your records.',
+                `We appreciate your business and look forward to serving you again.`,
+                '',
+                storeName
+            ];
+
+            const emailText = emailLines.join('\n');
+
+            const info = await invoiceTransporter.sendMail({
+                from: mailFrom,
+                to: customerEmail,
+                subject,
+                text: emailText,
+                attachments: [
+                    {
+                        filename: sanitizedFileName,
+                        content: pdfBuffer,
+                        contentType: 'application/pdf'
+                    }
+                ]
+            });
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: true,
+                messageId: info.messageId,
+                recipient: customerEmail,
+                fileName: sanitizedFileName
+            }));
+        } catch (error) {
+            console.error('[Server] ❌ Invoice sending error:', error);
+            const safeMessage = error instanceof SyntaxError ? 'Invalid JSON in request body' : error.message;
+            sendResponse(500, { success: false, error: safeMessage });
+        }
+    });
+}
+
+/**
  * Serve product images from the external images directory.
  * @param {string} pathname
  * @param {import('http').ServerResponse} res
@@ -391,6 +574,11 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    if (pathname === '/api/send-invoice' && req.method === 'POST') {
+        handleSendInvoiceRequest(req, res);
+        return;
+    }
+
     if (pathname.startsWith('/product-images/')) {
         handleExternalProductImageRequest(pathname, res);
         return;
@@ -427,6 +615,7 @@ module.exports = {
     handleUploadImageRequest,
     validateAndSanitizeOrderData,
     handleSendOrderEmailRequest,
+    handleSendInvoiceRequest,
     handleExternalProductImageRequest,
     handleStaticAssetRequest
 };

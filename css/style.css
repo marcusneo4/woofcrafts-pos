@@ -126,9 +126,9 @@ body::after {
 }
 
 .container {
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 24px;
     position: relative;
     z-index: 1;
 }
@@ -301,6 +301,15 @@ header h1 {
     align-items: flex-start;
     gap: 32px;
     margin-top: -12px;
+}
+
+/* POS view layout (products left, cart right) */
+#view-pos {
+    grid-column: 1 / -1; /* span full width of .main-content grid */
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.9fr);
+    gap: 32px;
+    align-items: flex-start;
 }
 
 /* Products Section */
@@ -936,6 +945,88 @@ header h1 {
     gap: 6px;
 }
 
+/* Customer Email Composer (local part + domain buttons) */
+.email-compose-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.email-local-input {
+    width: auto !important;
+    flex: 1;
+    min-width: 160px;
+}
+
+.email-at {
+    color: var(--text-light);
+    font-weight: 900;
+    font-size: 1.2rem;
+    user-select: none;
+}
+
+.email-domain-selected {
+    flex: 0 0 auto;
+    padding: 12px 16px;
+    border: 3px solid var(--border-color);
+    background: var(--bg-light);
+    border-radius: 15px;
+    font-weight: 900;
+    min-width: 120px;
+    text-align: center;
+    color: var(--text-dark);
+}
+
+.email-domain-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.domain-btn {
+    background: var(--bg-white);
+    color: var(--text-dark);
+    border: 3px solid var(--border-color);
+    padding: 12px 16px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    min-height: 44px;
+    transition:
+        transform 0.18s cubic-bezier(0.25, 1, 0.5, 1),
+        box-shadow 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+        border-color 0.18s cubic-bezier(0.25, 1, 0.5, 1),
+        background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.domain-btn:hover {
+    border-color: var(--primary-color);
+    background: var(--bg-light);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(53, 32, 16, 0.18);
+}
+
+.domain-btn:active {
+    transform: translateY(-1px) scale(0.98);
+}
+
+.domain-btn:focus-visible {
+    outline: 3px solid var(--primary-dark);
+    outline-offset: 3px;
+}
+
+.domain-btn.active {
+    border-color: var(--primary-color);
+    background: var(--bg-light);
+    color: var(--primary-color);
+}
+
+.email-domain-custom {
+    margin-top: 10px;
+}
+
 .input-field {
     width: 100%;
     padding: 14px 18px;
@@ -1285,6 +1376,10 @@ select.input-field option {
 /* Responsive Design */
 @media (max-width: 1024px) {
     .main-content {
+        grid-template-columns: 1fr;
+    }
+
+    #view-pos {
         grid-template-columns: 1fr;
     }
 
