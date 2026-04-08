@@ -41,73 +41,19 @@ class ProductManager {
                             image: row.image_url || ''
                         };
                     });
-
-                    // Sync to localStorage so POS can load quickly even if Supabase is down
-                    localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
                     console.log(`✓ Loaded ${this.products.length} products from Supabase`);
                     return;
                 }
             } catch (error) {
-                console.warn('Could not load products from Supabase, falling back:', error);
-            }
-        }
-
-        try {
-            // First, try to load from products.json
-            const response = await fetch('data/products.json');
-            if (response.ok) {
-                const data = await response.json();
-                if (data.products && Array.isArray(data.products)) {
-                    this.products = data.products;
-                    // Sync to localStorage
-                    localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-                    console.log(`✓ Loaded ${this.products.length} products from products.json`);
-                    return;
-                }
-            }
-        } catch (error) {
-            console.warn('Could not load products.json, trying localStorage:', error);
-        }
-
-        // Fallback to localStorage
-        const storedProducts = localStorage.getItem('woofcrafts_products');
-        if (storedProducts) {
-            try {
-                const parsed = JSON.parse(storedProducts);
-                if (Array.isArray(parsed)) {
-                    this.products = parsed;
-                    console.log(`✓ Loaded ${this.products.length} products from localStorage`);
-                } else {
-                    console.warn('Invalid products data in localStorage');
-                    this.products = [];
-                }
-            } catch (error) {
-                console.error('Error parsing stored products:', error);
+                console.error('Could not load products from Supabase:', error);
                 this.products = [];
+                return;
             }
-        } else {
-            console.log('No products in localStorage yet');
-            this.products = [];
         }
-    }
 
-    async saveProducts() {
-        // Save to localStorage
-        try {
-            localStorage.setItem('woofcrafts_products', JSON.stringify(this.products));
-            console.log(`✓ Saved ${this.products.length} products to localStorage`);
-            
-            // Trigger storage event for other tabs
-            window.dispatchEvent(new StorageEvent('storage', {
-                key: 'woofcrafts_products',
-                newValue: JSON.stringify(this.products),
-                url: window.location.href,
-                storageArea: localStorage
-            }));
-        } catch (error) {
-            console.error('Error saving products:', error);
-            throw error;
-        }
+        // Product management is shared-mode only; require Supabase config.
+        console.warn('Supabase is not configured. Product management is disabled.');
+        this.products = [];
     }
 
     getSupabaseConfig() {
@@ -284,19 +230,17 @@ class ProductManager {
         let imagePath = null;
 
         const supabaseClient = await this.getSupabaseClient();
-
         const isSupabaseConfigured = Boolean(supabaseClient);
+        if (!isSupabaseConfigured) {
+            alert('Supabase is not configured. Product changes cannot be saved.');
+            return;
+        }
+
         const wasEditing = Boolean(this.editingId);
         const productId = this.editingId || this.generateUuidV4();
         if (imageFile && imageFile.size > 0) {
-            if (isSupabaseConfigured) {
-                // Upload image to Supabase Storage
-                imagePath = await this.uploadProductImageToSupabase(imageFile, productId);
-            } else {
-                // Local fallback mode (no Supabase config)
-                console.warn('Supabase not configured; saving product image as data URL');
-                imagePath = await this.saveImageAsDataURL(imageFile);
-            }
+            // Upload image to Supabase Storage
+            imagePath = await this.uploadProductImageToSupabase(imageFile, productId);
         } else if (this.editingId) {
             // If editing and no new image, keep the existing image
             const existingProduct = this.products.find(p => p.id == this.editingId || String(p.id) === String(this.editingId));
@@ -311,38 +255,17 @@ class ProductManager {
         }
 
         try {
-            if (isSupabaseConfigured) {
-                await this.upsertProduct({
-                    productId,
-                    title: name,
-                    description: description,
-                    price: price,
-                    category: category,
-                    imageUrl: imagePath
-                });
+            await this.upsertProduct({
+                productId,
+                title: name,
+                description: description,
+                price: price,
+                category: category,
+                imageUrl: imagePath
+            });
 
-                // Reload from Supabase to keep the local cache consistent
-                await this.loadProducts();
-            } else {
-                // Local fallback mode (keeps current behavior when Supabase config is missing)
-                const product = {
-                    id: productId,
-                    name: name,
-                    description: description,
-                    price: price,
-                    category: category,
-                    image: imagePath
-                };
-
-                if (wasEditing) {
-                    const index = this.products.findIndex(p => p.id == this.editingId || String(p.id) === String(this.editingId));
-                    if (index !== -1) this.products[index] = product;
-                } else {
-                    this.products.push(product);
-                }
-
-                await this.saveProducts();
-            }
+            // Reload from Supabase to keep the list consistent
+            await this.loadProducts();
 
             this.renderProducts();
             this.resetForm();
@@ -391,17 +314,14 @@ class ProductManager {
         try {
             const supabaseClient = await this.getSupabaseClient();
             const isSupabaseConfigured = Boolean(supabaseClient);
-
-            if (isSupabaseConfigured) {
-                await this.deleteProductFromSupabase(productId);
-                await this.loadProducts();
-                this.renderProducts();
-            } else {
-                // Local fallback mode (no Supabase config)
-                this.products = this.products.filter(p => p.id != productId);
-                await this.saveProducts();
-                this.renderProducts();
+            if (!isSupabaseConfigured) {
+                alert('Supabase is not configured. Product deletion is disabled.');
+                return;
             }
+
+            await this.deleteProductFromSupabase(productId);
+            await this.loadProducts();
+            this.renderProducts();
 
             this.showMessage('Product deleted successfully!', 'success');
 
@@ -458,8 +378,8 @@ class ProductManager {
                     <div class="product-list-price">$${parseFloat(product.price).toFixed(2)}</div>
                 </div>
                 <div class="product-list-actions">
-                    <button class="btn-edit" onclick="productManager.editProduct(${JSON.stringify(product.id)})" title="Edit product details and image">✏️ Edit</button>
-                    <button class="btn-delete" onclick="productManager.deleteProduct(${JSON.stringify(product.id)})" title="Delete this product">🗑️ Delete</button>
+                    <button class="btn-edit" onclick='productManager.editProduct(${JSON.stringify(product.id)})' title="Edit product details and image">✏️ Edit</button>
+                    <button class="btn-delete" onclick='productManager.deleteProduct(${JSON.stringify(product.id)})' title="Delete this product">🗑️ Delete</button>
                 </div>
             </div>
         `;

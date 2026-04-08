@@ -642,13 +642,13 @@ class POSApp {
 
             const safeId = JSON.stringify(product.id);
             return `
-                <div class="product-card" onclick="safeAddToCart(${safeId})">
+                <div class="product-card" onclick='safeAddToCart(${safeId})'>
                     ${category !== 'general' ? `<div class="product-category-badge">${categoryLabel}</div>` : ''}
                     <img src="${escapeHtml(imageSrc)}" alt="${productName}" class="product-image" 
                          onerror="this.onerror=null; this.src='${PLACEHOLDER_IMAGE}'">
                     <div class="product-name">${productName}</div>
                     <div class="product-price">$${parseFloat(product.price).toFixed(2)}</div>
-                    <button class="quick-add-btn" onclick="event.stopPropagation(); safeAddToCart(${safeId})" title="Quick Add">+</button>
+                    <button class="quick-add-btn" onclick='event.stopPropagation(); safeAddToCart(${safeId})' title="Quick Add">+</button>
                 </div>
             `;
         }).join('');
@@ -759,12 +759,12 @@ class POSApp {
                             <div class="cart-item-price">$${item.price.toFixed(2)} each</div>
                         </div>
                         <div class="cart-item-controls">
-                            <button class="quantity-btn" onclick="(window.posApp || posApp).updateQuantity(${safeId(item.productId)}, -1)">-</button>
+                            <button class="quantity-btn" onclick='(window.posApp || posApp).updateQuantity(${safeId(item.productId)}, -1)'>-</button>
                             <span class="quantity-display">${item.quantity}</span>
-                            <button class="quantity-btn" onclick="(window.posApp || posApp).updateQuantity(${safeId(item.productId)}, 1)">+</button>
+                            <button class="quantity-btn" onclick='(window.posApp || posApp).updateQuantity(${safeId(item.productId)}, 1)'>+</button>
                         </div>
                         <div class="cart-item-total">$${subtotal.toFixed(2)}</div>
-                        <button class="remove-btn" onclick="(window.posApp || posApp).removeFromCart(${safeId(item.productId)})" title="Remove">🗑️</button>
+                        <button class="remove-btn" onclick='(window.posApp || posApp).removeFromCart(${safeId(item.productId)})' title="Remove">🗑️</button>
                     </div>
                 </div>
             `;
