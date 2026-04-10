@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="pos-page">
     <div class="paw-bg-decoration"></div>
     <div class="container">
         <header role="banner">
@@ -122,11 +122,11 @@
                             Customer Information
                         </h3>
                         <div class="input-group">
-                            <label>👤 Customer Name (Optional)</label>
+                            <label for="customer-name">👤 Customer Name (Optional)</label>
                             <input type="text" id="customer-name" placeholder="Fido's Owner" class="input-field">
                         </div>
                         <div class="input-group">
-                            <label>📧 Customer Email *</label>
+                            <label for="customer-email-local">📧 Customer Email *</label>
                             <div class="email-compose-row" aria-label="Customer email composer">
                                 <input
                                     type="text"
@@ -181,11 +181,11 @@
                             >
                         </div>
                         <div class="input-group">
-                            <label>📞 Phone Number</label>
+                            <label for="customer-phone">📞 Phone Number</label>
                             <input type="tel" id="customer-phone" placeholder="9123 4567" class="input-field">
                         </div>
                         <div class="input-group">
-                            <label>💬 Comments / Special Instructions</label>
+                            <label for="customer-comment">💬 Comments / Special Instructions</label>
                             <textarea id="customer-comment" placeholder="Any special requests or notes..." class="input-field textarea-resizable" rows="3"></textarea>
                         </div>
                         

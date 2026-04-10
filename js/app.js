@@ -305,17 +305,16 @@ class POSApp {
             return `
                 <button
                     type="button"
-                    class="btn-secondary"
-                    style="width: 100%; justify-content: space-between; margin-bottom: 12px;"
+                    class="btn-secondary purchase-card-btn"
                     data-purchase-id="${escapeHtml(purchaseId)}"
                     aria-label="View purchase ${orderId}"
                 >
-                    <span style="display:flex; gap:10px; align-items:center;">
+                    <span class="purchase-card-left">
                         <span>🧾</span>
                         <span>#${orderId}</span>
                     </span>
-                    <span style="font-weight: 800;">
-                        ${this.escapePurchaseText(total)}<span style="font-weight: 600; color: var(--text-light); margin-left: 10px;">${this.escapePurchaseText(dateText)}</span>
+                    <span class="purchase-card-right">
+                        ${this.escapePurchaseText(total)}<span class="purchase-card-date">${this.escapePurchaseText(dateText)}</span>
                     </span>
                 </button>
             `;
@@ -350,29 +349,34 @@ class POSApp {
 
             return `
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05);">${itemName}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); text-align:center;">${qty}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); text-align:right;">${price}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); text-align:right; font-weight: 800; color: var(--primary-color);">${subtotal}</td>
+                    <td>${itemName}</td>
+                    <td class="purchase-details-qty-cell">${qty}</td>
+                    <td class="purchase-details-price-cell">${price}</td>
+                    <td class="purchase-details-subtotal-cell">${subtotal}</td>
                 </tr>
             `;
         }).join('');
 
         detailsEl.style.display = 'block';
         detailsEl.innerHTML = `
-            <div class="container" style="padding: 18px; border-radius: 18px; border: 1px solid rgba(0,0,0,0.06); background: var(--bg-white);">
-                <h2 style="margin-bottom: 10px; font-family: 'Fredoka One', cursive;">Purchase #${safeOrderId}</h2>
-                <p style="margin: 6px 0; color: var(--text-light); font-weight: 600;">${customerName ? `Customer: ${customerName}<br/>` : ''}${customerEmail ? `Email: ${customerEmail}<br/>` : ''}${customerPhone ? `Phone: ${customerPhone}<br/>` : ''}${dateText ? `Date: ${this.escapePurchaseText(dateText)}<br/>` : ''}</p>
-                ${customerComment ? `<p style="margin: 10px 0 0 0; color: var(--text-dark); font-weight: 600;">Notes: ${customerComment}</p>` : ''}
+            <article class="purchase-details-card">
+                <h2 class="purchase-details-title">Purchase #${safeOrderId}</h2>
+                <p class="purchase-details-meta">
+                    ${customerName ? `Customer: ${customerName}<br/>` : ''}
+                    ${customerEmail ? `Email: ${customerEmail}<br/>` : ''}
+                    ${customerPhone ? `Phone: ${customerPhone}<br/>` : ''}
+                    ${dateText ? `Date: ${this.escapePurchaseText(dateText)}<br/>` : ''}
+                </p>
+                ${customerComment ? `<p class="purchase-details-notes">Notes: ${customerComment}</p>` : ''}
 
-                <div style="margin-top: 14px; overflow-x: auto;">
-                    <table style="width:100%; border-collapse: collapse;">
+                <div class="purchase-details-table-wrap">
+                    <table class="purchase-details-table">
                         <thead>
                             <tr>
-                                <th style="text-align:left; padding: 12px; border-bottom: 2px solid rgba(0,0,0,0.06); color: var(--primary-color);">Item</th>
-                                <th style="text-align:center; padding: 12px; border-bottom: 2px solid rgba(0,0,0,0.06); color: var(--primary-color);">Qty</th>
-                                <th style="text-align:right; padding: 12px; border-bottom: 2px solid rgba(0,0,0,0.06); color: var(--primary-color);">Price</th>
-                                <th style="text-align:right; padding: 12px; border-bottom: 2px solid rgba(0,0,0,0.06); color: var(--primary-color);">Subtotal</th>
+                                <th>Item</th>
+                                <th class="purchase-details-qty-cell">Qty</th>
+                                <th class="purchase-details-price-cell">Price</th>
+                                <th class="purchase-details-subtotal-cell">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -381,23 +385,23 @@ class POSApp {
                     </table>
                 </div>
 
-                <div style="margin-top: 14px; display:flex; justify-content:flex-end; gap: 18px; flex-wrap: wrap;">
-                    <div style="min-width: 180px;">
-                        <div style="color: var(--text-light); font-weight: 700;">Subtotal</div>
-                        <div style="font-weight: 900; font-size: 1.2rem;">${this.formatCurrency(purchase.subtotal)}</div>
+                <div class="purchase-details-totals">
+                    <div class="purchase-total-box">
+                        <div class="purchase-total-label">Subtotal</div>
+                        <div class="purchase-total-value">${this.formatCurrency(purchase.subtotal)}</div>
                     </div>
                     ${Number(purchase.discount_amount || 0) > 0 ? `
-                        <div style="min-width: 180px;">
-                            <div style="color: var(--text-light); font-weight: 700;">Discount</div>
-                            <div style="font-weight: 900; font-size: 1.2rem; color: var(--text-light);">-${this.formatCurrency(purchase.discount_amount)}</div>
+                        <div class="purchase-total-box">
+                            <div class="purchase-total-label">Discount</div>
+                            <div class="purchase-total-value purchase-total-value-muted">-${this.formatCurrency(purchase.discount_amount)}</div>
                         </div>
                     ` : ''}
-                    <div style="min-width: 180px;">
-                        <div style="color: var(--text-light); font-weight: 700;">Total</div>
-                        <div style="font-weight: 900; font-size: 1.4rem; color: var(--primary-color);">${this.formatCurrency(purchase.total)}</div>
+                    <div class="purchase-total-box purchase-total-box-highlight">
+                        <div class="purchase-total-label">Total</div>
+                        <div class="purchase-total-value purchase-total-value-highlight">${this.formatCurrency(purchase.total)}</div>
                     </div>
                 </div>
-            </div>
+            </article>
         `;
     }
 
@@ -1049,6 +1053,7 @@ class POSApp {
         }
 
         const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
         const marginLeft = 40;
         const marginRight = 40;
         const availableWidth = pageWidth - marginLeft - marginRight;
@@ -1073,30 +1078,51 @@ class POSApp {
         const total = Number(orderDetails.total || 0);
 
         const formatCurrency = (value) => `$${Number(value || 0).toFixed(2)}`;
+        const palette = {
+            brand: [184, 148, 95],
+            brandLight: [243, 233, 218],
+            ink: [46, 35, 24],
+            muted: [112, 90, 66],
+            line: [226, 210, 186],
+            white: [255, 255, 255]
+        };
 
-        // Header
+        // Branded header
+        const headerHeight = 98;
+        doc.setFillColor(...palette.brandLight);
+        doc.roundedRect(marginLeft, 24, availableWidth, headerHeight, 16, 16, 'F');
+        doc.setDrawColor(...palette.line);
+        doc.roundedRect(marginLeft, 24, availableWidth, headerHeight, 16, 16, 'S');
+
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(20);
-        doc.setTextColor(212, 165, 116);
-        doc.text('WoofCrafts', marginLeft, 44);
+        doc.setFontSize(24);
+        doc.setTextColor(...palette.brand);
+        doc.text('WoofCrafts', marginLeft + 20, 60);
 
-        doc.setFontSize(12);
-        doc.setTextColor(92, 74, 55);
-        doc.text(`Invoice #${safeOrderId}`, marginLeft, 64);
-        doc.text(`Date: ${formattedDate}`, marginLeft, 80);
+        doc.setFontSize(11);
+        doc.setTextColor(...palette.muted);
+        doc.text('Pet boutique invoice', marginLeft + 20, 80);
 
-        // Divider
-        doc.setDrawColor(232, 213, 183);
-        doc.setLineWidth(1);
-        doc.line(marginLeft, 98, marginLeft + availableWidth, 98);
-
-        // Customer block
-        let yCursor = 120;
         doc.setFont('helvetica', 'bold');
-        doc.text('Bill To:', marginLeft, yCursor);
-        yCursor += 16;
+        doc.setFontSize(13);
+        doc.setTextColor(...palette.ink);
+        doc.text(`Invoice #${safeOrderId}`, marginLeft + availableWidth - 20, 58, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.setTextColor(...palette.muted);
+        doc.text(`Issued ${formattedDate}`, marginLeft + availableWidth - 20, 78, { align: 'right' });
+
+        // Bill-to section
+        let yCursor = 150;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(...palette.brand);
+        doc.text('BILL TO', marginLeft, yCursor);
+        yCursor += 18;
 
         doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.setTextColor(...palette.ink);
         doc.text(`Name: ${customerName}`, marginLeft, yCursor);
         yCursor += 14;
         doc.text(`Email: ${customerEmail}`, marginLeft, yCursor);
@@ -1108,19 +1134,18 @@ class POSApp {
         }
 
         if (customerComment) {
-            doc.text('Notes:', marginLeft, yCursor);
-            yCursor += 14;
-            const commentLines = String(customerComment)
-                .split('\n')
-                .flatMap((line) => doc.splitTextToSize(line, availableWidth));
-            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...palette.brand);
+            doc.text('Notes', marginLeft, yCursor + 6);
+            yCursor += 20;
+            const commentLines = doc.splitTextToSize(String(customerComment), availableWidth);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...palette.ink);
             doc.text(commentLines, marginLeft, yCursor);
-            // Advance cursor by roughly comment height
             yCursor += commentLines.length * 12;
-            doc.setFontSize(12);
         }
 
-        const lineItemsStartY = Math.max(yCursor + 10, 175);
+        const lineItemsStartY = Math.max(yCursor + 12, 205);
 
         const head = [['Item', 'Qty', 'Price', 'Subtotal']];
         const body = Array.isArray(orderDetails.items) ? orderDetails.items.map((item) => {
@@ -1140,12 +1165,17 @@ class POSApp {
             theme: 'grid',
             styles: {
                 fontSize: 10,
-                cellPadding: 4
+                cellPadding: 6,
+                lineColor: palette.line,
+                textColor: palette.ink
             },
             headStyles: {
-                fillColor: [212, 165, 116],
-                textColor: [255, 255, 255],
+                fillColor: palette.brand,
+                textColor: palette.white,
                 fontStyle: 'bold'
+            },
+            alternateRowStyles: {
+                fillColor: [252, 248, 242]
             },
             columnStyles: {
                 1: { halign: 'center', cellWidth: 60 },
@@ -1156,30 +1186,45 @@ class POSApp {
 
         const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : lineItemsStartY + 30;
         let totalsY = finalY + 24;
-
-        doc.setDrawColor(232, 213, 183);
-        doc.line(marginLeft, totalsY - 10, marginLeft + availableWidth, totalsY - 10);
-
-        // Subtotal
-        doc.setFontSize(12);
-        doc.setTextColor(92, 74, 55);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Subtotal:', marginLeft, totalsY);
-        doc.text(formatCurrency(subtotal), marginLeft + availableWidth, totalsY, { align: 'right' });
-        totalsY += 18;
-
-        if (discountAmount > 0) {
-            doc.text('Discount:', marginLeft, totalsY);
-            doc.text(`-${formatCurrency(discountAmount)}`, marginLeft + availableWidth, totalsY, { align: 'right' });
-            totalsY += 18;
+        const summaryCardHeight = discountAmount > 0 ? 82 : 64;
+        if (totalsY + summaryCardHeight > pageHeight - 90) {
+            doc.addPage();
+            totalsY = 64;
         }
 
-        // Total
+        const summaryCardWidth = 220;
+        const summaryX = marginLeft + availableWidth - summaryCardWidth;
+        doc.setFillColor(...palette.brandLight);
+        doc.roundedRect(summaryX, totalsY, summaryCardWidth, summaryCardHeight, 12, 12, 'F');
+        doc.setDrawColor(...palette.line);
+        doc.roundedRect(summaryX, totalsY, summaryCardWidth, summaryCardHeight, 12, 12, 'S');
+
+        let summaryLineY = totalsY + 24;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.setTextColor(...palette.muted);
+        doc.text('Subtotal', summaryX + 16, summaryLineY);
+        doc.text(formatCurrency(subtotal), summaryX + summaryCardWidth - 16, summaryLineY, { align: 'right' });
+        summaryLineY += 18;
+
+        if (discountAmount > 0) {
+            doc.text('Discount', summaryX + 16, summaryLineY);
+            doc.text(`-${formatCurrency(discountAmount)}`, summaryX + summaryCardWidth - 16, summaryLineY, { align: 'right' });
+            summaryLineY += 18;
+        }
+
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.setTextColor(212, 165, 116);
-        doc.text('Total:', marginLeft, totalsY + 6);
-        doc.text(formatCurrency(total), marginLeft + availableWidth, totalsY + 6, { align: 'right' });
+        doc.setFontSize(14);
+        doc.setTextColor(...palette.brand);
+        doc.text('Total', summaryX + 16, summaryLineY + 2);
+        doc.text(formatCurrency(total), summaryX + summaryCardWidth - 16, summaryLineY + 2, { align: 'right' });
+
+        // Footer note
+        const footerY = pageHeight - 36;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(...palette.muted);
+        doc.text('Thank you for supporting WoofCrafts. We hope your pet loves their new goodies.', marginLeft, footerY);
 
         const dataUriString = doc.output('datauristring');
         const commaIndex = dataUriString.indexOf(',');

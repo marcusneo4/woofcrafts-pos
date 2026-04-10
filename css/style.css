@@ -66,6 +66,7 @@
     --duration-base: 240ms;
     --duration-slow: 300ms;
     --ease-standard: cubic-bezier(0.25, 1, 0.5, 1);
+    --focus-ring: 0 0 0 3px rgba(184, 148, 95, 0.3);
 
     /* Legacy aliases kept for compatibility */
     --primary-color: var(--color-brand-400);
@@ -91,14 +92,33 @@
 body {
     font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: var(--base-bg);
-    background-image: 
-        radial-gradient(circle at 20% 50%, rgba(232, 213, 183, 0.2) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(196, 165, 116, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 40% 20%, rgba(201, 169, 97, 0.1) 0%, transparent 50%);
+    background-image:
+        radial-gradient(circle at 8% 15%, rgba(232, 213, 183, 0.35) 0%, transparent 38%),
+        radial-gradient(circle at 92% 88%, rgba(196, 165, 116, 0.22) 0%, transparent 36%),
+        linear-gradient(180deg, #f8f1e7 0%, #f5ede3 48%, #f2e9de 100%);
     color: var(--text-dark);
     line-height: 1.6;
     min-height: 100vh;
     position: relative;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
+body.login-page {
+    background-image:
+        radial-gradient(circle at 50% -5%, rgba(212, 165, 116, 0.36) 0%, transparent 38%),
+        linear-gradient(180deg, #f8f1e7 0%, #efe4d7 100%);
+}
+
+body.pos-page .container,
+body.products-page .container {
+    padding-top: 28px;
 }
 
 /* Explicitly hide any search/filter UI elements */
@@ -200,8 +220,9 @@ header {
     box-shadow: var(--shadow);
     position: relative;
     overflow: hidden;
-    transform: translateY(12px);
+    transform: translateY(4px);
     z-index: 2;
+    border: 1px solid rgba(253, 248, 243, 0.45);
 }
 
 header::before {
@@ -239,6 +260,8 @@ header::after {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
     position: relative;
     z-index: 2;
 }
@@ -297,10 +320,11 @@ header h1 {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-height: 44px;
 }
 
 .manage-products-btn:hover {
-    transform: translateY(-4px) scale(1.04);
+    transform: translateY(-3px);
     box-shadow: var(--shadow-hover);
 }
 
@@ -384,9 +408,10 @@ header h1 {
     padding: 36px 34px 34px 34px;
     border-radius: 28px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(226, 210, 186, 0.6);
+    border: 1px solid rgba(226, 210, 186, 0.82);
     position: relative;
     z-index: 1;
+    backdrop-filter: blur(2px);
 }
 
 .products-grid {
@@ -459,7 +484,7 @@ header h1 {
 }
 
 .quick-add-btn:hover {
-    transform: translateY(-2px) scale(1.08);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-hover);
 }
 
@@ -489,7 +514,7 @@ header h1 {
 
 .product-card:hover {
     border-color: var(--primary-color);
-    transform: translateY(-6px) scale(1.02);
+    transform: translateY(-4px);
     box-shadow: var(--shadow-hover);
     background: linear-gradient(135deg, #faf5ee 0%, #f4e1ce 100%);
 }
@@ -603,7 +628,7 @@ header h1 {
     top: 24px;
     max-height: calc(100vh - 100px);
     overflow-y: auto;
-    border: 1px solid rgba(226, 210, 186, 0.75);
+    border: 1px solid rgba(226, 210, 186, 0.85);
 }
 
 .cart-header {
@@ -805,7 +830,7 @@ header h1 {
     background: var(--primary-color);
     color: var(--bg-white);
     border-color: var(--primary-color);
-    transform: scale(1.1) rotate(5deg);
+    transform: translateY(-1px);
 }
 
 .quantity-btn:active {
@@ -1118,7 +1143,7 @@ header h1 {
     border-color: var(--primary-color);
     background: white;
     color: var(--text-dark);
-    box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.1);
+    box-shadow: var(--focus-ring);
     transform: translateY(-2px);
 }
 
@@ -1175,7 +1200,7 @@ select.input-field option {
         background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1),
         color 0.2s cubic-bezier(0.25, 1, 0.5, 1);
     touch-action: manipulation;
-    box-shadow: 0 16px 40px rgba(53, 32, 16, 0.28);
+    box-shadow: 0 16px 40px rgba(53, 32, 16, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1183,7 +1208,7 @@ select.input-field option {
 }
 
 .btn-primary:hover {
-    transform: translateY(-4px) scale(1.03);
+    transform: translateY(-3px);
     box-shadow: var(--shadow-hover);
 }
 
@@ -1192,8 +1217,8 @@ select.input-field option {
 }
 
 .btn-primary:focus-visible {
-    outline: 3px solid var(--primary-dark);
-    outline-offset: 3px;
+    outline: none;
+    box-shadow: var(--focus-ring), 0 16px 40px rgba(53, 32, 16, 0.28);
 }
 
 .btn-primary:disabled {
@@ -1213,7 +1238,12 @@ select.input-field option {
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s;
+    transition:
+        transform 0.18s var(--ease-standard),
+        box-shadow 0.2s var(--ease-standard),
+        border-color 0.2s var(--ease-standard),
+        color 0.2s var(--ease-standard),
+        background-color 0.2s var(--ease-standard);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1225,6 +1255,7 @@ select.input-field option {
     background: var(--bg-light);
     transform: translateY(-2px);
     color: var(--primary-color);
+    box-shadow: 0 12px 28px rgba(53, 32, 16, 0.16);
 }
 
 .btn-secondary:focus-visible,
@@ -1237,6 +1268,12 @@ select.input-field option {
 .manage-products-btn:focus-visible {
     outline: 3px solid var(--primary-dark);
     outline-offset: 2px;
+}
+
+a:focus-visible {
+    outline: 3px solid var(--primary-dark);
+    outline-offset: 3px;
+    border-radius: 10px;
 }
 
 .input-field:focus-visible {
@@ -1548,6 +1585,24 @@ select.input-field option {
         flex-direction: column;
     }
 
+    .purchase-card-btn {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .purchase-card-date {
+        margin-left: 0;
+    }
+
+    .purchase-details-totals {
+        justify-content: stretch;
+    }
+
+    .purchase-total-box {
+        width: 100%;
+    }
+
     /* Reduce side paw decorations on mobile */
     body::before,
     body::after {
@@ -1588,11 +1643,20 @@ select.input-field option {
     display: flex;
     align-items: center;
     gap: 14px;
+    flex-wrap: wrap;
 }
 
 .tab-buttons {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
+}
+
+.tab-buttons .btn-secondary[aria-selected="true"] {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: var(--bg-light);
+    box-shadow: 0 10px 24px rgba(53, 32, 16, 0.14);
 }
 
 .textarea-resizable {
@@ -1603,6 +1667,136 @@ select.input-field option {
 .purchase-details-panel {
     margin-top: 24px;
     display: none;
+}
+
+.purchase-card-btn {
+    width: 100%;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    text-align: left;
+    border-width: 2px;
+}
+
+.purchase-card-left {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-weight: 800;
+}
+
+.purchase-card-right {
+    font-weight: 900;
+    color: var(--primary-color);
+}
+
+.purchase-card-date {
+    font-weight: 600;
+    color: var(--text-light);
+    margin-left: 10px;
+}
+
+.purchase-details-card {
+    padding: 20px;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--bg-white);
+    box-shadow: var(--shadow-sm);
+}
+
+.purchase-details-title {
+    margin-bottom: 10px;
+    font-family: 'Fredoka One', cursive;
+}
+
+.purchase-details-meta {
+    margin: 6px 0;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.purchase-details-notes {
+    margin: 10px 0 0 0;
+    color: var(--text-dark);
+    font-weight: 600;
+    background: var(--bg-light);
+    border-left: 4px solid var(--primary-color);
+    padding: 10px 12px;
+    border-radius: 10px;
+}
+
+.purchase-details-table-wrap {
+    margin-top: 16px;
+    overflow-x: auto;
+}
+
+.purchase-details-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.purchase-details-table th,
+.purchase-details-table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.purchase-details-table th {
+    color: var(--primary-color);
+    border-bottom-width: 2px;
+}
+
+.purchase-details-qty-cell {
+    text-align: center;
+}
+
+.purchase-details-price-cell {
+    text-align: right;
+}
+
+.purchase-details-subtotal-cell {
+    text-align: right;
+    font-weight: 800;
+    color: var(--primary-color);
+}
+
+.purchase-details-totals {
+    margin-top: 18px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.purchase-total-box {
+    min-width: 170px;
+    padding: 12px;
+    border-radius: 14px;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+}
+
+.purchase-total-label {
+    color: var(--text-light);
+    font-weight: 700;
+}
+
+.purchase-total-value {
+    font-weight: 900;
+    font-size: 1.2rem;
+}
+
+.purchase-total-value-muted {
+    color: var(--text-light);
+}
+
+.purchase-total-box-highlight {
+    background: linear-gradient(135deg, #faf5ee 0%, #f4e1ce 100%);
+    border-color: rgba(212, 165, 116, 0.6);
+}
+
+.purchase-total-value-highlight {
+    color: var(--primary-color);
+    font-size: 1.35rem;
 }
 
 #toast-container {
@@ -1719,6 +1913,7 @@ dialog[open] {
     max-width: 400px;
     width: 100%;
     text-align: center;
+    border: 1px solid rgba(226, 210, 186, 0.7);
 }
 
 .login-logo {
@@ -1734,7 +1929,8 @@ dialog[open] {
 }
 
 .login-subtitle {
-    color: var(--text-light);
+    color: var(--text-dark);
+    opacity: 0.8;
     margin-bottom: 30px;
 }
 
@@ -1796,6 +1992,17 @@ dialog[open] {
 
 .login-btn:active {
     transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 .error-message {
