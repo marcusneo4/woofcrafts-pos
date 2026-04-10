@@ -194,7 +194,10 @@ header::after {
 
 .dog-icon {
     font-size: 2.5rem;
-    animation: bounce 2s infinite;
+}
+
+.logo-section:hover .dog-icon {
+    animation: bounce 2s;
 }
 
 @keyframes bounce {
@@ -204,7 +207,10 @@ header::after {
 
 .paw-decoration {
     font-size: 1.5rem;
-    animation: wiggle 3s infinite;
+}
+
+.logo-section:hover .paw-decoration {
+    animation: wiggle 3s;
 }
 
 @keyframes wiggle {
@@ -279,7 +285,10 @@ header h1 {
 
 .paw-icon {
     font-size: 1.5rem;
-    animation: rotate 4s linear infinite;
+}
+
+.section-header:hover .paw-icon {
+    animation: rotate 4s linear;
 }
 
 @keyframes rotate {
@@ -491,7 +500,10 @@ header h1 {
     font-size: 4rem;
     display: block;
     margin-bottom: 20px;
-    animation: bounce 2s infinite;
+}
+
+.empty-state:hover .empty-icon {
+    animation: bounce 2s;
 }
 
 .empty-state p {

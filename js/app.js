@@ -469,7 +469,7 @@ class POSApp {
                     await this.showPurchaseDetails(purchaseId);
                 } catch (error) {
                     console.error('Error showing purchase details:', error);
-                    alert('Failed to load purchase details. See console for details.');
+                    ui.showToast('Failed to load purchase details. See console for details.', 'error');
                 }
             });
         }
@@ -663,10 +663,10 @@ class POSApp {
                 ? parseInt(productId, 10) : productId;
 
             const product = this.products.find(p => p.id == normalizedId || String(p.id) === String(normalizedId));
-            if (!product) {
-                alert('Product not found! Please refresh the page.');
-                return;
-            }
+        if (!product) {
+            ui.showToast('Product not found! Please refresh the page.', 'error');
+            return;
+        }
 
             const existingItem = this.cart.find(item => item.productId == normalizedId || String(item.productId) === String(normalizedId));
             
@@ -695,7 +695,7 @@ class POSApp {
             }
         } catch (error) {
             console.error('❌ Error in addToCart:', error);
-            alert('Error adding to cart: ' + error.message);
+            ui.showToast('Error adding to cart: ' + error.message, 'error');
         }
     }
 
@@ -821,8 +821,8 @@ class POSApp {
         }
     }
 
-    clearCart() {
-        if (confirm('Are you sure you want to clear the cart?')) {
+    async clearCart(skipConfirm = false) {
+        if (skipConfirm || await ui.confirm('Are you sure you want to clear the cart?', 'Clear Cart')) {
             this.cart = [];
             this.discountApplied = false;
             this.saveCart();
@@ -876,19 +876,19 @@ class POSApp {
         const emailEl = document.getElementById('customer-email');
         const email = emailEl ? (emailEl.value || '').trim() : '';
         if (!email) {
-            alert('Please enter customer email address');
+            ui.showToast('Please enter customer email address', 'error');
             return false;
         }
 
         // Basic format validation so bad domains like "custom" don't slip through.
         const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         if (!isValidEmail) {
-            alert('Please enter a valid customer email address');
+            ui.showToast('Please enter a valid customer email address', 'error');
             return false;
         }
 
         if (this.cart.length === 0) {
-            alert('Cart is empty. Please add items to cart.');
+            ui.showToast('Cart is empty. Please add items to cart.', 'error');
             return false;
         }
         return true;
@@ -1286,11 +1286,12 @@ class POSApp {
                 console.warn('[Checkout] Server order logging failed:', result.orderLog.reason);
             }
 
-            alert('🐾 Invoice email sent successfully to ' + orderDetails.customerEmail + '! 🐶\n\nOrder ID: #' + orderDetails.orderId);
-            this.clearCart();
+            ui.showToast('🐾 Invoice email sent successfully to ' + orderDetails.customerEmail + '! 🐶', 'success');
+            // Cart clears automatically without prompt as per UX review
+            this.clearCart(true);
         } catch (error) {
             console.error('Error sending email:', error);
-            alert('❌ Failed to send invoice email: ' + (error.message || 'Unknown error') + '\n\n💡 Please check:\n1. API endpoint `/api/send-invoice` is reachable\n2. Gmail SMTP env vars are set\n3. Customer email is valid');
+            ui.showToast('❌ Failed to send invoice email: ' + (error.message || 'Unknown error'), 'error');
         } finally {
             if (sendBtn) {
                 sendBtn.disabled = false;
@@ -1517,7 +1518,11 @@ class POSApp {
                             retryCount = retryCount || 0;
                             if (typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') {
                                 if (retryCount >= 30) {
-                                    alert('PDF libraries failed to load. Please try printing instead.');
+                                    if (window.parent && window.parent.ui) {
+                                        window.parent.ui.showToast('PDF libraries failed to load. Please try printing instead.', 'error');
+                                    } else {
+                                        alert('PDF libraries failed to load. Please try printing instead.');
+                                    }
                                     return;
                                 }
                                 setTimeout(function() { downloadPDF(retryCount + 1); }, 100);
@@ -1539,7 +1544,11 @@ class POSApp {
                                 doc.save('WoofCrafts_Order_${orderDetails.orderId}.pdf');
                             }).catch(err => {
                                 console.error('Error generating PDF:', err);
-                                alert('Error generating PDF. Please try printing instead.');
+                                if (window.parent && window.parent.ui) {
+                                    window.parent.ui.showToast('Error generating PDF. Please try printing instead.', 'error');
+                                } else {
+                                    alert('Error generating PDF. Please try printing instead.');
+                                }
                             });
                         }
                     </script>
@@ -1547,12 +1556,25 @@ class POSApp {
             </html>
         `;
         
-        const previewWindow = window.open('', '_blank', 'width=900,height=800');
-        if (previewWindow) {
-            previewWindow.document.write(previewHTML);
-            previewWindow.document.close();
+        const previewModal = document.getElementById('email-preview-modal');
+        const iframe = document.getElementById('preview-iframe');
+        const closeBtn = document.getElementById('preview-close-btn');
+        const doneBtn = document.getElementById('preview-done-btn');
+        
+        if (previewModal && iframe) {
+            iframe.srcdoc = previewHTML;
+            const closeModal = () => previewModal.close();
+            closeBtn.onclick = closeModal;
+            doneBtn.onclick = closeModal;
+            previewModal.showModal();
         } else {
-            alert('Please allow pop-ups to view the email preview.');
+            const previewWindow = window.open('', '_blank', 'width=900,height=800');
+            if (previewWindow) {
+                previewWindow.document.write(previewHTML);
+                previewWindow.document.close();
+            } else {
+                ui.showToast('Please allow pop-ups to view the email preview.', 'error');
+            }
         }
     }
 
@@ -1617,7 +1639,7 @@ class POSApp {
 // Global helper function to safely add to cart
 function safeAddToCart(productId) {
     if (!window.posApp && !posApp) {
-        alert('Please wait for the app to load, then try again.');
+        ui.showToast('Please wait for the app to load, then try again.', 'error');
         return;
     }
     (window.posApp || posApp).addToCart(productId);
@@ -1652,7 +1674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 500);
     } catch (error) {
         console.error('❌ Failed to initialize POS App:', error);
-        alert('Failed to initialize the app. Please refresh the page.');
+        ui.showToast('Failed to initialize the app. Please refresh the page.', 'error');
     }
 });
 

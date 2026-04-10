@@ -222,7 +222,7 @@ class ProductManager {
         const imageFile = formData.get('image');
 
         if (!name || !price || price <= 0) {
-            alert('Please fill in all fields with valid values');
+            ui.showToast('Please fill in all fields with valid values', 'error');
             return;
         }
 
@@ -232,7 +232,7 @@ class ProductManager {
         const supabaseClient = await this.getSupabaseClient();
         const isSupabaseConfigured = Boolean(supabaseClient);
         if (!isSupabaseConfigured) {
-            alert('Supabase is not configured. Product changes cannot be saved.');
+            ui.showToast('Supabase is not configured. Product changes cannot be saved.', 'error');
             return;
         }
 
@@ -250,7 +250,7 @@ class ProductManager {
         }
 
         if (!imagePath) {
-            alert('Please select an image');
+            ui.showToast('Please select an image', 'error');
             return;
         }
 
@@ -271,14 +271,14 @@ class ProductManager {
             this.resetForm();
 
             const action = wasEditing ? 'updated' : 'added';
-            this.showMessage(`✓ Product ${action} successfully!`, 'success');
+            ui.showToast(`Product ${action} successfully!`, 'success');
 
             // Notify other pages that products were updated
             window.dispatchEvent(new CustomEvent('productsUpdated'));
             sessionStorage.setItem('woofcrafts_products_updated', Date.now().toString());
         } catch (error) {
             console.error('Error saving product:', error);
-            alert('Error saving product. Please try again.');
+            ui.showToast('Error saving product. Please try again.', 'error');
         }
     }
 
@@ -310,12 +310,12 @@ class ProductManager {
     }
 
     async deleteProduct(productId) {
-        if (!confirm('Are you sure you want to delete this product?')) return;
+        if (!await ui.confirm('Are you sure you want to delete this product?', 'Delete Product')) return;
         try {
             const supabaseClient = await this.getSupabaseClient();
             const isSupabaseConfigured = Boolean(supabaseClient);
             if (!isSupabaseConfigured) {
-                alert('Supabase is not configured. Product deletion is disabled.');
+                ui.showToast('Supabase is not configured. Product deletion is disabled.', 'error');
                 return;
             }
 
@@ -323,14 +323,14 @@ class ProductManager {
             await this.loadProducts();
             this.renderProducts();
 
-            this.showMessage('Product deleted successfully!', 'success');
+            ui.showToast('Product deleted successfully!', 'success');
 
             // Notify other pages that products were updated
             window.dispatchEvent(new CustomEvent('productsUpdated'));
             sessionStorage.setItem('woofcrafts_products_updated', Date.now().toString());
         } catch (error) {
             console.error('Error deleting product:', error);
-            alert('Error deleting product. Please try again.');
+            ui.showToast('Error deleting product. Please try again.', 'error');
         }
     }
 
@@ -384,23 +384,6 @@ class ProductManager {
             </div>
         `;
         }).join('');
-    }
-
-    showMessage(message, type) {
-        // Remove existing messages
-        const existing = document.querySelector('.message');
-        if (existing) existing.remove();
-
-        const messageEl = document.createElement('div');
-        messageEl.className = `message message-${type}`;
-        messageEl.textContent = message;
-        
-        const form = document.getElementById('product-form');
-        form.parentNode.insertBefore(messageEl, form);
-
-        setTimeout(() => {
-            messageEl.remove();
-        }, 3000);
     }
 
     setupEventListeners() {

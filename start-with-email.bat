@@ -4,9 +4,9 @@ echo Creating .env file...
 (
 echo EMAIL_HOST=smtp.gmail.com
 echo EMAIL_PORT=587
-echo EMAIL_USER=marcusneo4@gmail.com
-echo EMAIL_PASS=mufcfdwgpetigqou
-echo EMAIL_FROM=WoofCrafts ^<marcusneo4@gmail.com^>
+echo EMAIL_USER=your-email@example.com
+echo EMAIL_PASS=your-email-app-password
+echo EMAIL_FROM=WoofCrafts ^<your-email@example.com^>
 echo PORT=8000
 ) > .env
 

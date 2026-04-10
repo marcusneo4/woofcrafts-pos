@@ -123,6 +123,58 @@
         </main>
     </div>
 
+    <!-- UI Overlay System: Toasts & Modals -->
+    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;"></div>
+
+    <dialog id="custom-modal" class="custom-modal" style="border: none; border-radius: 20px; padding: 0; margin: auto; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); background: var(--bg-white);">
+        <div style="padding: 24px; text-align: center;">
+            <h3 id="modal-title" style="font-family: 'Fredoka One', cursive; color: var(--text-dark); margin-bottom: 12px; font-size: 1.5rem;">Confirm Action</h3>
+            <p id="modal-message" style="color: var(--text-light); margin-bottom: 24px;">Are you sure?</p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button id="modal-cancel" class="btn-secondary" style="flex: 1; padding: 10px;">Cancel</button>
+                <button id="modal-confirm" class="btn-primary" style="flex: 1; padding: 10px; background: var(--danger-color); box-shadow: none;">Confirm</button>
+            </div>
+        </div>
+    </dialog>
+
+    <style>
+        .toast {
+            background: white;
+            border-left: 5px solid var(--success-color);
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            color: var(--text-dark);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideInRight 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .toast.error {
+            border-left-color: var(--danger-color);
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(3px);
+        }
+        dialog[open] {
+            animation: zoomIn 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        @keyframes zoomIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+
     <script src="js/config.public.js"></script>
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
