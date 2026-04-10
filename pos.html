@@ -19,8 +19,8 @@
                     <h1>WoofCrafts</h1>
                     <span class="paw-decoration">🐾</span>
                 </div>
-                <div class="header-actions" style="display:flex; align-items:center; gap:14px;">
-                    <div class="tab-buttons" role="tablist" aria-label="POS Views" style="display:flex; gap:10px;">
+                <div class="header-actions">
+                    <div class="tab-buttons" role="tablist" aria-label="POS Views">
                         <button
                             type="button"
                             class="btn-secondary"
@@ -186,7 +186,7 @@
                         </div>
                         <div class="input-group">
                             <label>💬 Comments / Special Instructions</label>
-                            <textarea id="customer-comment" placeholder="Any special requests or notes..." class="input-field" rows="3" style="resize: vertical; min-height: 80px;"></textarea>
+                            <textarea id="customer-comment" placeholder="Any special requests or notes..." class="input-field textarea-resizable" rows="3"></textarea>
                         </div>
                         
                         <div class="action-buttons">
@@ -210,75 +210,24 @@
 
                 <div id="purchases-list" class="products-grid"></div>
 
-                <div id="purchase-details" class="container" style="margin-top: 24px; display: none;"></div>
+                <div id="purchase-details" class="container purchase-details-panel"></div>
             </section>
         </main>
     </div>
 
     <!-- UI Overlay System: Toasts & Modals -->
-    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;"></div>
+    <div id="toast-container"></div>
 
-    <dialog id="custom-modal" class="custom-modal" style="border: none; border-radius: 20px; padding: 0; margin: auto; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); background: var(--bg-white);">
-        <div style="padding: 24px; text-align: center;">
-            <h3 id="modal-title" style="font-family: 'Fredoka One', cursive; color: var(--text-dark); margin-bottom: 12px; font-size: 1.5rem;">Confirm Action</h3>
-            <p id="modal-message" style="color: var(--text-light); margin-bottom: 24px;">Are you sure?</p>
-            <div style="display: flex; gap: 12px; justify-content: center;">
-                <button id="modal-cancel" class="btn-secondary" style="flex: 1; padding: 10px;">Cancel</button>
-                <button id="modal-confirm" class="btn-primary" style="flex: 1; padding: 10px; background: var(--danger-color); box-shadow: none;">Confirm</button>
+    <dialog id="custom-modal" class="custom-modal custom-modal-confirm">
+        <div class="custom-modal-content">
+            <h3 id="modal-title" class="custom-modal-title">Confirm Action</h3>
+            <p id="modal-message" class="custom-modal-message">Are you sure?</p>
+            <div class="custom-modal-actions">
+                <button id="modal-cancel" class="btn-secondary modal-action-btn">Cancel</button>
+                <button id="modal-confirm" class="btn-primary btn-danger-soft modal-action-btn">Confirm</button>
             </div>
         </div>
     </dialog>
-
-    <dialog id="email-preview-modal" class="custom-modal" style="border: none; border-radius: 20px; padding: 0; margin: auto; width: 90%; max-width: 900px; max-height: 90vh; box-shadow: 0 10px 40px rgba(0,0,0,0.2); background: var(--bg-white); overflow: hidden; display: flex; flex-direction: column;">
-        <div style="padding: 16px 24px; background: var(--gradient-primary); display: flex; justify-content: space-between; align-items: center; color: white;">
-            <h3 style="font-family: 'Fredoka One', cursive; margin: 0; font-size: 1.5rem;">🐾 Invoice Preview</h3>
-            <button id="preview-close-btn" style="background: transparent; border: none; color: white; font-size: 1.5rem; cursor: pointer; font-weight: bold;">×</button>
-        </div>
-        <div style="flex: 1; overflow-y: auto; padding: 0;">
-            <iframe id="preview-iframe" style="width: 100%; height: 600px; border: none; display: block;"></iframe>
-        </div>
-        <div style="padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
-            <button id="preview-done-btn" class="btn-primary" style="padding: 10px 24px;">Done</button>
-        </div>
-    </dialog>
-
-    <style>
-        .toast {
-            background: white;
-            border-left: 5px solid var(--success-color);
-            padding: 16px 24px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            color: var(--text-dark);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            animation: slideInRight 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-        }
-        .toast.error {
-            border-left-color: var(--danger-color);
-        }
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-        dialog::backdrop {
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(3px);
-        }
-        dialog[open] {
-            animation: zoomIn 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-        }
-        @keyframes zoomIn {
-            from { transform: scale(0.9); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-    </style>
 
     <!-- Shared utilities (must load first) -->
     <script src="js/config.public.js"></script>

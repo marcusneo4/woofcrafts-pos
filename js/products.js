@@ -303,7 +303,7 @@ class ProductManager {
         
         // Update form button
         document.getElementById('submit-btn').innerHTML = '<span>✏️</span> Update Product';
-        document.getElementById('cancel-edit-btn').style.display = 'block';
+        document.getElementById('cancel-edit-btn').classList.remove('hidden');
         
         // Scroll to form
         document.querySelector('.add-product-section').scrollIntoView({ behavior: 'smooth' });
@@ -346,7 +346,7 @@ class ProductManager {
         document.getElementById('product-id').value = '';
         this.editingId = null;
         document.getElementById('submit-btn').innerHTML = '<span>➕</span> Add Product';
-        document.getElementById('cancel-edit-btn').style.display = 'none';
+        document.getElementById('cancel-edit-btn').classList.add('hidden');
     }
 
     renderProducts() {
@@ -358,7 +358,7 @@ class ProductManager {
                 <div class="empty-state">
                     <span class="empty-icon">📦</span>
                     <p>No products yet!</p>
-                    <p style="font-size: 0.9rem; margin-top: 10px;">Add your first pawsome product above! 🎉</p>
+                    <p class="empty-state-note">Add your first pawsome product above! 🎉</p>
                 </div>
             `;
             return;

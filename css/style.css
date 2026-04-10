@@ -7,26 +7,83 @@
 }
 
 :root {
-    /* Beige/Natural Dog-Themed Colors and Layout Tokens */
-    --primary-color: #D4A574;      /* Warm Beige */
-    --primary-dark: #B8945F;       /* Darker Beige */
-    --secondary-color: #C9A961;    /* Golden Beige */
-    --accent-color: #E8D5B7;       /* Light Beige */
-    --accent-warm: #F4E6D7;        /* Cream */
-    --success-color: #A0B58F;      /* Sage Green */
-    --danger-color: #C96F4A;       /* Warm Red-Brown for destructive actions */
-    --text-dark: #5C4A37;          /* Brown */
-    --text-light: #8B7355;         /* Light Brown */
-    /* 60-30-10 layout tokens */
-    --base-bg: #F5F0E9;            /* 60%: overall page background */
-    --surface-color: #FAF5EE;      /* 30%: cards and panels */
-    --bg-light: #FAF5EE;           /* Backwards-compatible alias */
-    --bg-white: #FDF8F3;           /* Off-white surface, never pure white */
-    --border-color: #E2D2BA;       /* Light Beige Border */
+    /* Reference color tokens */
+    --color-brand-300: #E8D5B7;
+    --color-brand-400: #D4A574;
+    --color-brand-500: #C9A961;
+    --color-brand-600: #B8945F;
+    --color-neutral-50: #FDF8F3;
+    --color-neutral-100: #FAF5EE;
+    --color-neutral-200: #F5F0E9;
+    --color-neutral-300: #E2D2BA;
+    --color-neutral-700: #8B7355;
+    --color-neutral-900: #5C4A37;
+    --color-success-500: #A0B58F;
+    --color-danger-500: #C96F4A;
+
+    /* Semantic color tokens */
+    --color-bg-page: var(--color-neutral-200);
+    --color-bg-surface: var(--color-neutral-100);
+    --color-bg-elevated: var(--color-neutral-50);
+    --color-text-primary: var(--color-neutral-900);
+    --color-text-secondary: var(--color-neutral-700);
+    --color-border-subtle: var(--color-neutral-300);
+    --color-action-primary: var(--color-brand-400);
+    --color-action-primary-strong: var(--color-brand-600);
+    --color-action-danger: var(--color-danger-500);
+    --color-feedback-success: var(--color-success-500);
+    --color-feedback-danger: var(--color-danger-500);
+
+    /* Typography tokens */
+    --font-family-base: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-family-display: 'Fredoka One', cursive;
+    --font-size-sm: 0.875rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.25rem;
+    --font-size-xl: 1.5rem;
+    --line-height-base: 1.6;
+
+    /* Spacing + radius tokens */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --radius-pill: 999px;
+
+    /* Elevation + motion tokens */
+    --shadow-sm: 0 4px 12px rgba(53, 32, 16, 0.1);
     --shadow: 0 18px 45px rgba(53, 32, 16, 0.18);
     --shadow-hover: 0 26px 60px rgba(53, 32, 16, 0.26);
-    --cta-color: #D4A574;
-    --cta-color-dark: #B8945F;
+    --duration-fast: 180ms;
+    --duration-base: 240ms;
+    --duration-slow: 300ms;
+    --ease-standard: cubic-bezier(0.25, 1, 0.5, 1);
+
+    /* Legacy aliases kept for compatibility */
+    --primary-color: var(--color-brand-400);
+    --primary-dark: var(--color-brand-600);
+    --secondary-color: var(--color-brand-500);
+    --accent-color: var(--color-brand-300);
+    --accent-warm: #F4E6D7;
+    --success-color: var(--color-success-500);
+    --danger-color: var(--color-danger-500);
+    --text-dark: var(--color-text-primary);
+    --text-light: var(--color-text-secondary);
+    --base-bg: var(--color-bg-page);
+    --surface-color: var(--color-bg-surface);
+    --bg-light: var(--color-bg-surface);
+    --bg-white: var(--color-bg-elevated);
+    --border-color: var(--color-border-subtle);
+    --cta-color: var(--color-action-primary);
+    --cta-color-dark: var(--color-action-primary-strong);
     --gradient-primary: linear-gradient(135deg, #D4A574 0%, #C9A961 45%, #E8D5B7 100%);
     --gradient-secondary: linear-gradient(135deg, #C9A961 0%, #D4A574 100%);
 }
@@ -510,6 +567,11 @@ header h1 {
     color: var(--text-light);
     font-size: 1.1rem;
     margin-bottom: 15px;
+}
+
+.empty-state-note {
+    font-size: 0.9rem;
+    margin-top: 10px;
 }
 
 .empty-link {
@@ -1263,10 +1325,37 @@ select.input-field option {
     gap: 12px;
 }
 
+.field-note {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-top: 5px;
+    text-align: left;
+}
+
 .products-list {
     display: flex;
     flex-direction: column;
     gap: 18px;
+}
+
+.products-list-section {
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding-right: 12px;
+}
+
+.products-list-section::-webkit-scrollbar {
+    width: 8px;
+}
+
+.products-list-section::-webkit-scrollbar-track {
+    background: var(--bg-light);
+    border-radius: 10px;
+}
+
+.products-list-section::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 10px;
 }
 
 .product-list-item {
@@ -1493,6 +1582,233 @@ select.input-field option {
 
 .hidden {
     display: none !important;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.tab-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.textarea-resizable {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.purchase-details-panel {
+    margin-top: 24px;
+    display: none;
+}
+
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: var(--bg-white);
+    border-left: 5px solid var(--success-color);
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    color: var(--text-dark);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideInRight 0.3s var(--ease-standard);
+}
+
+.toast.error {
+    border-left-color: var(--danger-color);
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+}
+
+dialog[open] {
+    animation: zoomIn 0.3s var(--ease-standard);
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.custom-modal {
+    border: none;
+    border-radius: 20px;
+    padding: 0;
+    margin: auto;
+    background: var(--bg-white);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.custom-modal-confirm {
+    max-width: 400px;
+}
+
+.custom-modal-content {
+    padding: 24px;
+    text-align: center;
+}
+
+.custom-modal-title {
+    font-family: var(--font-family-display);
+    color: var(--text-dark);
+    margin-bottom: 12px;
+    font-size: 1.5rem;
+}
+
+.custom-modal-message {
+    color: var(--text-light);
+    margin-bottom: 24px;
+}
+
+.custom-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.modal-action-btn {
+    flex: 1;
+    padding: 10px;
+}
+
+.btn-danger-soft {
+    background: var(--danger-color);
+    box-shadow: none;
+}
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.login-box {
+    background: var(--bg-white);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: var(--shadow-hover);
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+}
+
+.login-logo {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.login-title {
+    font-family: var(--font-family-display);
+    color: var(--primary-color);
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.login-subtitle {
+    color: var(--text-light);
+    margin-bottom: 30px;
+}
+
+.login-form {
+    text-align: left;
+}
+
+.login-input-group {
+    margin-bottom: 20px;
+}
+
+.login-input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+.login-input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 1rem;
+    font-family: var(--font-family-base);
+    transition: border-color 0.3s;
+}
+
+.login-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.login-input:focus-visible,
+.login-btn:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.login-btn {
+    width: 100%;
+    padding: 15px;
+    background: var(--gradient-primary);
+    color: var(--bg-white);
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: var(--font-family-base);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 10px;
+}
+
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.login-btn:active {
+    transform: translateY(0);
+}
+
+.error-message {
+    background: #ffebee;
+    color: #c62828;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.error-message.show {
+    display: block;
 }
 
 /* Cute Animations */
