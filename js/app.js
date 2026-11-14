@@ -11,6 +11,8 @@ class POSApp {
         this.purchasesLoaded = false;
         this.lastPurchasesSource = 'unknown'; // 'supabase' | 'local'
         this.activeCategory = 'all';
+        this.FREE_DELIVERY_MIN = 50;   // SGD, measured after any discount
+        this.DELIVERY_FEE = 2.5;       // SGD
         
         this.init();
     }
@@ -121,6 +123,7 @@ class POSApp {
             customer_comment: String(orderDetails.customerComment || ''),
             subtotal: Number(orderDetails.subtotal || 0),
             discount_amount: Number(orderDetails.discountAmount || 0),
+            delivery_fee: Number(orderDetails.deliveryFee || 0),
             total: Number(orderDetails.total || 0),
             items: items
         };
@@ -196,7 +199,7 @@ class POSApp {
 
         const { data, error } = await supabaseClient
             .from('orders')
-            .select('id,order_id,customer_email,total,created_at,items,customer_name,customer_phone,customer_comment,subtotal,discount_amount')
+            .select('id,order_id,customer_email,total,created_at,items,customer_name,customer_phone,customer_comment,subtotal,discount_amount,delivery_fee')
             .order('created_at', { ascending: false })
             .limit(50);
 
@@ -273,6 +276,7 @@ class POSApp {
             if (p && p.id) this.purchaseCache.set(String(p.id), p);
         });
 
+        let lastFolder = '';
         listEl.innerHTML = purchases.map((p) => {
             const purchaseId = String(p.id);
             const orderId = this.escapePurchaseText(p.order_id || '');
@@ -281,7 +285,15 @@ class POSApp {
             const createdAt = p.created_at ? new Date(p.created_at) : null;
             const dateText = createdAt ? createdAt.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '';
 
-            return `
+            const folder = p.created_at ? this.invoiceFolderFor(p.created_at) : '';
+            let heading = '';
+            if (folder && folder !== lastFolder) {
+                lastFolder = folder;
+                const headingText = new Date(p.created_at).toLocaleDateString('en-GB', { timeZone: 'Asia/Singapore', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+                heading = `<h3 class="purchase-date-heading">${this.escapePurchaseText(headingText)}</h3>`;
+            }
+
+            return `${heading}
                 <button
                     type="button"
                     class="btn-secondary purchase-card-btn"
@@ -375,11 +387,24 @@ class POSApp {
                             <div class="purchase-total-value purchase-total-value-muted">-${this.formatCurrency(purchase.discount_amount)}</div>
                         </div>
                     ` : ''}
+                    ${Number(purchase.delivery_fee || 0) > 0 ? `
+                        <div class="purchase-total-box">
+                            <div class="purchase-total-label">Delivery</div>
+                            <div class="purchase-total-value">${this.formatCurrency(purchase.delivery_fee)}</div>
+                        </div>
+                    ` : ''}
                     <div class="purchase-total-box purchase-total-box-highlight">
                         <div class="purchase-total-label">Total</div>
                         <div class="purchase-total-value purchase-total-value-highlight">${this.formatCurrency(purchase.total)}</div>
                     </div>
                 </div>
+                ${purchase.order_id && purchase.created_at ? `
+                    <button type="button" class="btn-secondary invoice-open-btn"
+                        data-invoice-order="${escapeHtml(String(purchase.order_id))}"
+                        data-invoice-date="${escapeHtml(String(purchase.created_at))}">
+                        ${iconSvg('receipt')} Open invoice PDF
+                    </button>
+                ` : ''}
             </article>
         `;
     }
@@ -808,16 +833,76 @@ class POSApp {
         this.updateTotals();
     }
 
-    updateTotals() {
+    /** Subtotal, discount, delivery and total for the current cart. Delivery is free from 50 SGD. */
+    calculateTotals() {
         const subtotal = this.calculateSubtotal();
         const discountPercent = this.discountApplied ? 0.05 : 0;
         const discountAmount = subtotal * discountPercent;
-        const total = subtotal - discountAmount;
+        const afterDiscount = subtotal - discountAmount;
+        const deliveryFee = (subtotal > 0 && afterDiscount < this.FREE_DELIVERY_MIN) ? this.DELIVERY_FEE : 0;
+        return { subtotal, discountPercent, discountAmount, afterDiscount, deliveryFee, total: afterDiscount + deliveryFee };
+    }
+
+    /** yyyy-mm-dd in Singapore time: the name of the folder an invoice is saved in. */
+    invoiceFolderFor(dateLike) {
+        const date = dateLike ? new Date(dateLike) : new Date();
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+    }
+
+    invoicePathFor(orderId, dateLike) {
+        return `${this.invoiceFolderFor(dateLike)}/WoofCrafts_Order_${orderId}.pdf`;
+    }
+
+    async allocateOrderId() {
+        const client = await this.getSupabaseClient();
+        if (!client) throw new Error('Not connected to the order database');
+        const { data, error } = await client.rpc('next_order_id');
+        if (error || !data) throw new Error('Could not get an order number' + (error ? ': ' + error.message : ''));
+        return String(data);
+    }
+
+    async saveInvoicePdf(orderId, dateLike, pdfBase64) {
+        const client = await this.getSupabaseClient();
+        if (!client) throw new Error('Not connected to storage');
+        const bytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
+        const { error } = await client.storage.from('invoices').upload(
+            this.invoicePathFor(orderId, dateLike),
+            new Blob([bytes], { type: 'application/pdf' }),
+            { contentType: 'application/pdf', upsert: true }
+        );
+        if (error) throw new Error(error.message);
+    }
+
+    async openSavedInvoice(orderId, dateLike) {
+        try {
+            const client = await this.getSupabaseClient();
+            const { data, error } = await client.storage.from('invoices').createSignedUrl(this.invoicePathFor(orderId, dateLike), 300);
+            if (error || !data || !data.signedUrl) throw new Error(error ? error.message : 'missing');
+            window.open(data.signedUrl, '_blank', 'noopener');
+        } catch (error) {
+            ui.showToast('No saved invoice PDF for this order.', 'error');
+        }
+    }
+
+    updateTotals() {
+        const { subtotal, discountAmount, deliveryFee, total } = this.calculateTotals();
 
         const subtotalEl = document.getElementById('subtotal');
         const totalEl = document.getElementById('total');
         const discountAmountEl = document.getElementById('discount-amount');
         if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+        const deliveryEl = document.getElementById('delivery-fee');
+        if (deliveryEl) deliveryEl.textContent = (subtotal > 0 && deliveryFee === 0) ? 'Free' : `$${deliveryFee.toFixed(2)}`;
+        const hintEl = document.getElementById('delivery-hint');
+        if (hintEl) {
+            const away = this.FREE_DELIVERY_MIN - (subtotal - discountAmount);
+            if (deliveryFee > 0 && away > 0) {
+                hintEl.textContent = `Add $${away.toFixed(2)} more for free delivery.`;
+                hintEl.classList.remove('hidden');
+            } else {
+                hintEl.classList.add('hidden');
+            }
+        }
         if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
         document.querySelectorAll('[data-cart-total]').forEach((el) => { el.textContent = `$${total.toFixed(2)}`; });
         if (discountAmountEl) {
@@ -1080,6 +1165,7 @@ class POSApp {
 
         const subtotal = Number(orderDetails.subtotal || 0);
         const discountAmount = Number(orderDetails.discountAmount || 0);
+        const deliveryFee = Number(orderDetails.deliveryFee || 0);
         const total = Number(orderDetails.total || 0);
 
         const formatCurrency = (value) => `$${Number(value || 0).toFixed(2)}`;
@@ -1191,7 +1277,7 @@ class POSApp {
 
         const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : lineItemsStartY + 30;
         let totalsY = finalY + 24;
-        const summaryCardHeight = discountAmount > 0 ? 82 : 64;
+        const summaryCardHeight = 82 + (discountAmount > 0 ? 18 : 0);
         if (totalsY + summaryCardHeight > pageHeight - 90) {
             doc.addPage();
             totalsY = 64;
@@ -1217,6 +1303,10 @@ class POSApp {
             doc.text(`-${formatCurrency(discountAmount)}`, summaryX + summaryCardWidth - 16, summaryLineY, { align: 'right' });
             summaryLineY += 18;
         }
+
+        doc.text('Delivery', summaryX + 16, summaryLineY);
+        doc.text(deliveryFee > 0 ? formatCurrency(deliveryFee) : 'Free', summaryX + summaryCardWidth - 16, summaryLineY, { align: 'right' });
+        summaryLineY += 18;
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
@@ -1256,14 +1346,23 @@ class POSApp {
         const customerEmail = document.getElementById('customer-email').value.trim();
         const customerPhone = document.getElementById('customer-phone').value.trim();
         
-        const subtotal = this.calculateSubtotal();
-        const discountPercent = this.discountApplied ? 0.05 : 0;
-        const discountAmount = subtotal * discountPercent;
-        const total = subtotal - discountAmount;
+        const { subtotal, discountPercent, discountAmount, deliveryFee, total } = this.calculateTotals();
 
         // A retry after a failed email reuses the same order id and date, so one
         // sale never becomes two rows in the order history.
-        const orderId = this.pendingOrderId || String(Math.floor(1000 + Math.random() * 9000));
+        let orderId = this.pendingOrderId;
+        if (!orderId) {
+            try {
+                orderId = await this.allocateOrderId();
+            } catch (error) {
+                ui.showToast(error.message + '. Check the connection and try again.', 'error');
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.innerHTML = iconSvg('mail') + ' Send invoice';
+                }
+                return;
+            }
+        }
         const orderDateIso = this.pendingOrderDate || new Date().toISOString();
         this.pendingOrderId = orderId;
         this.pendingOrderDate = orderDateIso;
@@ -1286,6 +1385,7 @@ class POSApp {
             subtotal: subtotal,
             discountAmount: discountAmount,
             discountPercent: discountPercent * 100,
+            deliveryFee: deliveryFee,
             total: total
         };
 
@@ -1299,6 +1399,15 @@ class POSApp {
 
             const pdfBase64 = await this.generateInvoicePdfBase64(orderDetails);
             const fileName = `WoofCrafts_Order_${orderDetails.orderId}.pdf`;
+
+            // File a copy in the invoices folder for today's date. A failure here must not stop the email.
+            let savedCopy = true;
+            try {
+                await this.saveInvoicePdf(orderDetails.orderId, orderDateIso, pdfBase64);
+            } catch (saveError) {
+                savedCopy = false;
+                console.error('Could not save invoice copy:', saveError);
+            }
 
             const accessToken = await window.WoofAuth.getAccessToken();
             const response = await fetch('/api/send-invoice', {
@@ -1329,7 +1438,7 @@ class POSApp {
                 await this.refreshPurchasesView();
             }
 
-            ui.showToast('Invoice sent to ' + orderDetails.customerEmail, 'success');
+            ui.showToast('Invoice #' + orderDetails.orderId + ' sent to ' + orderDetails.customerEmail + (savedCopy ? '' : '. The PDF copy could not be filed, so download it from the email.'), savedCopy ? 'success' : 'error');
             this.closeCartSheet();
             this.pendingOrderId = null;
             this.pendingOrderDate = null;
@@ -1409,6 +1518,10 @@ class POSApp {
     }
 
     setupEventListeners() {
+        document.addEventListener('click', (event) => {
+            const btn = event.target && event.target.closest ? event.target.closest('.invoice-open-btn') : null;
+            if (btn) this.openSavedInvoice(btn.getAttribute('data-invoice-order'), btn.getAttribute('data-invoice-date'));
+        });
         this.setupCartSheet();
         this.setupCategoryFilter();
         const discountBtn = document.getElementById('discount-btn');

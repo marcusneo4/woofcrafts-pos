@@ -155,7 +155,10 @@ module.exports = async function sendInvoiceHandler(req, res) {
         });
 
         const mailFrom = process.env.GMAIL_FROM || process.env.EMAIL_FROM || emailUser;
-        const subject = process.env.INVOICE_SUBJECT || 'WoofCrafts Invoice';
+        // Staff copies go out as BCC on every invoice, so the customer never sees these addresses.
+        const copyTo = (process.env.INVOICE_COPY_TO || 'marissaneo3110@gmail.com,leeyuanzhang28@gmail.com')
+            .split(',').map((a) => a.trim()).filter(Boolean);
+        const subjectBase = process.env.INVOICE_SUBJECT || 'WoofCrafts Invoice';
         const storeName = 'WoofCrafts';
 
         const sanitizeInlineText = (value, fallback) => {
@@ -187,7 +190,7 @@ module.exports = async function sendInvoiceHandler(req, res) {
             `Thank you for shopping with ${storeName}.`,
             '',
             `Attached is your invoice${safeInvoiceNumber ? ` #${safeInvoiceNumber}` : ''}${formattedPurchaseDate ? ` for your recent in-store purchase on ${formattedPurchaseDate}` : ''}.`,
-            'It includes a full breakdown of the items, taxes, and payment details recorded in our point-of-sale system.',
+            'It lists the items, any discount, delivery and the total.',
             '',
             'Please keep this email and the attached PDF for your records.',
             'We appreciate your business and look forward to serving you again.',
@@ -200,7 +203,8 @@ module.exports = async function sendInvoiceHandler(req, res) {
         const info = await invoiceTransporter.sendMail({
             from: mailFrom,
             to: customerEmail,
-            subject,
+            bcc: copyTo,
+            subject: safeInvoiceNumber ? `${subjectBase} #${safeInvoiceNumber}` : subjectBase,
             text: emailText,
             attachments: [
                 {
