@@ -11,6 +11,7 @@ class POSApp {
         this.purchasesLoaded = false;
         this.lastPurchasesSource = 'unknown'; // 'supabase' | 'local'
         this.activeCategory = 'all';
+        this.deliveryEnabled = true;   // staff can switch delivery off for on-the-spot sales
         this.FREE_DELIVERY_MIN = 50;   // SGD, measured after any discount
         this.DELIVERY_FEE = 2.5;       // SGD
         
@@ -839,7 +840,7 @@ class POSApp {
         const discountPercent = this.discountApplied ? 0.05 : 0;
         const discountAmount = subtotal * discountPercent;
         const afterDiscount = subtotal - discountAmount;
-        const deliveryFee = (subtotal > 0 && afterDiscount < this.FREE_DELIVERY_MIN) ? this.DELIVERY_FEE : 0;
+        const deliveryFee = (this.deliveryEnabled && subtotal > 0 && afterDiscount < this.FREE_DELIVERY_MIN) ? this.DELIVERY_FEE : 0;
         return { subtotal, discountPercent, discountAmount, afterDiscount, deliveryFee, total: afterDiscount + deliveryFee };
     }
 
@@ -892,11 +893,11 @@ class POSApp {
         const discountAmountEl = document.getElementById('discount-amount');
         if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
         const deliveryEl = document.getElementById('delivery-fee');
-        if (deliveryEl) deliveryEl.textContent = (subtotal > 0 && deliveryFee === 0) ? 'Free' : `$${deliveryFee.toFixed(2)}`;
+        if (deliveryEl) deliveryEl.textContent = !this.deliveryEnabled ? 'Pickup' : (subtotal > 0 && deliveryFee === 0) ? 'Free' : `$${deliveryFee.toFixed(2)}`;
         const hintEl = document.getElementById('delivery-hint');
         if (hintEl) {
             const away = this.FREE_DELIVERY_MIN - (subtotal - discountAmount);
-            if (deliveryFee > 0 && away > 0) {
+            if (this.deliveryEnabled && deliveryFee > 0 && away > 0) {
                 hintEl.textContent = `Add $${away.toFixed(2)} more for free delivery.`;
                 hintEl.classList.remove('hidden');
             } else {
@@ -919,6 +920,9 @@ class POSApp {
         if (skipConfirm || await ui.confirm('Remove every item from this order?', 'Reset cart')) {
             this.cart = [];
             this.discountApplied = false;
+            this.deliveryEnabled = true;
+            const deliveryToggle = document.getElementById('delivery-toggle');
+            if (deliveryToggle) deliveryToggle.checked = true;
             this.saveCart();
             this.renderCart();
             this.clearDiscount();
@@ -929,6 +933,9 @@ class POSApp {
     resetCart() {
         this.cart = [];
         this.discountApplied = false;
+        this.deliveryEnabled = true;
+        const deliveryToggle = document.getElementById('delivery-toggle');
+        if (deliveryToggle) deliveryToggle.checked = true;
         this.saveCart();
         this.renderCart();
         this.clearDiscount();
@@ -1305,7 +1312,7 @@ class POSApp {
         }
 
         doc.text('Delivery', summaryX + 16, summaryLineY);
-        doc.text(deliveryFee > 0 ? formatCurrency(deliveryFee) : 'Free', summaryX + summaryCardWidth - 16, summaryLineY, { align: 'right' });
+        doc.text(orderDetails.deliveryMethod === 'pickup' ? 'Pickup' : (deliveryFee > 0 ? formatCurrency(deliveryFee) : 'Free'), summaryX + summaryCardWidth - 16, summaryLineY, { align: 'right' });
         summaryLineY += 18;
 
         doc.setFont('helvetica', 'bold');
@@ -1386,6 +1393,7 @@ class POSApp {
             discountAmount: discountAmount,
             discountPercent: discountPercent * 100,
             deliveryFee: deliveryFee,
+            deliveryMethod: this.deliveryEnabled ? 'delivery' : 'pickup',
             total: total
         };
 
@@ -1522,6 +1530,13 @@ class POSApp {
             const btn = event.target && event.target.closest ? event.target.closest('.invoice-open-btn') : null;
             if (btn) this.openSavedInvoice(btn.getAttribute('data-invoice-order'), btn.getAttribute('data-invoice-date'));
         });
+        const deliveryToggle = document.getElementById('delivery-toggle');
+        if (deliveryToggle) {
+            deliveryToggle.addEventListener('change', () => {
+                this.deliveryEnabled = deliveryToggle.checked;
+                this.updateTotals();
+            });
+        }
         this.setupCartSheet();
         this.setupCategoryFilter();
         const discountBtn = document.getElementById('discount-btn');
