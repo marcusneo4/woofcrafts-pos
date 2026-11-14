@@ -88,27 +88,7 @@ class ProductManager {
     }
 
     async getSupabaseClient() {
-        if (this.supabaseClientPromise) return this.supabaseClientPromise;
-
-        const config = this.getSupabaseConfig();
-        const isConfigured = Boolean(config.supabaseUrl) && Boolean(config.supabaseAnonKey);
-        if (!isConfigured) {
-            this.supabaseClientPromise = Promise.resolve(null);
-            return this.supabaseClientPromise;
-        }
-
-        this.supabaseClientPromise = (async () => {
-            try {
-                const supabaseModule = await import('https://esm.sh/@supabase/supabase-js@2');
-                const { createClient } = supabaseModule;
-                return createClient(config.supabaseUrl, config.supabaseAnonKey);
-            } catch (error) {
-                console.warn('Failed to create Supabase client:', error);
-                return null;
-            }
-        })();
-
-        return this.supabaseClientPromise;
+        return window.WoofAuth.getClient();
     }
 
     async upsertProduct({ productId, title, description, price, category, imageUrl }) {
@@ -222,7 +202,7 @@ class ProductManager {
         const imageFile = formData.get('image');
 
         if (!name || !price || price <= 0) {
-            ui.showToast('Please fill in all fields with valid values', 'error');
+            ui.showToast('Enter a product name and a price of 0 or more.', 'error');
             return;
         }
 
@@ -250,7 +230,7 @@ class ProductManager {
         }
 
         if (!imagePath) {
-            ui.showToast('Please select an image', 'error');
+            ui.showToast('Choose a photo for the product.', 'error');
             return;
         }
 
@@ -271,14 +251,14 @@ class ProductManager {
             this.resetForm();
 
             const action = wasEditing ? 'updated' : 'added';
-            ui.showToast(`Product ${action} successfully!`, 'success');
+            ui.showToast(`Product ${action}`, 'success');
 
             // Notify other pages that products were updated
             window.dispatchEvent(new CustomEvent('productsUpdated'));
             sessionStorage.setItem('woofcrafts_products_updated', Date.now().toString());
         } catch (error) {
             console.error('Error saving product:', error);
-            ui.showToast('Error saving product. Please try again.', 'error');
+            ui.showToast('Could not save the product. Check the connection and try again.', 'error');
         }
     }
 
@@ -299,10 +279,10 @@ class ProductManager {
         const imgSrc = safeImageSrc(product.image);
         preview.innerHTML = imgSrc
             ? `<img src="${escapeHtml(imgSrc)}" alt="Current image">`
-            : '<div class="preview-placeholder"><span>🐕</span><p>No image</p></div>';
+            : '<div class="preview-placeholder">' + iconSvg('image') + '<p>No photo</p></div>';
         
         // Update form button
-        document.getElementById('submit-btn').innerHTML = '<span>✏️</span> Update Product';
+        document.getElementById('submit-btn').innerHTML = iconSvg('check') + ' Save changes';
         document.getElementById('cancel-edit-btn').classList.remove('hidden');
         
         // Scroll to form
@@ -310,7 +290,7 @@ class ProductManager {
     }
 
     async deleteProduct(productId) {
-        if (!await ui.confirm('Are you sure you want to delete this product?', 'Delete Product')) return;
+        if (!await ui.confirm('This removes the product from the POS. It cannot be undone.', 'Delete product')) return;
         try {
             const supabaseClient = await this.getSupabaseClient();
             const isSupabaseConfigured = Boolean(supabaseClient);
@@ -323,14 +303,14 @@ class ProductManager {
             await this.loadProducts();
             this.renderProducts();
 
-            ui.showToast('Product deleted successfully!', 'success');
+            ui.showToast('Product deleted', 'success');
 
             // Notify other pages that products were updated
             window.dispatchEvent(new CustomEvent('productsUpdated'));
             sessionStorage.setItem('woofcrafts_products_updated', Date.now().toString());
         } catch (error) {
             console.error('Error deleting product:', error);
-            ui.showToast('Error deleting product. Please try again.', 'error');
+            ui.showToast('Could not delete the product. Check the connection and try again.', 'error');
         }
     }
 
@@ -339,13 +319,13 @@ class ProductManager {
         const preview = document.getElementById('image-preview');
         preview.innerHTML = `
             <div class="preview-placeholder">
-                <span>🐕</span>
-                <p>Image preview will appear here</p>
+                ${iconSvg('image')}
+                <p>The photo preview shows here</p>
             </div>
         `;
         document.getElementById('product-id').value = '';
         this.editingId = null;
-        document.getElementById('submit-btn').innerHTML = '<span>➕</span> Add Product';
+        document.getElementById('submit-btn').innerHTML = iconSvg('plus') + ' Add product';
         document.getElementById('cancel-edit-btn').classList.add('hidden');
     }
 
@@ -356,9 +336,9 @@ class ProductManager {
         if (this.products.length === 0) {
             list.innerHTML = `
                 <div class="empty-state">
-                    <span class="empty-icon">📦</span>
-                    <p>No products yet!</p>
-                    <p class="empty-state-note">Add your first pawsome product above! 🎉</p>
+                    <span class="empty-icon">${iconSvg('box')}</span>
+                    <p>No products yet</p>
+                    <p class="empty-state-note">Add your first product with the form.</p>
                 </div>
             `;
             return;
@@ -378,8 +358,8 @@ class ProductManager {
                     <div class="product-list-price">$${parseFloat(product.price).toFixed(2)}</div>
                 </div>
                 <div class="product-list-actions">
-                    <button class="btn-edit" onclick='productManager.editProduct(${JSON.stringify(product.id)})' title="Edit product details and image">✏️ Edit</button>
-                    <button class="btn-delete" onclick='productManager.deleteProduct(${JSON.stringify(product.id)})' title="Delete this product">🗑️ Delete</button>
+                    <button class="btn-edit" onclick='productManager.editProduct(${JSON.stringify(product.id)})' title="Edit this product">${iconSvg('edit')} Edit</button>
+                    <button class="btn-delete" onclick='productManager.deleteProduct(${JSON.stringify(product.id)})' title="Delete this product">${iconSvg('trash')} Delete</button>
                 </div>
             </div>
         `;
@@ -404,11 +384,9 @@ class ProductManager {
 // Initialize the product manager
 let productManager;
 document.addEventListener('DOMContentLoaded', async () => {
-    // Check authentication
-    if (sessionStorage.getItem('woofcrafts_authenticated') !== 'true') {
-        window.location.href = 'index.html';
-        return;
-    }
+    // Staff must be signed in with Supabase Auth
+    const session = await window.WoofAuth.requireStaff();
+    if (!session) return;
     
     productManager = new ProductManager();
 });

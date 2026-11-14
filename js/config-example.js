@@ -2,11 +2,6 @@
 // Copy this file to config.js and update the values. config.js is gitignored.
 // NEVER commit config.js with real credentials.
 
-window.POS_CONFIG = {
-    // Login password for POS access (change before production!)
-    loginPassword: 'hyper'
-};
-
 window.SUPABASE_CONFIG = {
     // Supabase project URL (from your Supabase dashboard)
     supabaseUrl: 'https://YOUR_PROJECT_REF.supabase.co',

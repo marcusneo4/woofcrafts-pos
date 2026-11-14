@@ -2,62 +2,93 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#3B2E22">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="WoofCrafts">
     <title>WoofCrafts - Login</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="login-page">
-    <div class="paw-bg-decoration"></div>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <symbol id="i-tag" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="6"/><circle cx="12" cy="8" r="1.5"/><path d="M9.5 14h5M9.5 17h5"/></symbol>
+    </svg>
     <main class="login-container" role="main">
         <div class="login-box">
-            <div class="login-logo">🐕</div>
+            <div class="login-logo"><svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg></div>
             <h1 class="login-title">WoofCrafts</h1>
-            <p class="login-subtitle">🐾 Store staff login to access the POS system</p>
-            
+            <p class="login-subtitle">Staff sign in</p>
+
             <div id="error-message" class="error-message" role="alert" aria-live="polite"></div>
-            
-            <form id="login-form" class="login-form" aria-label="Staff login form">
+
+            <form id="login-form" class="login-form" aria-label="Staff sign in">
                 <div class="login-input-group">
-                    <label for="password">🔒 Password</label>
-                    <input type="password" id="password" class="login-input" placeholder="Enter password" required autofocus aria-required="true">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" class="login-input" placeholder="you@example.com" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required autofocus aria-required="true">
                 </div>
-                <button type="submit" class="login-btn">
-                    <span>🚪</span> Enter
-                </button>
+                <div class="login-input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="login-input" placeholder="Password" autocomplete="current-password" required aria-required="true">
+                </div>
+                <button type="submit" id="login-btn" class="login-btn">Sign in</button>
             </form>
         </div>
     </main>
 
     <script src="js/config.public.js"></script>
-    <!-- Optional: load js/config.js (copy from config-example.js) to override local settings -->
-    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
     <script>
-        const CORRECT_PASSWORD = (window.POS_CONFIG && window.POS_CONFIG.loginPassword) || 'hyper';
-        
-        document.getElementById('login-form').addEventListener('submit', (e) => {
+        const form = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
+        const errorMessage = document.getElementById('error-message');
+        let hideTimer = null;
+
+        function showError(text) {
+            errorMessage.textContent = '❌ ' + text;
+            errorMessage.classList.add('show');
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(() => errorMessage.classList.remove('show'), 6000);
+        }
+
+        // Already signed in as staff on this device: go straight to the POS.
+        window.WoofAuth.getSession().then((session) => {
+            if (session && window.WoofAuth.isStaff(session)) window.location.replace('pos.html');
+        });
+
+        if (new URLSearchParams(window.location.search).has('denied')) {
+            showError('That account is not set up for the POS. Ask the owner to add it.');
+        }
+
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const errorMessage = document.getElementById('error-message');
-            
-            if (password === CORRECT_PASSWORD) {
-                // Store authentication in sessionStorage
-                sessionStorage.setItem('woofcrafts_authenticated', 'true');
-                // Redirect to main POS page
+
+            loginBtn.disabled = true;
+            try {
+                const client = await window.WoofAuth.getClient();
+                if (!client) {
+                    showError("Can't reach the sign-in service. Check the internet connection and try again.");
+                    return;
+                }
+                const { data, error } = await client.auth.signInWithPassword({ email, password });
+                if (error) {
+                    showError('Email or password is wrong. Check both and try again.');
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                    return;
+                }
+                if (!window.WoofAuth.isStaff(data.session)) {
+                    await client.auth.signOut();
+                    showError('That account is not set up for the POS. Ask the owner to add it.');
+                    return;
+                }
                 window.location.href = 'pos.html';
-            } else {
-                errorMessage.textContent = '❌ Incorrect password. Please try again.';
-                errorMessage.classList.add('show');
-                document.getElementById('password').value = '';
-                document.getElementById('password').focus();
-                
-                // Hide error after 3 seconds
-                setTimeout(() => {
-                    errorMessage.classList.remove('show');
-                }, 3000);
+            } finally {
+                loginBtn.disabled = false;
             }
         });
     </script>

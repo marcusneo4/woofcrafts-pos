@@ -10,16 +10,15 @@ class POSApp {
         this.purchaseCache = new Map();
         this.purchasesLoaded = false;
         this.lastPurchasesSource = 'unknown'; // 'supabase' | 'local'
+        this.activeCategory = 'all';
         
         this.init();
     }
 
     async init() {
-        // Check authentication
-        if (sessionStorage.getItem('woofcrafts_authenticated') !== 'true') {
-            window.location.href = 'index.html';
-            return;
-        }
+        // Staff must be signed in with Supabase Auth
+        const session = await window.WoofAuth.requireStaff();
+        if (!session) return;
         
         try {
             await this.loadProducts();
@@ -96,27 +95,7 @@ class POSApp {
     }
 
     async getSupabaseClient() {
-        if (this.supabaseClientPromise) return this.supabaseClientPromise;
-
-        const config = this.getSupabaseConfig();
-        const isConfigured = Boolean(config.supabaseUrl) && Boolean(config.supabaseAnonKey);
-        if (!isConfigured) {
-            this.supabaseClientPromise = Promise.resolve(null);
-            return this.supabaseClientPromise;
-        }
-
-        this.supabaseClientPromise = (async () => {
-            try {
-                const supabaseModule = await import('https://esm.sh/@supabase/supabase-js@2');
-                const { createClient } = supabaseModule;
-                return createClient(config.supabaseUrl, config.supabaseAnonKey);
-            } catch (error) {
-                console.warn('Failed to create Supabase client:', error);
-                return null;
-            }
-        })();
-
-        return this.supabaseClientPromise;
+        return window.WoofAuth.getClient();
     }
 
     isSupabaseConfigured() {
@@ -279,9 +258,9 @@ class POSApp {
 
             listEl.innerHTML = `
                 <div class="empty-state">
-                    <span class="empty-icon">📜</span>
-                    <p>No purchases yet.</p>
-                    <p style="font-size: 0.9rem; margin-top: 10px;">Complete an order to see it here.</p>
+                    <span class="empty-icon">${iconSvg('receipt')}</span>
+                    <p>No purchases yet</p>
+                    <p class="empty-state-note">Orders show here after you send an invoice.</p>
                     ${localModeNotice}
                 </div>
             `;
@@ -310,7 +289,7 @@ class POSApp {
                     aria-label="View purchase ${orderId}"
                 >
                     <span class="purchase-card-left">
-                        <span>🧾</span>
+                        ${iconSvg('receipt')}
                         <span>#${orderId}</span>
                     </span>
                     <span class="purchase-card-right">
@@ -473,7 +452,7 @@ class POSApp {
                     await this.showPurchaseDetails(purchaseId);
                 } catch (error) {
                     console.error('Error showing purchase details:', error);
-                    ui.showToast('Failed to load purchase details. See console for details.', 'error');
+                    ui.showToast('Could not load this purchase. Check the connection and try again.', 'error');
                 }
             });
         }
@@ -612,34 +591,59 @@ class POSApp {
         localStorage.setItem('woofcrafts_cart', JSON.stringify(this.cart));
     }
 
-    renderProducts() {
-        const grid = document.getElementById('products-grid');
-        
-        if (!grid) {
-            console.error('❌ Products grid element not found!');
+    renderCategoryFilter(products) {
+        const filterEl = document.getElementById('category-filter');
+        if (!filterEl) return;
+
+        const seen = new Map();
+        products.forEach((product) => {
+            const key = String(product.category || 'general').toLowerCase();
+            if (!seen.has(key)) seen.set(key, key.charAt(0).toUpperCase() + key.slice(1));
+        });
+
+        // A filter only helps when there is something to choose between.
+        if (seen.size < 2) {
+            filterEl.innerHTML = '';
+            filterEl.classList.add('hidden');
+            this.activeCategory = 'all';
             return;
         }
-        
+        if (this.activeCategory !== 'all' && !seen.has(this.activeCategory)) this.activeCategory = 'all';
+
+        const chip = (key, label) =>
+            `<button type="button" class="chip" data-category="${escapeHtml(key)}" aria-pressed="${this.activeCategory === key}">${escapeHtml(label)}</button>`;
+        filterEl.classList.remove('hidden');
+        filterEl.innerHTML = chip('all', 'All') + Array.from(seen, ([key, label]) => chip(key, label)).join('');
+    }
+
+    renderProducts() {
+        const grid = document.getElementById('products-grid');
+
+        if (!grid) {
+            console.error('Products grid element not found');
+            return;
+        }
+
         // Filter out any invalid products
         const validProducts = this.products.filter(product => product && product.id && product.name);
-        
-        console.log(`📦 Rendering ${validProducts.length} valid products (total: ${this.products.length})`);
-        
-        if (!validProducts || validProducts.length === 0) {
-            console.warn('⚠️ No valid products to display');
+        this.renderCategoryFilter(validProducts);
+
+        if (validProducts.length === 0) {
             grid.innerHTML = `
                 <div class="empty-state">
-                    <span class="empty-icon">🐶</span>
-                    <p>No products available yet!</p>
-                    <a href="products.html" class="empty-link">Add your first product here 🎉</a>
+                    <span class="empty-icon">${iconSvg('box')}</span>
+                    <p>No products yet</p>
+                    <a href="products.html" class="empty-link">Add a product</a>
                 </div>
             `;
             return;
         }
 
-        grid.innerHTML = validProducts.map(product => {
-            const category = product.category || 'general';
-            const categoryLabel = escapeHtml(category.charAt(0).toUpperCase() + category.slice(1));
+        const visibleProducts = this.activeCategory === 'all'
+            ? validProducts
+            : validProducts.filter(p => String(p.category || 'general').toLowerCase() === this.activeCategory);
+
+        grid.innerHTML = visibleProducts.map(product => {
             const productName = escapeHtml(product.name || '');
             let imageSrc = safeImageSrc(product.image) || PLACEHOLDER_IMAGE;
             if (!imageSrc) imageSrc = PLACEHOLDER_IMAGE;
@@ -647,17 +651,16 @@ class POSApp {
             const safeId = JSON.stringify(product.id);
             return `
                 <div class="product-card" onclick='safeAddToCart(${safeId})'>
-                    ${category !== 'general' ? `<div class="product-category-badge">${categoryLabel}</div>` : ''}
-                    <img src="${escapeHtml(imageSrc)}" alt="${productName}" class="product-image" 
-                         onerror="this.onerror=null; this.src='${PLACEHOLDER_IMAGE}'">
+                    <div class="product-media">
+                        <img src="${escapeHtml(imageSrc)}" alt="${productName}" class="product-image"
+                             onerror="this.onerror=null; this.src='${PLACEHOLDER_IMAGE}'">
+                        <div class="product-price">$${parseFloat(product.price).toFixed(2)}</div>
+                    </div>
                     <div class="product-name">${productName}</div>
-                    <div class="product-price">$${parseFloat(product.price).toFixed(2)}</div>
-                    <button class="quick-add-btn" onclick='event.stopPropagation(); safeAddToCart(${safeId})' title="Quick Add">+</button>
+                    <button type="button" class="quick-add-btn" onclick='event.stopPropagation(); safeAddToCart(${safeId})' aria-label="Add ${productName} to cart" title="Add to cart">${iconSvg('plus')}</button>
                 </div>
             `;
         }).join('');
-        
-        console.log('✓ Products rendered successfully');
     }
 
     addToCart(productId) {
@@ -668,7 +671,7 @@ class POSApp {
 
             const product = this.products.find(p => p.id == normalizedId || String(p.id) === String(normalizedId));
         if (!product) {
-            ui.showToast('Product not found! Please refresh the page.', 'error');
+            ui.showToast('Product not found. Refresh the page and try again.', 'error');
             return;
         }
 
@@ -690,16 +693,15 @@ class POSApp {
             this.renderCart();
             
             // Visual feedback
-            const cartBadge = document.getElementById('cart-count');
-            if (cartBadge) {
-                cartBadge.style.animation = 'none';
-                setTimeout(() => {
-                    cartBadge.style.animation = 'scaleIn 0.3s';
-                }, 10);
-            }
+            ['cart-count', 'cart-bar-count'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.style.animation = 'none';
+                setTimeout(() => { el.style.animation = 'scaleIn 0.25s'; }, 10);
+            });
         } catch (error) {
             console.error('❌ Error in addToCart:', error);
-            ui.showToast('Error adding to cart: ' + error.message, 'error');
+            ui.showToast('Could not add the item: ' + error.message, 'error');
         }
     }
 
@@ -735,13 +737,15 @@ class POSApp {
         if (cartCount) {
             cartCount.textContent = totalItems;
         }
+        const cartBarCount = document.getElementById('cart-bar-count');
+        if (cartBarCount) cartBarCount.textContent = totalItems;
         
         if (this.cart.length === 0) {
             cartItems.innerHTML = `
                 <div class="empty-cart">
-                    <span class="empty-cart-icon">🐕</span>
+                    <span class="empty-cart-icon">${iconSvg('cart')}</span>
                     <p>Your cart is empty</p>
-                    <p class="empty-cart-hint">Start shopping by clicking on products!</p>
+                    <p class="empty-cart-hint">Tap a product to add it.</p>
                 </div>
             `;
             this.updateTotals();
@@ -763,12 +767,12 @@ class POSApp {
                             <div class="cart-item-price">$${item.price.toFixed(2)} each</div>
                         </div>
                         <div class="cart-item-controls">
-                            <button class="quantity-btn" onclick='(window.posApp || posApp).updateQuantity(${safeId(item.productId)}, -1)'>-</button>
+                            <button type="button" class="quantity-btn" aria-label="Remove one ${itemName}" onclick='(window.posApp || posApp).updateQuantity(${safeId(item.productId)}, -1)'>${iconSvg('minus')}</button>
                             <span class="quantity-display">${item.quantity}</span>
-                            <button class="quantity-btn" onclick='(window.posApp || posApp).updateQuantity(${safeId(item.productId)}, 1)'>+</button>
+                            <button type="button" class="quantity-btn" aria-label="Add one ${itemName}" onclick='(window.posApp || posApp).updateQuantity(${safeId(item.productId)}, 1)'>${iconSvg('plus')}</button>
                         </div>
                         <div class="cart-item-total">$${subtotal.toFixed(2)}</div>
-                        <button class="remove-btn" onclick='(window.posApp || posApp).removeFromCart(${safeId(item.productId)})' title="Remove">🗑️</button>
+                        <button type="button" class="remove-btn" aria-label="Remove ${itemName} from cart" onclick='(window.posApp || posApp).removeFromCart(${safeId(item.productId)})' title="Remove">${iconSvg('trash')}</button>
                     </div>
                 </div>
             `;
@@ -790,7 +794,7 @@ class POSApp {
         const discountBtn = document.getElementById('discount-btn');
         if (discountBtn) {
             discountBtn.disabled = true;
-            discountBtn.innerHTML = '<span>✅</span> Discount Applied <span class="discount-badge">5%</span>';
+            discountBtn.innerHTML = iconSvg('check') + ' 5% discount applied';
         }
     }
 
@@ -799,7 +803,7 @@ class POSApp {
         const discountBtn = document.getElementById('discount-btn');
         if (discountBtn) {
             discountBtn.disabled = false;
-            discountBtn.innerHTML = '<span>🎁</span> Apply 5% Discount';
+            discountBtn.innerHTML = iconSvg('percent') + ' Apply 5% discount';
         }
         this.updateTotals();
     }
@@ -815,6 +819,7 @@ class POSApp {
         const discountAmountEl = document.getElementById('discount-amount');
         if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
         if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+        document.querySelectorAll('[data-cart-total]').forEach((el) => { el.textContent = `$${total.toFixed(2)}`; });
         if (discountAmountEl) {
             if (this.discountApplied && discountAmount > 0) {
                 discountAmountEl.textContent = `-$${discountAmount.toFixed(2)}`;
@@ -826,7 +831,7 @@ class POSApp {
     }
 
     async clearCart(skipConfirm = false) {
-        if (skipConfirm || await ui.confirm('Are you sure you want to clear the cart?', 'Clear Cart')) {
+        if (skipConfirm || await ui.confirm('Remove every item from this order?', 'Reset cart')) {
             this.cart = [];
             this.discountApplied = false;
             this.saveCart();
@@ -880,19 +885,19 @@ class POSApp {
         const emailEl = document.getElementById('customer-email');
         const email = emailEl ? (emailEl.value || '').trim() : '';
         if (!email) {
-            ui.showToast('Please enter customer email address', 'error');
+            ui.showToast('Enter the customer email address.', 'error');
             return false;
         }
 
         // Basic format validation so bad domains like "custom" don't slip through.
         const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         if (!isValidEmail) {
-            ui.showToast('Please enter a valid customer email address', 'error');
+            ui.showToast('Enter a valid email address, like name@gmail.com.', 'error');
             return false;
         }
 
         if (this.cart.length === 0) {
-            ui.showToast('Cart is empty. Please add items to cart.', 'error');
+            ui.showToast('Add an item to the cart first.', 'error');
             return false;
         }
         return true;
@@ -1243,7 +1248,7 @@ class POSApp {
         const sendBtn = document.getElementById('send-email-btn');
         if (sendBtn) {
             sendBtn.disabled = true;
-            sendBtn.innerHTML = '<span>⏳</span> Sending...';
+            sendBtn.innerHTML = iconSvg('mail') + ' Sending…';
         }
 
         const customerNameRaw = document.getElementById('customer-name').value.trim();
@@ -1256,9 +1261,12 @@ class POSApp {
         const discountAmount = subtotal * discountPercent;
         const total = subtotal - discountAmount;
 
-        // Generate 4-digit order ID
-        const orderId = String(Math.floor(1000 + Math.random() * 9000));
-        const orderDateIso = new Date().toISOString();
+        // A retry after a failed email reuses the same order id and date, so one
+        // sale never becomes two rows in the order history.
+        const orderId = this.pendingOrderId || String(Math.floor(1000 + Math.random() * 9000));
+        const orderDateIso = this.pendingOrderDate || new Date().toISOString();
+        this.pendingOrderId = orderId;
+        this.pendingOrderDate = orderDateIso;
 
         const customerComment = document.getElementById('customer-comment')?.value.trim() || '';
 
@@ -1282,13 +1290,22 @@ class POSApp {
         };
 
         try {
+            // Record the sale first. The order record matters more than the invoice
+            // email: a booth sale that is never written down is lost for good.
+            if (!this.pendingOrderLogged) {
+                await this.logPurchase(orderDetails);
+                this.pendingOrderLogged = true;
+            }
+
             const pdfBase64 = await this.generateInvoicePdfBase64(orderDetails);
             const fileName = `WoofCrafts_Order_${orderDetails.orderId}.pdf`;
 
+            const accessToken = await window.WoofAuth.getAccessToken();
             const response = await fetch('/api/send-invoice', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken || ''}`
                 },
                 body: JSON.stringify({
                     pdfBase64,
@@ -1296,25 +1313,13 @@ class POSApp {
                     customerName: customerNameRaw,
                     purchaseDate: orderDateIso,
                     invoiceNumber: orderDetails.orderId,
-                    fileName,
-                    orderDetails
+                    fileName
                 })
             });
 
             const result = await response.json();
             if (!response.ok || !result.success) {
                 throw new Error(result.error || 'Failed to send invoice email');
-            }
-
-            const orderLoggedByServer = Boolean(result.orderLog && result.orderLog.saved);
-            if (!orderLoggedByServer) {
-                try {
-                    await this.logPurchase(orderDetails);
-                } catch (logError) {
-                    console.warn('Purchase logging failed:', logError);
-                }
-            } else {
-                this.lastPurchasesSource = 'supabase';
             }
 
             // If user is currently viewing purchases, refresh list immediately.
@@ -1324,25 +1329,88 @@ class POSApp {
                 await this.refreshPurchasesView();
             }
 
-            if (result.orderLog && result.orderLog.attempted && !result.orderLog.saved) {
-                console.warn('[Checkout] Server order logging failed:', result.orderLog.reason);
-            }
-
-            ui.showToast('🐾 Invoice email sent successfully to ' + orderDetails.customerEmail + '! 🐶', 'success');
+            ui.showToast('Invoice sent to ' + orderDetails.customerEmail, 'success');
+            this.closeCartSheet();
+            this.pendingOrderId = null;
+            this.pendingOrderDate = null;
+            this.pendingOrderLogged = false;
             // Cart clears automatically without prompt as per UX review
             this.clearCart(true);
         } catch (error) {
             console.error('Error sending email:', error);
-            ui.showToast('❌ Failed to send invoice email: ' + (error.message || 'Unknown error'), 'error');
+            const where = this.lastPurchasesSource === 'supabase' ? 'order history' : 'this device';
+            if (this.pendingOrderLogged) {
+                ui.showToast(
+                    `Order #${orderDetails.orderId} is saved to ${where}, but the invoice email did not send: `
+                    + (error.message || 'unknown error')
+                    + '. Press Send invoice to try the email again.',
+                    'error'
+                );
+            } else {
+                ui.showToast('Could not record this sale: ' + (error.message || 'unknown error') + '. Check the connection and try again.', 'error');
+            }
         } finally {
             if (sendBtn) {
                 sendBtn.disabled = false;
-                sendBtn.innerHTML = '<span>📬</span> Send Email';
+                sendBtn.innerHTML = iconSvg('mail') + ' Send invoice';
             }
         }
     }
 
+    // ---- Cart sheet (phones and iPad portrait). From 900px wide the cart is docked beside the products.
+    openCartSheet() {
+        const panel = document.getElementById('cart-panel');
+        if (!panel) return;
+        panel.classList.add('is-open');
+        document.body.classList.add('cart-open');
+        const bar = document.getElementById('cart-bar');
+        if (bar) bar.setAttribute('aria-expanded', 'true');
+        const closeBtn = document.getElementById('cart-close');
+        if (closeBtn) closeBtn.focus({ preventScroll: true });
+    }
+
+    closeCartSheet() {
+        const panel = document.getElementById('cart-panel');
+        if (panel) panel.classList.remove('is-open');
+        document.body.classList.remove('cart-open');
+        const bar = document.getElementById('cart-bar');
+        if (bar) bar.setAttribute('aria-expanded', 'false');
+    }
+
+    setupCartSheet() {
+        const on = (id, handler) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('click', handler);
+        };
+        on('cart-bar', () => this.openCartSheet());
+        on('cart-close', () => { this.closeCartSheet(); const bar = document.getElementById('cart-bar'); if (bar) bar.focus({ preventScroll: true }); });
+        on('cart-backdrop', () => this.closeCartSheet());
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && document.body.classList.contains('cart-open')) this.closeCartSheet();
+        });
+
+        // Rotating an iPad to landscape docks the cart; make sure no sheet state is left behind.
+        const docked = window.matchMedia('(min-width: 900px)');
+        const onChange = () => { if (docked.matches) this.closeCartSheet(); };
+        if (docked.addEventListener) docked.addEventListener('change', onChange);
+        else if (docked.addListener) docked.addListener(onChange);
+    }
+
+    setupCategoryFilter() {
+        const filterEl = document.getElementById('category-filter');
+        if (!filterEl) return;
+        filterEl.addEventListener('click', (event) => {
+            const chip = event.target && event.target.closest ? event.target.closest('[data-category]') : null;
+            if (!chip) return;
+            this.activeCategory = chip.getAttribute('data-category') || 'all';
+            this.renderProducts();
+        });
+    }
+
     setupEventListeners() {
+        this.setupCartSheet();
+        this.setupCategoryFilter();
         const discountBtn = document.getElementById('discount-btn');
         if (discountBtn) discountBtn.addEventListener('click', () => this.applyDiscount());
 
@@ -1350,7 +1418,7 @@ class POSApp {
         if (clearCartBtn) clearCartBtn.addEventListener('click', () => this.clearCart());
 
         const resetCartBtn = document.getElementById('reset-cart-btn');
-        if (resetCartBtn) resetCartBtn.addEventListener('click', () => this.resetCart());
+        if (resetCartBtn) resetCartBtn.addEventListener('click', () => (this.cart.length ? this.clearCart() : this.resetCart()));
 
         const sendEmailBtn = document.getElementById('send-email-btn');
         if (sendEmailBtn) sendEmailBtn.addEventListener('click', () => this.sendOrderEmail());
@@ -1438,7 +1506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 500);
     } catch (error) {
         console.error('❌ Failed to initialize POS App:', error);
-        ui.showToast('Failed to initialize the app. Please refresh the page.', 'error');
+        ui.showToast('The app could not start. Refresh the page.', 'error');
     }
 });
 

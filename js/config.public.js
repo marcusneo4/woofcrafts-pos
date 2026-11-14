@@ -1,10 +1,6 @@
 // WoofCrafts POS - Public runtime config (safe for Vercel + browser)
 // Keep only public values here. Do NOT put server secrets in this file.
 
-window.POS_CONFIG = window.POS_CONFIG || {
-  loginPassword: 'hyper'
-};
-
 window.SUPABASE_CONFIG = window.SUPABASE_CONFIG || {
   // Replace with your real Supabase project values.
   // These are public browser-safe values (anon key + URL).

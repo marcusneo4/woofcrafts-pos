@@ -39,96 +39,44 @@ async function readJsonBody(req, { maxBytes }) {
 }
 
 /**
- * Persist an order in Supabase using server-side credentials.
- * Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel env.
- * @param {unknown} rawOrderDetails
- * @returns {Promise<{ attempted: boolean, saved: boolean, reason?: string }>}
+ * Only signed-in POS staff may send invoices. Checks the Supabase access token
+ * sent by the browser and requires the `pos_staff` role in app_metadata
+ * (app_metadata can only be changed from the Supabase dashboard or server side).
+ * @param {import('http').IncomingMessage} req
+ * @returns {Promise<boolean>}
  */
-async function logOrderToSupabase(rawOrderDetails) {
+async function isPosStaff(req) {
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const apiKey = process.env.SUPABASE_ANON_KEY;
+    const authHeader = String((req.headers && req.headers.authorization) || '');
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-        return {
-            attempted: false,
-            saved: false,
-            reason: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY'
-        };
+    if (!supabaseUrl || !apiKey || !token) return false;
+
+    try {
+        const response = await fetch(`${String(supabaseUrl).replace(/\/$/, '')}/auth/v1/user`, {
+            headers: { apikey: apiKey, Authorization: `Bearer ${token}` }
+        });
+        if (!response.ok) return false;
+        const user = await response.json();
+        return Boolean(user && user.app_metadata && user.app_metadata.role === 'pos_staff');
+    } catch (error) {
+        return false;
     }
-
-    if (!rawOrderDetails || typeof rawOrderDetails !== 'object') {
-        return {
-            attempted: true,
-            saved: false,
-            reason: 'Missing or invalid orderDetails payload'
-        };
-    }
-
-    const orderDetails = rawOrderDetails;
-    const items = Array.isArray(orderDetails.items) ? orderDetails.items : [];
-
-    const payload = {
-        order_id: String(orderDetails.orderId || ''),
-        customer_name: String(orderDetails.customerName || ''),
-        customer_email: String(orderDetails.customerEmail || ''),
-        customer_phone: String(orderDetails.customerPhone || ''),
-        customer_comment: String(orderDetails.customerComment || ''),
-        subtotal: Number(orderDetails.subtotal || 0),
-        discount_amount: Number(orderDetails.discountAmount || 0),
-        total: Number(orderDetails.total || 0),
-        items
-    };
-
-    if (!payload.order_id || !payload.customer_email) {
-        return {
-            attempted: true,
-            saved: false,
-            reason: 'order_id or customer_email is missing'
-        };
-    }
-
-    const endpoint = `${String(supabaseUrl).replace(/\/$/, '')}/rest/v1/orders`;
-    const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-            apikey: supabaseServiceRoleKey,
-            Authorization: `Bearer ${supabaseServiceRoleKey}`,
-            'Content-Type': 'application/json',
-            Prefer: 'return=minimal'
-        },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        return {
-            attempted: true,
-            saved: false,
-            reason: `Supabase insert failed (${response.status}): ${errorText || 'Unknown error'}`
-        };
-    }
-
-    return { attempted: true, saved: true };
 }
 
-/**
- * Vercel API route: send invoice PDF email.
- * Accepts JSON body:
- * - pdfBase64 (string, base64-encoded PDF without data-uri prefix)
- * - customerEmail (string)
- * - customerName (string, optional)
- * - purchaseDate (string, optional - ISO date preferred)
- * - invoiceNumber (string, optional)
- * - fileName (string, optional)
- *
- * @param {import('http').IncomingMessage & { body?: unknown }} req
- * @param {import('http').ServerResponse & { statusCode?: number }} res
- */
 module.exports = async function sendInvoiceHandler(req, res) {
     if (req.method !== 'POST') {
         res.statusCode = 405;
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ success: false, error: 'Method not allowed' }));
+        return;
+    }
+
+    if (!(await isPosStaff(req))) {
+        res.statusCode = 401;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ success: false, error: 'Sign in again to send invoices.' }));
         return;
     }
 
@@ -142,7 +90,6 @@ module.exports = async function sendInvoiceHandler(req, res) {
         const purchaseDateRaw = payload.purchaseDate;
         const invoiceNumberRaw = payload.invoiceNumber;
         const fileNameRaw = payload.fileName;
-        const orderDetails = payload.orderDetails;
 
         if (!pdfBase64Raw || typeof pdfBase64Raw !== 'string') {
             res.statusCode = 400;
@@ -264,10 +211,6 @@ module.exports = async function sendInvoiceHandler(req, res) {
             ]
         });
 
-        const orderLogResult = await logOrderToSupabase(orderDetails);
-        if (orderLogResult.attempted && !orderLogResult.saved) {
-            console.warn('[Vercel SendInvoice] Order log failed:', orderLogResult.reason);
-        }
 
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -275,8 +218,7 @@ module.exports = async function sendInvoiceHandler(req, res) {
             success: true,
             messageId: info.messageId,
             recipient: customerEmail,
-            fileName: sanitizedFileName,
-            orderLog: orderLogResult
+            fileName: sanitizedFileName
         }));
     } catch (error) {
         console.error('[Vercel SendInvoice] ❌ Error:', error);

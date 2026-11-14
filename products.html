@@ -2,68 +2,79 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#3B2E22">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="WoofCrafts">
     <title>Manage Products - WoofCrafts POS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="products-page">
-    <div class="paw-bg-decoration"></div>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <symbol id="i-tag" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="6"/><circle cx="12" cy="8" r="1.5"/><path d="M9.5 14h5M9.5 17h5"/></symbol>
+        <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9M4 9v11h16V9M4 9c0 1.7 1.3 3 2.7 3S9.3 10.7 9.3 9c0 1.7 1.3 3 2.7 3s2.7-1.3 2.7-3c0 1.7 1.3 3 2.7 3S20 10.7 20 9"/></symbol>
+        <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
+        <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></symbol>
+        <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9"/></symbol>
+        <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+        <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+        <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></symbol>
+        <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 9"/></symbol>
+        <symbol id="i-percent" viewBox="0 0 24 24"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/></symbol>
+        <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5"/></symbol>
+        <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+    </svg>
+
     <div class="container">
         <header role="banner">
             <div class="header-content">
                 <div class="logo-section">
-                    <span class="dog-icon">🐕</span>
-                    <h1>WoofCrafts Product Management</h1>
-                    <span class="paw-decoration">🐾</span>
+                    <svg class="icon logo-mark" aria-hidden="true"><use href="#i-tag"/></svg>
+                    <h1>WoofCrafts</h1>
                 </div>
-                <a href="pos.html" class="btn-secondary">
-                    <span>🏠</span> Back to POS
-                </a>
+                <div class="header-actions">
+                    <a href="pos.html" class="manage-products-btn show-label">
+                        <svg class="icon" aria-hidden="true"><use href="#i-back"/></svg><span class="label">Back to POS</span>
+                    </a>
+                </div>
             </div>
         </header>
 
         <main class="products-management" role="main">
-            <!-- Add Product Form -->
             <section class="add-product-section" aria-labelledby="add-product-heading">
                 <div class="section-header">
-                    <h2 id="add-product-heading">
-                        <span class="paw-icon">✨</span>
-                        Add New Product
-                        <span class="paw-icon">✨</span>
-                    </h2>
-                    <p class="section-subtitle">Add pawsome products to your store!</p>
+                    <h2 id="add-product-heading">Add a product</h2>
                 </div>
-                <form id="product-form" class="product-form" aria-label="Add or edit product form">
+                <form id="product-form" class="product-form" aria-label="Add or edit product">
                     <input type="hidden" id="product-id" name="productId">
-                    
+
                     <div class="form-group">
-                        <label for="product-name">
-                            <span>📝</span> Product Name *
-                        </label>
-                        <input type="text" id="product-name" name="name" placeholder="e.g., Cute Dog Bandana" required class="input-field">
+                        <label for="product-name">Product name (required)</label>
+                        <input type="text" id="product-name" name="name" placeholder="Big Identification Tag" required class="input-field" autocomplete="off">
                     </div>
 
                     <div class="form-group">
-                        <label for="product-price">
-                            <span>💰</span> Price ($) *
-                        </label>
-                        <input type="number" id="product-price" name="price" step="0.01" min="0" placeholder="0.00" required class="input-field">
+                        <label for="product-price">Price in $ (required)</label>
+                        <input type="number" id="product-price" name="price" step="0.01" min="0" placeholder="0.00" required class="input-field" inputmode="decimal">
                     </div>
 
                     <div class="form-group">
-                        <label for="product-description">
-                            <span>📝</span> Description
-                        </label>
-                        <textarea id="product-description" name="description" placeholder="Product description (optional)" class="input-field" rows="3"></textarea>
+                        <label for="product-description">Description</label>
+                        <textarea id="product-description" name="description" placeholder="Optional" class="input-field" rows="3"></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label for="product-category">
-                            <span>🏷️</span> Category
-                        </label>
+                        <label for="product-category">Category</label>
                         <select id="product-category" name="category" class="input-field">
                             <option value="general">General</option>
                             <option value="tags">Tags</option>
@@ -80,65 +91,54 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="product-image">
-                            <span>📷</span> Product Image *
-                        </label>
-                        <input type="file" id="product-image" name="image" accept="image/*" class="input-field file-input" aria-label="Upload product image">
+                        <label for="product-image">Photo</label>
+                        <input type="file" id="product-image" name="image" accept="image/*" class="input-field file-input" aria-label="Upload product photo">
                         <div id="image-preview" class="image-preview">
                             <div class="preview-placeholder">
-                                <span>🐕</span>
-                                <p>Image preview will appear here</p>
+                                <svg class="icon" aria-hidden="true"><use href="#i-image"/></svg>
+                                <p>The photo preview shows here</p>
                             </div>
                         </div>
-                        <p class="field-note">
-                            * Required for new products. When editing, leave blank to keep existing image.
-                        </p>
+                        <p class="field-note">Required for a new product. When editing, leave it empty to keep the current photo.</p>
                     </div>
 
                     <div class="form-buttons">
                         <button type="submit" class="btn-primary" id="submit-btn">
-                            <span>➕</span> Add Product
+                            <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg> Add product
                         </button>
                         <button type="button" class="btn-secondary hidden" id="cancel-edit-btn">
-                            <span>❌</span> Cancel Edit
+                            <svg class="icon" aria-hidden="true"><use href="#i-x"/></svg> Cancel edit
                         </button>
                     </div>
                 </form>
             </section>
 
-            <!-- Products List -->
             <section class="products-list-section" aria-labelledby="products-list-heading">
                 <div class="section-header">
-                    <h2 id="products-list-heading">
-                        <span class="paw-icon">📦</span>
-                        Your Products
-                        <span class="paw-icon">📦</span>
-                    </h2>
-                    <p class="section-subtitle">Manage your pawsome product collection</p>
+                    <h2 id="products-list-heading">Your products</h2>
                 </div>
-                <div id="products-list" class="products-list">
-                    <!-- Products will be loaded here -->
-                </div>
+                <div id="products-list" class="products-list"></div>
             </section>
         </main>
     </div>
 
-    <!-- UI Overlay System: Toasts & Modals -->
-    <div id="toast-container"></div>
+    <!-- Toasts and confirm dialog -->
+    <div id="toast-container" role="status" aria-live="polite"></div>
 
     <dialog id="custom-modal" class="custom-modal custom-modal-confirm">
         <div class="custom-modal-content">
-            <h3 id="modal-title" class="custom-modal-title">Confirm Action</h3>
+            <h3 id="modal-title" class="custom-modal-title">Confirm</h3>
             <p id="modal-message" class="custom-modal-message">Are you sure?</p>
             <div class="custom-modal-actions">
-                <button id="modal-cancel" class="btn-secondary modal-action-btn">Cancel</button>
-                <button id="modal-confirm" class="btn-primary btn-danger-soft modal-action-btn">Confirm</button>
+                <button id="modal-cancel" class="btn-secondary modal-action-btn" type="button">Cancel</button>
+                <button id="modal-confirm" class="btn-primary btn-danger-soft modal-action-btn" type="button">Confirm</button>
             </div>
         </div>
     </dialog>
 
     <script src="js/config.public.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/products.js"></script>
 </body>

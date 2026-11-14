@@ -18,14 +18,24 @@ function safeImageSrc(src) {
     return src;
 }
 
-/** Placeholder SVG for product images (150x150) */
-const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\'%3E%3Crect fill=\'%23FAF7F3\' width=\'150\' height=\'150\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'16\' font-weight=\'bold\'%3E🐕%3C/text%3E%3C/svg%3E';
+/** Inline icon from the sprite at the top of each page */
+function iconSvg(name) {
+    return '<svg class="icon" aria-hidden="true"><use href="#i-' + name + '"/></svg>';
+}
 
-/** Placeholder SVG for cart thumbnails (70x70) */
-const PLACEHOLDER_THUMB = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'70\' height=\'70\'%3E%3Crect fill=\'%23FAF7F3\' width=\'70\' height=\'70\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'20\'%3E🐕%3C/text%3E%3C/svg%3E';
+/** Placeholder image: a grey tag on a quiet background. Contains no quote characters,
+ *  so it is safe inside an onerror="..." attribute. */
+function placeholderSvg(size) {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 24 24">'
+        + '<rect width="24" height="24" fill="#EBDFCD"/>'
+        + '<g fill="none" stroke="#8B7355" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" transform="translate(6 6) scale(.5)">'
+        + '<rect x="6" y="2.5" width="12" height="19" rx="6"/><circle cx="12" cy="8" r="1.5"/></g></svg>';
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
 
-/** Placeholder SVG for product list (90x90) */
-const PLACEHOLDER_LIST = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'90\' height=\'90\'%3E%3Crect fill=\'%23FAF7F3\' width=\'90\' height=\'90\'/%3E%3Ctext fill=\'%23D4A574\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'20\'%3E🐕%3C/text%3E%3C/svg%3E';
+const PLACEHOLDER_IMAGE = placeholderSvg(150);
+const PLACEHOLDER_THUMB = placeholderSvg(70);
+const PLACEHOLDER_LIST = placeholderSvg(90);
 
 /** UI Helper for Modern Toasts and Modals */
 window.ui = {
@@ -37,7 +47,7 @@ window.ui = {
         }
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
-        toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> <span>${escapeHtml(message)}</span>`;
+        toast.innerHTML = iconSvg(type === 'success' ? 'check' : 'alert') + `<span>${escapeHtml(message)}</span>`;
         container.appendChild(toast);
         setTimeout(() => {
             toast.style.animation = 'fadeOut 0.3s forwards';

@@ -2,196 +2,171 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#3B2E22">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="WoofCrafts">
     <title>WoofCrafts POS System</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="pos-page">
-    <div class="paw-bg-decoration"></div>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <symbol id="i-tag" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="6"/><circle cx="12" cy="8" r="1.5"/><path d="M9.5 14h5M9.5 17h5"/></symbol>
+        <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9M4 9v11h16V9M4 9c0 1.7 1.3 3 2.7 3S9.3 10.7 9.3 9c0 1.7 1.3 3 2.7 3s2.7-1.3 2.7-3c0 1.7 1.3 3 2.7 3S20 10.7 20 9"/></symbol>
+        <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
+        <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></symbol>
+        <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9"/></symbol>
+        <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+        <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+        <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></symbol>
+        <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 9"/></symbol>
+        <symbol id="i-percent" viewBox="0 0 24 24"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/></symbol>
+        <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5"/></symbol>
+        <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+    </svg>
+
     <div class="container">
         <header role="banner">
             <div class="header-content">
                 <div class="logo-section">
-                    <span class="dog-icon">🐕</span>
+                    <svg class="icon logo-mark" aria-hidden="true"><use href="#i-tag"/></svg>
                     <h1>WoofCrafts</h1>
-                    <span class="paw-decoration">🐾</span>
+                </div>
+                <div class="tab-buttons" role="tablist" aria-label="POS views">
+                    <button type="button" class="btn-secondary" id="pos-tab-btn" role="tab" aria-controls="view-pos" aria-selected="true">
+                        <svg class="icon" aria-hidden="true"><use href="#i-store"/></svg> POS
+                    </button>
+                    <button type="button" class="btn-secondary" id="purchases-tab-btn" role="tab" aria-controls="view-purchases" aria-selected="false">
+                        <svg class="icon" aria-hidden="true"><use href="#i-receipt"/></svg> Purchases
+                    </button>
                 </div>
                 <div class="header-actions">
-                    <div class="tab-buttons" role="tablist" aria-label="POS Views">
-                        <button
-                            type="button"
-                            class="btn-secondary"
-                            id="pos-tab-btn"
-                            role="tab"
-                            aria-controls="view-pos"
-                            aria-selected="true"
-                        >
-                            <span>🛍️</span> POS
-                        </button>
-                        <button
-                            type="button"
-                            class="btn-secondary"
-                            id="purchases-tab-btn"
-                            role="tab"
-                            aria-controls="view-purchases"
-                            aria-selected="false"
-                        >
-                            <span>📜</span> Purchases
-                        </button>
-                    </div>
-                    <a href="products.html" class="manage-products-btn">
-                        <span>📦</span> Manage Products
+                    <a href="products.html" class="manage-products-btn" aria-label="Manage products">
+                        <svg class="icon" aria-hidden="true"><use href="#i-box"/></svg><span class="label">Products</span>
                     </a>
+                    <button type="button" class="btn-secondary" id="sign-out-btn" aria-label="Sign out">
+                        <svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg><span class="label">Sign out</span>
+                    </button>
                 </div>
             </div>
         </header>
 
         <main class="main-content" role="main">
             <div id="view-pos">
-                <!-- Product Grid Section -->
                 <section class="products-section" aria-labelledby="products-heading">
                     <div class="section-header">
-                        <h2 id="products-heading">
-                            <span class="paw-icon">🐾</span>
-                            Browse Our Pawsome Products
-                            <span class="paw-icon">🐾</span>
-                        </h2>
-                        <p class="section-subtitle">Click on any product to add it to your cart!</p>
+                        <h2 id="products-heading">Products</h2>
                     </div>
-                    
+                    <div id="category-filter" class="category-filter" role="group" aria-label="Filter products by category"></div>
                     <div id="products-grid" class="products-grid">
-                        <!-- Products will be loaded here -->
-                        <div class="no-products">
-                            <div class="empty-state">
-                                <span class="empty-icon">🐶</span>
-                                <p>No products available yet!</p>
-                                <a href="products.html" class="empty-link">Add your first product here 🎉</a>
-                            </div>
+                        <div class="empty-state">
+                            <span class="empty-icon"><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg></span>
+                            <p>No products yet</p>
+                            <a href="products.html" class="empty-link">Add a product</a>
                         </div>
                     </div>
                 </section>
 
-                <!-- Cart and Checkout Section -->
-                <aside class="cart-section" aria-label="Shopping cart and checkout">
+                <button type="button" id="cart-bar" class="cart-bar" aria-controls="cart-panel" aria-expanded="false">
+                    <span class="cart-bar-summary">
+                        <span class="cart-bar-count" id="cart-bar-count">0</span>
+                        <span>View cart</span>
+                    </span>
+                    <span class="cart-bar-total">
+                        <span data-cart-total>$0.00</span>
+                        <svg class="icon" aria-hidden="true"><use href="#i-chevron-up"/></svg>
+                    </span>
+                </button>
+                <div class="cart-backdrop" id="cart-backdrop"></div>
+
+                <aside class="cart-section" id="cart-panel" aria-label="Cart and checkout">
                     <div class="cart-header">
                         <h2>
-                            <span class="cart-icon">🛒</span>
-                            Your Cart
+                            <span class="cart-icon"><svg class="icon" aria-hidden="true"><use href="#i-cart"/></svg></span>
+                            Cart
                             <span class="cart-badge" id="cart-count">0</span>
                         </h2>
+                        <span class="cart-header-total" data-cart-total>$0.00</span>
+                        <button type="button" class="cart-close" id="cart-close" aria-label="Close cart"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
                     </div>
-                    
+
                     <div id="cart-items" class="cart-items">
                         <div class="empty-cart">
-                            <span class="empty-cart-icon">🐕</span>
+                            <span class="empty-cart-icon"><svg class="icon" aria-hidden="true"><use href="#i-cart"/></svg></span>
                             <p>Your cart is empty</p>
-                            <p class="empty-cart-hint">Start shopping by clicking on products!</p>
+                            <p class="empty-cart-hint">Tap a product to add it.</p>
                         </div>
                     </div>
 
                     <div class="order-summary">
                         <div class="summary-row">
-                            <span>Subtotal:</span>
+                            <span>Subtotal</span>
                             <span id="subtotal">$0.00</span>
                         </div>
                         <div class="discount-section">
-                            <button id="discount-btn" class="discount-btn">
-                                <span>🎁</span> Apply 5% Discount
+                            <button id="discount-btn" class="discount-btn" type="button">
+                                <svg class="icon" aria-hidden="true"><use href="#i-percent"/></svg> Apply 5% discount
                             </button>
                             <span id="discount-amount" class="discount-amount hidden">-$0.00</span>
                         </div>
                         <div class="summary-row total-row">
-                            <span>Total:</span>
+                            <span>Total</span>
                             <span id="total">$0.00</span>
                         </div>
                     </div>
-                    
-                    <!-- POS Actions -->
+
                     <div class="pos-actions">
-                        <button id="reset-cart-btn" class="btn-secondary">
-                            <span>🔄</span> Reset Cart
+                        <button id="reset-cart-btn" class="btn-secondary" type="button">
+                            <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg> Reset cart
                         </button>
                     </div>
 
                     <div class="checkout-section">
-                        <h3>
-                            <span>🐾</span>
-                            Customer Information
-                        </h3>
+                        <h3>Customer details</h3>
                         <div class="input-group">
-                            <label for="customer-name">👤 Customer Name (Optional)</label>
-                            <input type="text" id="customer-name" placeholder="Fido's Owner" class="input-field">
+                            <label for="customer-name">Name (optional)</label>
+                            <input type="text" id="customer-name" placeholder="Customer name" class="input-field" autocomplete="off">
                         </div>
                         <div class="input-group">
-                            <label for="customer-email-local">📧 Customer Email *</label>
-                            <div class="email-compose-row" aria-label="Customer email composer">
-                                <input
-                                    type="text"
-                                    id="customer-email-local"
-                                    placeholder="owner"
-                                    class="input-field email-local-input"
-                                    autocomplete="off"
-                                >
+                            <label for="customer-email-local">Email (required)</label>
+                            <div class="email-compose-row" aria-label="Customer email">
+                                <input type="text" id="customer-email-local" placeholder="name" class="input-field email-local-input" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email">
                                 <span class="email-at" aria-hidden="true">@</span>
-                                <span
-                                    id="customer-email-domain-selected"
-                                    class="email-domain-selected"
-                                    role="status"
-                                    aria-live="polite"
-                                >gmail.com</span>
+                                <span id="customer-email-domain-selected" class="email-domain-selected" role="status" aria-live="polite">gmail.com</span>
                             </div>
-
-                            <div class="email-domain-buttons" role="group" aria-label="Email domain buttons">
-                                <button type="button" class="domain-btn active" data-domain="gmail.com">
-                                    gmail.com
-                                </button>
-                                <button type="button" class="domain-btn" data-domain="yahoo.com">
-                                    yahoo.com
-                                </button>
-                                <button type="button" class="domain-btn" data-domain="outlook.com">
-                                    outlook.com
-                                </button>
-                                <button type="button" class="domain-btn" data-domain="hotmail.com">
-                                    hotmail.com
-                                </button>
-                                <button type="button" class="domain-btn" data-domain="aol.com">
-                                    aol.com
-                                </button>
-                                <button type="button" class="domain-btn" data-domain="__other__" id="email-domain-other-btn">
-                                    Other
-                                </button>
+                            <div class="email-domain-buttons" role="group" aria-label="Email provider">
+                                <button type="button" class="domain-btn active" data-domain="gmail.com">gmail.com</button>
+                                <button type="button" class="domain-btn" data-domain="yahoo.com">yahoo.com</button>
+                                <button type="button" class="domain-btn" data-domain="outlook.com">outlook.com</button>
+                                <button type="button" class="domain-btn" data-domain="hotmail.com">hotmail.com</button>
+                                <button type="button" class="domain-btn" data-domain="aol.com">aol.com</button>
+                                <button type="button" class="domain-btn" data-domain="__other__" id="email-domain-other-btn">Other</button>
                             </div>
-
-                            <input
-                                type="text"
-                                id="customer-email-domain-custom"
-                                class="input-field email-domain-custom hidden"
-                                placeholder="example.com"
-                                autocomplete="off"
-                            >
-
-                            <input
-                                type="email"
-                                id="customer-email"
-                                class="hidden"
-                                aria-label="Customer email (hidden)"
-                            >
+                            <input type="text" id="customer-email-domain-custom" class="input-field email-domain-custom hidden" placeholder="example.com" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+                            <input type="email" id="customer-email" class="hidden" aria-label="Customer email (hidden)">
                         </div>
                         <div class="input-group">
-                            <label for="customer-phone">📞 Phone Number</label>
-                            <input type="tel" id="customer-phone" placeholder="9123 4567" class="input-field">
+                            <label for="customer-phone">Phone</label>
+                            <input type="tel" id="customer-phone" placeholder="9123 4567" class="input-field" autocomplete="off" inputmode="tel">
                         </div>
                         <div class="input-group">
-                            <label for="customer-comment">💬 Comments / Special Instructions</label>
-                            <textarea id="customer-comment" placeholder="Any special requests or notes..." class="input-field textarea-resizable" rows="3"></textarea>
+                            <label for="customer-comment">Notes</label>
+                            <textarea id="customer-comment" placeholder="Engraving text, special requests" class="input-field textarea-resizable" rows="3"></textarea>
                         </div>
-                        
+
                         <div class="action-buttons">
-                            <button id="send-email-btn" class="btn-primary">
-                                <span>📬</span> Send Email
+                            <button id="send-email-btn" class="btn-primary" type="button">
+                                <svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg> Send invoice
                             </button>
                         </div>
                     </div>
@@ -200,12 +175,8 @@
 
             <section id="view-purchases" class="hidden" aria-label="Purchase history">
                 <div class="section-header">
-                    <h2 id="purchases-heading">
-                        <span class="paw-icon">📜</span>
-                        Purchases
-                        <span class="paw-icon">📜</span>
-                    </h2>
-                    <p class="section-subtitle">Click a purchase to see line items.</p>
+                    <h2 id="purchases-heading">Purchases</h2>
+                    <p class="section-subtitle">Tap a purchase to see its items.</p>
                 </div>
 
                 <div id="purchases-list" class="products-grid"></div>
@@ -215,16 +186,16 @@
         </main>
     </div>
 
-    <!-- UI Overlay System: Toasts & Modals -->
-    <div id="toast-container"></div>
+    <!-- Toasts and confirm dialog -->
+    <div id="toast-container" role="status" aria-live="polite"></div>
 
     <dialog id="custom-modal" class="custom-modal custom-modal-confirm">
         <div class="custom-modal-content">
-            <h3 id="modal-title" class="custom-modal-title">Confirm Action</h3>
+            <h3 id="modal-title" class="custom-modal-title">Confirm</h3>
             <p id="modal-message" class="custom-modal-message">Are you sure?</p>
             <div class="custom-modal-actions">
-                <button id="modal-cancel" class="btn-secondary modal-action-btn">Cancel</button>
-                <button id="modal-confirm" class="btn-primary btn-danger-soft modal-action-btn">Confirm</button>
+                <button id="modal-cancel" class="btn-secondary modal-action-btn" type="button">Cancel</button>
+                <button id="modal-confirm" class="btn-primary btn-danger-soft modal-action-btn" type="button">Confirm</button>
             </div>
         </div>
     </dialog>
@@ -232,6 +203,7 @@
     <!-- Shared utilities (must load first) -->
     <script src="js/config.public.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/utils.js"></script>
     <!-- EmailJS for client-side email sending -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -240,6 +212,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <!-- Main app script -->
     <script src="js/app.js"></script>
+    <script>
+        document.getElementById('sign-out-btn').addEventListener('click', () => window.WoofAuth.signOut());
+    </script>
 </body>
 </html>
 
