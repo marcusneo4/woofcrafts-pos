@@ -144,13 +144,43 @@ class ProductManager {
         reader.readAsDataURL(file);
     }
 
-    async saveImageAsDataURL(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
+    /**
+     * Shrink a photo before upload: phone photos are often 5-15 MB, which the bucket
+     * refuses, and a huge image makes the POS grid slow to load on mobile data.
+     * Returns a JPEG blob of roughly 150-300 KB, longest side 1200px.
+     */
+    async prepareImageForUpload(file) {
+        const MAX_SIDE = 1200;
+        const TARGET_BYTES = 300 * 1024;
+
+        let bitmap;
+        try {
+            bitmap = await createImageBitmap(file);
+        } catch (error) {
+            throw new Error('That photo format could not be read. Save it as JPG or PNG and try again.');
+        }
+
+        const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+        const width = Math.max(1, Math.round(bitmap.width * scale));
+        const height = Math.max(1, Math.round(bitmap.height * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0, width, height);
+        if (bitmap.close) bitmap.close();
+
+        const toBlob = (quality) => new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Could not process that photo. Try a different one.'))), 'image/jpeg', quality);
         });
+
+        let blob = await toBlob(0.82);
+        for (const quality of [0.7, 0.6, 0.5]) {
+            if (blob.size <= TARGET_BYTES) break;
+            blob = await toBlob(quality);
+        }
+        return blob;
     }
 
     async uploadProductImageToSupabase(file, productId) {
@@ -160,35 +190,28 @@ class ProductManager {
         const config = this.getSupabaseConfig();
         const bucketName = config.supabaseStorageBucket || 'product-images';
 
-        const originalName = file.name || 'product-image';
-        const sanitizedFilename = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const blob = await this.prepareImageForUpload(file);
 
-        // Deterministic path: stable per product id + original filename
-        const storagePath = `products/${productId}/${sanitizedFilename}`;
+        // One file per product, so replacing a photo never leaves orphans behind.
+        // The timestamp keeps the URL unique, so browsers don't show the old photo.
+        const storagePath = `products/${productId}/photo-${Date.now()}.jpg`;
 
-        try {
-            const { error: uploadError } = await supabaseClient.storage
-                .from(bucketName)
-                .upload(storagePath, file, {
-                    contentType: file.type || 'application/octet-stream',
-                    upsert: true
-                });
+        const { error: uploadError } = await supabaseClient.storage
+            .from(bucketName)
+            .upload(storagePath, blob, { contentType: 'image/jpeg', upsert: true });
 
-            if (uploadError) {
-                throw new Error(`Supabase storage upload failed: ${uploadError.message}`);
-            }
-
-            const { data } = supabaseClient.storage.from(bucketName).getPublicUrl(storagePath);
-            if (!data || !data.publicUrl) {
-                throw new Error('Supabase storage did not return a publicUrl');
-            }
-
-            return data.publicUrl;
-        } catch (error) {
-            console.error('Error uploading image to Supabase Storage:', error);
-            console.warn('Falling back to data URL storage');
-            return await this.saveImageAsDataURL(file);
+        if (uploadError) {
+            // No silent fallback: a photo stored in the database row would load on
+            // every POS visit and quietly slow the whole shop down.
+            throw new Error(`The photo did not upload (${uploadError.message}). Check the connection and try again.`);
         }
+
+        const { data } = supabaseClient.storage.from(bucketName).getPublicUrl(storagePath);
+        if (!data || !data.publicUrl) {
+            throw new Error('The photo uploaded but no link came back. Try saving again.');
+        }
+
+        return data.publicUrl;
     }
 
     async handleFormSubmit(event) {
@@ -198,11 +221,15 @@ class ProductManager {
         const name = (formData.get('name') || '').toString().trim();
         const description = (formData.get('description') || '').toString().trim();
         const price = parseFloat(formData.get('price') || 0);
-        const category = (formData.get('category') || 'general').toLowerCase();
+        const category = ((formData.get('category') || '').toString().trim().toLowerCase().replace(/\s+/g, ' ')) || 'general';
         const imageFile = formData.get('image');
 
-        if (!name || !price || price <= 0) {
-            ui.showToast('Enter a product name and a price of 0 or more.', 'error');
+        if (!name) {
+            ui.showToast('Enter a product name.', 'error');
+            return;
+        }
+        if (!Number.isFinite(price) || price < 0) {
+            ui.showToast('Enter a price of 0 or more.', 'error');
             return;
         }
 
@@ -218,9 +245,29 @@ class ProductManager {
 
         const wasEditing = Boolean(this.editingId);
         const productId = this.editingId || this.generateUuidV4();
+        const submitBtn = document.getElementById('submit-btn');
+        const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+        const busy = (label) => {
+            if (!submitBtn) return;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = iconSvg('refresh') + ' ' + label;
+        };
+        const done = () => {
+            if (!submitBtn) return;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnHtml;
+        };
+
         if (imageFile && imageFile.size > 0) {
-            // Upload image to Supabase Storage
-            imagePath = await this.uploadProductImageToSupabase(imageFile, productId);
+            busy('Uploading photo…');
+            try {
+                imagePath = await this.uploadProductImageToSupabase(imageFile, productId);
+            } catch (error) {
+                console.error('Error uploading product photo:', error);
+                done();
+                ui.showToast(error.message, 'error');
+                return;
+            }
         } else if (this.editingId) {
             // If editing and no new image, keep the existing image
             const existingProduct = this.products.find(p => p.id == this.editingId || String(p.id) === String(this.editingId));
@@ -230,11 +277,13 @@ class ProductManager {
         }
 
         if (!imagePath) {
+            done();
             ui.showToast('Choose a photo for the product.', 'error');
             return;
         }
 
         try {
+            busy('Saving…');
             await this.upsertProduct({
                 productId,
                 title: name,
@@ -248,6 +297,9 @@ class ProductManager {
             await this.loadProducts();
 
             this.renderProducts();
+            // Most stock is added in runs of the same kind, so keep the category.
+            try { localStorage.setItem('woofcrafts_last_category', category); } catch (error) { /* private mode */ }
+            done();
             this.resetForm();
 
             const action = wasEditing ? 'updated' : 'added';
@@ -258,6 +310,7 @@ class ProductManager {
             sessionStorage.setItem('woofcrafts_products_updated', Date.now().toString());
         } catch (error) {
             console.error('Error saving product:', error);
+            done();
             ui.showToast('Could not save the product. Check the connection and try again.', 'error');
         }
     }
@@ -325,8 +378,16 @@ class ProductManager {
         `;
         document.getElementById('product-id').value = '';
         this.editingId = null;
+        document.getElementById('submit-btn').disabled = false;
         document.getElementById('submit-btn').innerHTML = iconSvg('plus') + ' Add product';
         document.getElementById('cancel-edit-btn').classList.add('hidden');
+
+        const categoryEl = document.getElementById('product-category');
+        if (categoryEl) {
+            let last = '';
+            try { last = localStorage.getItem('woofcrafts_last_category') || ''; } catch (error) { /* private mode */ }
+            categoryEl.value = last || 'general';
+        }
     }
 
     renderProducts() {
@@ -348,6 +409,8 @@ class ProductManager {
             const productName = escapeHtml(product.name || '');
             let imageSrc = safeImageSrc(product.image) || PLACEHOLDER_LIST;
             if (!imageSrc) imageSrc = PLACEHOLDER_LIST;
+            // A photo kept inside the product row is downloaded on every POS visit.
+            const heavyPhoto = typeof product.image === 'string' && product.image.startsWith('data:');
 
             return `
             <div class="product-list-item">
@@ -356,6 +419,7 @@ class ProductManager {
                 <div class="product-list-info">
                     <div class="product-list-name">${productName}</div>
                     <div class="product-list-price">$${parseFloat(product.price).toFixed(2)}</div>
+                    ${heavyPhoto ? `<p class="product-list-warning">${iconSvg('alert')} This photo is stored the slow way and holds up the POS. Press Edit and choose the photo again to fix it.</p>` : ''}
                 </div>
                 <div class="product-list-actions">
                     <button class="btn-edit" onclick='productManager.editProduct(${JSON.stringify(product.id)})' title="Edit this product">${iconSvg('edit')} Edit</button>

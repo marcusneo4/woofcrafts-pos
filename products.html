@@ -75,19 +75,21 @@
 
                     <div class="form-group">
                         <label for="product-category">Category</label>
-                        <select id="product-category" name="category" class="input-field">
-                            <option value="general">General</option>
-                            <option value="tags">Tags</option>
-                            <option value="addons">Addons</option>
-                            <option value="photoframes">Photo Frames</option>
-                            <option value="christmas">Christmas</option>
-                            <option value="promotion">Promotion</option>
-                            <option value="toys">Toys</option>
-                            <option value="treats">Treats</option>
-                            <option value="food">Food</option>
-                            <option value="grooming">Grooming</option>
-                            <option value="accessories">Accessories</option>
-                        </select>
+                        <input type="text" id="product-category" name="category" class="input-field" list="category-list" value="general" autocomplete="off" placeholder="general">
+                        <datalist id="category-list">
+                            <option value="general"></option>
+                            <option value="tags"></option>
+                            <option value="addons"></option>
+                            <option value="photoframes"></option>
+                            <option value="christmas"></option>
+                            <option value="promotion"></option>
+                            <option value="toys"></option>
+                            <option value="treats"></option>
+                            <option value="food"></option>
+                            <option value="grooming"></option>
+                            <option value="accessories"></option>
+                        </datalist>
+                        <p class="field-note">Pick one, or type a new category name.</p>
                     </div>
 
                     <div class="form-group">

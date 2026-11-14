@@ -1,0 +1,38 @@
+const nodemailer=require(require('path').join((process.argv[2] || require('path').join(__dirname, '..')),'node_modules/nodemailer'));
+let sent=null;
+nodemailer.createTransport=()=>({sendMail:async(m)=>{sent=m;return {messageId:'<id>'}}});
+globalThis.fetch=async()=>({ok:true,json:async()=>({app_metadata:{role:'pos_staff'}})});
+process.env.SUPABASE_URL='https://x.supabase.co';process.env.SUPABASE_ANON_KEY='k';
+process.env.GMAIL_USER='marcusneo4@gmail.com';process.env.GMAIL_APP_PASSWORD='pw';
+const handler=require(require('path').join((process.argv[2] || require('path').join(__dirname, '..')),'api/send-invoice.js'));
+const pdf=Buffer.alloc(2000,7).toString('base64');
+let pass=0,fail=0;const ok=(c,n)=>{c?pass++:fail++;console.log((c?'PASS ':'FAIL ')+n)};
+const run=async(order,extra={})=>{sent=null;
+ const req={method:'POST',headers:{authorization:'Bearer t'},body:{pdfBase64:pdf,customerEmail:'yz@example.com',customerName:'yz',purchaseDate:'2026-11-14T17:53:03Z',invoiceNumber:'001000',fileName:'WoofCrafts_Order_001000.pdf',order,...extra}};
+ let out='';const res={statusCode:0,setHeader(){},end(b){out=b}};
+ await handler(req,res);return {res,body:JSON.parse(out)};};
+
+(async()=>{
+ let r=await run({items:[{name:'Wavy Tag',quantity:1,subtotal:15}],subtotal:15,discountAmount:0,deliveryFee:2.5,deliveryMethod:'delivery',total:17.5,customerComment:'I WANT IT PRETTTY'});
+ ok(r.res.statusCode===200&&r.body.success,'200 success');
+ ok(sent.from==='WoofCrafts <marcusneo4@gmail.com>','from shows shop name: '+sent.from);
+ ok(sent.replyTo==='marcusneo4@gmail.com','replyTo: '+sent.replyTo);
+ ok(sent.subject==='Your WoofCrafts invoice #001000','subject: '+sent.subject);
+ ok(JSON.stringify(sent.bcc)==='["marissaneo3110@gmail.com","leeyuanzhang28@gmail.com"]','bcc both staff');
+ ok(/15 Nov 2026/.test(sent.html)&&!/14 Nov/.test(sent.html),'date is Singapore 15 Nov (was UTC 14 Nov)');
+ ok(/Wavy Tag/.test(sent.html)&&/\$17\.50/.test(sent.html)&&/\$2\.50/.test(sent.html),'html has item, delivery and total');
+ ok(/I WANT IT PRETTTY/.test(sent.html)&&/I WANT IT PRETTTY/.test(sent.text),'note shown in both parts');
+ ok(/Wavy Tag x 1 - \$15\.00/.test(sent.text)&&/Total - \$17\.50/.test(sent.text),'text part has the lines');
+ ok(sent.attachments[0].filename==='WoofCrafts_Order_001000.pdf'&&sent.attachments[0].content.length>1000,'pdf attached');
+ ok(!/undefined|NaN|\[object/.test(sent.html+sent.text),'no undefined/NaN leaked');
+ r=await run({items:[{name:'Tag',quantity:2,subtotal:30}],subtotal:30,discountAmount:1.5,deliveryFee:0,deliveryMethod:'pickup',total:28.5});
+ ok(/Pickup/.test(sent.html)&&/-\$1\.50/.test(sent.html),'pickup + discount rows');
+ ok(!/Your note/.test(sent.html),'no empty note block');
+ r=await run({items:[{name:'<img src=x onerror=alert(1)>Bad',quantity:1,subtotal:5}],subtotal:5,deliveryFee:2.5,total:7.5,customerComment:'<script>x</script>'});
+ ok(!/<img src=x/.test(sent.html)&&!/<script>/.test(sent.html)&&/&lt;img/.test(sent.html),'html is escaped');
+ r=await run(undefined);
+ ok(r.res.statusCode===200&&!/Subtotal/.test(sent.html)&&/Hi yz/.test(sent.html),'still sends if order summary missing');
+ globalThis.fetch=async()=>({ok:false});
+ r=await run({});ok(r.res.statusCode===401,'rejects when not staff');
+ console.log(`\n${pass} passed, ${fail} failed`);process.exit(fail?1:0);
+})().catch(e=>{console.error('ERR',e);process.exit(2)});

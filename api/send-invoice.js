@@ -90,6 +90,7 @@ module.exports = async function sendInvoiceHandler(req, res) {
         const purchaseDateRaw = payload.purchaseDate;
         const invoiceNumberRaw = payload.invoiceNumber;
         const fileNameRaw = payload.fileName;
+        const order = (payload.order && typeof payload.order === 'object') ? payload.order : {};
 
         if (!pdfBase64Raw || typeof pdfBase64Raw !== 'string') {
             res.statusCode = 400;
@@ -154,12 +155,13 @@ module.exports = async function sendInvoiceHandler(req, res) {
             }
         });
 
-        const mailFrom = process.env.GMAIL_FROM || process.env.EMAIL_FROM || emailUser;
+        // Show the shop's name rather than a bare Gmail address in the inbox.
+        const mailFrom = process.env.GMAIL_FROM || process.env.EMAIL_FROM || `WoofCrafts <${emailUser}>`;
+        const replyTo = process.env.INVOICE_REPLY_TO || 'marcusneo4@gmail.com';
         // Staff copies go out as BCC on every invoice, so the customer never sees these addresses.
         const copyTo = (process.env.INVOICE_COPY_TO || 'marissaneo3110@gmail.com,leeyuanzhang28@gmail.com')
             .split(',').map((a) => a.trim()).filter(Boolean);
-        const subjectBase = process.env.INVOICE_SUBJECT || 'WoofCrafts Invoice';
-        const storeName = 'WoofCrafts';
+        const subjectBase = process.env.INVOICE_SUBJECT || 'Your WoofCrafts invoice';
 
         const sanitizeInlineText = (value, fallback) => {
             if (typeof value !== 'string') return fallback;
@@ -168,12 +170,21 @@ module.exports = async function sendInvoiceHandler(req, res) {
             return trimmed.slice(0, 120);
         };
 
+        const escapeHtml = (value) => String(value == null ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+        const money = (value) => `$${Number(value || 0).toFixed(2)}`;
+
+        // The shop and its customers are in Singapore, so the date on the email has
+        // to match the date on the receipt rather than the server's UTC clock.
         const formatPurchaseDate = (value) => {
             try {
-                if (!value) return '';
-                const date = (value instanceof Date) ? value : new Date(String(value));
+                const date = value ? new Date(String(value)) : new Date();
                 if (Number.isNaN(date.getTime())) return '';
-                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                return new Intl.DateTimeFormat('en-GB', {
+                    timeZone: 'Asia/Singapore', day: 'numeric', month: 'short', year: 'numeric'
+                }).format(date);
             } catch {
                 return '';
             }
@@ -184,28 +195,105 @@ module.exports = async function sendInvoiceHandler(req, res) {
         const safeInvoiceNumber = sanitizeInlineText(invoiceNumberRaw, '');
         const formattedPurchaseDate = formatPurchaseDate(purchaseDateRaw);
 
-        const emailLines = [
+        const items = Array.isArray(order.items) ? order.items.slice(0, 60) : [];
+        const discountAmount = Number(order.discountAmount || 0);
+        const deliveryFee = Number(order.deliveryFee || 0);
+        const isPickup = order.deliveryMethod === 'pickup';
+        const comment = sanitizeInlineText(order.customerComment, '');
+        const hasTotals = items.length > 0 || Number(order.total || 0) > 0;
+
+        const deliveryText = isPickup ? 'Pickup' : (deliveryFee > 0 ? money(deliveryFee) : 'Free');
+
+        // ---- Plain text, for mail apps that do not show HTML
+        const textLines = [
             `Hi ${greetingName},`,
             '',
-            `Thank you for shopping with ${storeName}.`,
-            '',
-            `Attached is your invoice${safeInvoiceNumber ? ` #${safeInvoiceNumber}` : ''}${formattedPurchaseDate ? ` for your recent in-store purchase on ${formattedPurchaseDate}` : ''}.`,
-            'It lists the items, any discount, delivery and the total.',
-            '',
-            'Please keep this email and the attached PDF for your records.',
-            'We appreciate your business and look forward to serving you again.',
-            '',
-            storeName
+            "Thanks for shopping with WoofCrafts! Here's your invoice for today's order.",
+            ''
         ];
+        if (safeInvoiceNumber || formattedPurchaseDate) {
+            textLines.push(`Invoice #${safeInvoiceNumber}${formattedPurchaseDate ? ` - ${formattedPurchaseDate}` : ''}`);
+        }
+        items.forEach((item) => {
+            textLines.push(`${sanitizeInlineText(item && item.name, 'Item')} x ${Number((item && item.quantity) || 0)} - ${money(item && item.subtotal)}`);
+        });
+        if (hasTotals) {
+            textLines.push(`Subtotal - ${money(order.subtotal)}`);
+            if (discountAmount > 0) textLines.push(`Discount - -${money(discountAmount)}`);
+            textLines.push(`Delivery - ${deliveryText}`);
+            textLines.push(`Total - ${money(order.total)}`);
+        }
+        if (comment) {
+            textLines.push('', `Your note: "${comment}"`);
+        }
+        textLines.push(
+            '',
+            'The PDF invoice is attached for your records. Reply to this email if anything is not right.',
+            '',
+            'Woof woof,',
+            'The WoofCrafts team'
+        );
+        const emailText = textLines.join('\n');
 
-        const emailText = emailLines.join('\n');
+        // ---- HTML, in the shop's own beige and brown
+        const c = { paper: '#F5EFE6', card: '#FFFDF9', line: '#E2D2BA', ink: '#3B2E22', muted: '#6A573F', brand: '#8A5A2B' };
+        const rowStyle = `padding:8px 0;border-bottom:1px solid ${c.line};font-size:15px;color:${c.ink};`;
+        const itemRows = items.map((item) => `
+            <tr>
+              <td style="${rowStyle}">${escapeHtml(sanitizeInlineText(item && item.name, 'Item'))}
+                <span style="color:${c.muted};">&times; ${escapeHtml(String(Number((item && item.quantity) || 0)))}</span>
+              </td>
+              <td align="right" style="${rowStyle}">${escapeHtml(money(item && item.subtotal))}</td>
+            </tr>`).join('');
+
+        const totalRow = (label, value, strong) => `
+            <tr>
+              <td style="padding:${strong ? '12px 0 0' : '6px 0 0'};font-size:${strong ? '17px' : '15px'};color:${strong ? c.ink : c.muted};${strong ? 'font-weight:700;' : ''}">${escapeHtml(label)}</td>
+              <td align="right" style="padding:${strong ? '12px 0 0' : '6px 0 0'};font-size:${strong ? '17px' : '15px'};color:${strong ? c.brand : c.muted};${strong ? 'font-weight:700;' : ''}">${escapeHtml(value)}</td>
+            </tr>`;
+
+        const summaryBlock = hasTotals ? `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0;">
+            ${itemRows}
+            ${totalRow('Subtotal', money(order.subtotal), false)}
+            ${discountAmount > 0 ? totalRow('Discount', `-${money(discountAmount)}`, false) : ''}
+            ${totalRow('Delivery', deliveryText, false)}
+            ${totalRow('Total', money(order.total), true)}
+          </table>` : '';
+
+        const noteBlock = comment ? `
+          <p style="margin:18px 0 0;padding:12px 14px;background:${c.paper};border-radius:10px;font-size:15px;color:${c.ink};">
+            <span style="color:${c.muted};">Your note:</span> ${escapeHtml(comment)}
+          </p>` : '';
+
+        const emailHtml = `<!DOCTYPE html>
+<html><body style="margin:0;padding:24px 12px;background:${c.paper};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:${c.card};border:1px solid ${c.line};border-radius:16px;">
+    <tr><td style="padding:28px 28px 0;">
+      <p style="margin:0;font-size:22px;font-weight:700;color:${c.brand};">WoofCrafts</p>
+      <p style="margin:4px 0 0;font-size:14px;color:${c.muted};">
+        ${safeInvoiceNumber ? `Invoice #${escapeHtml(safeInvoiceNumber)}` : 'Invoice'}${formattedPurchaseDate ? ` &middot; ${escapeHtml(formattedPurchaseDate)}` : ''}
+      </p>
+    </td></tr>
+    <tr><td style="padding:20px 28px 28px;">
+      <p style="margin:0;font-size:16px;color:${c.ink};">Hi ${escapeHtml(greetingName)},</p>
+      <p style="margin:10px 0 0;font-size:16px;color:${c.ink};">Thanks for shopping with WoofCrafts! Here&#39;s your invoice for today&#39;s order.</p>
+      ${summaryBlock}
+      ${noteBlock}
+      <p style="margin:22px 0 0;font-size:15px;color:${c.muted};">The PDF invoice is attached for your records. Reply to this email if anything isn&#39;t right.</p>
+      <p style="margin:18px 0 0;font-size:15px;color:${c.ink};">Woof woof,<br>The WoofCrafts team</p>
+    </td></tr>
+  </table>
+</body></html>`;
 
         const info = await invoiceTransporter.sendMail({
             from: mailFrom,
             to: customerEmail,
             bcc: copyTo,
+            replyTo: replyTo,
             subject: safeInvoiceNumber ? `${subjectBase} #${safeInvoiceNumber}` : subjectBase,
             text: emailText,
+            html: emailHtml,
             attachments: [
                 {
                     filename: sanitizedFileName,

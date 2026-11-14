@@ -1159,11 +1159,9 @@ class POSApp {
         const createdDate = orderDetails.orderDate
             ? new Date(orderDetails.orderDate)
             : new Date();
-        const formattedDate = createdDate.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        const formattedDate = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Singapore', day: 'numeric', month: 'short', year: 'numeric'
+        }).format(createdDate);
 
         const customerName = orderDetails.customerName || 'Customer';
         const customerEmail = orderDetails.customerEmail || '';
@@ -1196,10 +1194,6 @@ class POSApp {
         doc.setFontSize(24);
         doc.setTextColor(...palette.brand);
         doc.text('WoofCrafts', marginLeft + 20, 60);
-
-        doc.setFontSize(11);
-        doc.setTextColor(...palette.muted);
-        doc.text('Pet boutique invoice', marginLeft + 20, 80);
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(13);
@@ -1430,7 +1424,16 @@ class POSApp {
                     customerName: customerNameRaw,
                     purchaseDate: orderDateIso,
                     invoiceNumber: orderDetails.orderId,
-                    fileName
+                    fileName,
+                    order: {
+                        items: orderDetails.items,
+                        subtotal: orderDetails.subtotal,
+                        discountAmount: orderDetails.discountAmount,
+                        deliveryFee: orderDetails.deliveryFee,
+                        deliveryMethod: orderDetails.deliveryMethod,
+                        customerComment: orderDetails.customerComment,
+                        total: orderDetails.total
+                    }
                 })
             });
 
