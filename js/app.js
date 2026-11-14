@@ -10,6 +10,7 @@ class POSApp {
         this.purchaseCache = new Map();
         this.purchasesLoaded = false;
         this.lastPurchasesSource = 'unknown'; // 'supabase' | 'local'
+        this.loadError = null;
         this.activeCategory = 'all';
         this.deliveryEnabled = true;   // staff can switch delivery off for on-the-spot sales
         this.FREE_DELIVERY_MIN = 50;   // SGD, measured after any discount
@@ -54,6 +55,7 @@ class POSApp {
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
+                this.loadError = null;
 
                 if (Array.isArray(data) && data.length > 0) {
                     this.products = data.map((row) => {
@@ -77,6 +79,9 @@ class POSApp {
                 }
             } catch (error) {
                 console.error('Could not load products from Supabase:', error);
+                // An unexplained empty grid is the worst thing to hand someone at a
+                // market stall, so the page says what happened and offers a retry.
+                this.loadError = error.message || 'The connection failed';
                 this.products = [];
                 return;
             }
@@ -653,6 +658,24 @@ class POSApp {
         // Filter out any invalid products
         const validProducts = this.products.filter(product => product && product.id && product.name);
         this.renderCategoryFilter(validProducts);
+
+        if (this.loadError) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">${iconSvg('alert')}</span>
+                    <p>Products did not load</p>
+                    <p class="empty-state-note">${escapeHtml(this.loadError)}</p>
+                    <button type="button" class="btn-secondary" id="retry-products-btn">${iconSvg('refresh')} Try again</button>
+                </div>
+            `;
+            const retry = document.getElementById('retry-products-btn');
+            if (retry) retry.addEventListener('click', async () => {
+                retry.disabled = true;
+                await this.loadProducts();
+                this.renderProducts();
+            });
+            return;
+        }
 
         if (validProducts.length === 0) {
             grid.innerHTML = `

@@ -48,5 +48,12 @@ const submit=async(pm,data)=>{toasts.length=0;return pm.handleFormSubmit({preven
  pm.products=[{id:'1',name:'Heavy',price:5,image:'data:image/jpeg;base64,AAAA',category:'x'},{id:'2',name:'Fine',price:5,image:'https://x/p.jpg',category:'x'}];
  delete pm.renderProducts;const list=mk('products-list');ctx.ProductManager.prototype.renderProducts.call(pm);
  ok((list.innerHTML.match(/product-list-warning/g)||[]).length===1&&/Heavy/.test(list.innerHTML),'only the heavy photo is flagged');
+ pm.loadError='TypeError: Failed to fetch';
+ ctx.ProductManager.prototype.renderProducts.call(pm);
+ ok(/did not load/.test(list.innerHTML)&&/Failed to fetch/.test(list.innerHTML)&&/retry-products-btn/.test(list.innerHTML),'load failure shows a reason and a retry button');
+ ok(!/No products yet/.test(list.innerHTML),'load failure is not shown as an empty shop');
+ pm.loadError=null;pm.products=[{id:'3',name:'NoPic',price:5,image:'',category:'x'}];
+ ctx.ProductManager.prototype.renderProducts.call(pm);
+ ok(/No photo yet/.test(list.innerHTML),'product with no photo is flagged');
  console.log(`\n${pass} passed, ${fail} failed`);process.exit(fail?1:0);
 })().catch(e=>{console.error('ERR',e);process.exit(2)});

@@ -5,6 +5,7 @@ class ProductManager {
     constructor() {
         this.products = [];
         this.editingId = null;
+        this.loadError = null;
         this.supabaseClientPromise = null;
         
         this.init();
@@ -29,6 +30,7 @@ class ProductManager {
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
+                this.loadError = null;
 
                 if (Array.isArray(data)) {
                     this.products = data.map((row) => {
@@ -46,6 +48,9 @@ class ProductManager {
                 }
             } catch (error) {
                 console.error('Could not load products from Supabase:', error);
+                // Say so on the page: an empty list that means "failed to load"
+                // looks exactly like an empty list that means "no products".
+                this.loadError = error.message || 'The connection failed';
                 this.products = [];
                 return;
             }
@@ -394,6 +399,24 @@ class ProductManager {
         const list = document.getElementById('products-list');
         if (!list) return;
 
+        if (this.loadError) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">${iconSvg('alert')}</span>
+                    <p>The product list did not load</p>
+                    <p class="empty-state-note">${escapeHtml(this.loadError)}</p>
+                    <button type="button" class="btn-secondary" id="retry-products-btn">${iconSvg('refresh')} Try again</button>
+                </div>
+            `;
+            const retry = document.getElementById('retry-products-btn');
+            if (retry) retry.addEventListener('click', async () => {
+                retry.disabled = true;
+                await this.loadProducts();
+                this.renderProducts();
+            });
+            return;
+        }
+
         if (this.products.length === 0) {
             list.innerHTML = `
                 <div class="empty-state">
@@ -411,6 +434,7 @@ class ProductManager {
             if (!imageSrc) imageSrc = PLACEHOLDER_LIST;
             // A photo kept inside the product row is downloaded on every POS visit.
             const heavyPhoto = typeof product.image === 'string' && product.image.startsWith('data:');
+            const noPhoto = !product.image;
 
             return `
             <div class="product-list-item">
@@ -420,6 +444,7 @@ class ProductManager {
                     <div class="product-list-name">${productName}</div>
                     <div class="product-list-price">$${parseFloat(product.price).toFixed(2)}</div>
                     ${heavyPhoto ? `<p class="product-list-warning">${iconSvg('alert')} This photo is stored the slow way and holds up the POS. Press Edit and choose the photo again to fix it.</p>` : ''}
+                    ${noPhoto ? `<p class="product-list-warning">${iconSvg('alert')} No photo yet. Press Edit and choose one.</p>` : ''}
                 </div>
                 <div class="product-list-actions">
                     <button class="btn-edit" onclick='productManager.editProduct(${JSON.stringify(product.id)})' title="Edit this product">${iconSvg('edit')} Edit</button>
