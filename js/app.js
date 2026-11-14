@@ -701,7 +701,7 @@ class POSApp {
             return `
                 <div class="product-card" onclick='safeAddToCart(${safeId})'>
                     <div class="product-media">
-                        <img src="${escapeHtml(imageSrc)}" alt="${productName}" class="product-image"
+                        <img src="${escapeHtml(imageSrc)}" alt="${productName}" class="product-image" loading="lazy" decoding="async"
                              onerror="this.onerror=null; this.src='${PLACEHOLDER_IMAGE}'">
                         <div class="product-price">$${parseFloat(product.price).toFixed(2)}</div>
                     </div>

@@ -155,8 +155,11 @@ class ProductManager {
      * Returns a JPEG blob of roughly 150-300 KB, longest side 1200px.
      */
     async prepareImageForUpload(file) {
-        const MAX_SIDE = 1200;
-        const TARGET_BYTES = 300 * 1024;
+        // Product photos are shown at thumbnail size, so 900px is already more
+        // than a retina screen needs. Small files keep the POS quick on mobile data.
+        const MAX_SIDE = 900;
+        const TARGET_BYTES = 150 * 1024;
+        const HARD_LIMIT = 1024 * 1024;
 
         let bitmap;
         try {
@@ -180,10 +183,14 @@ class ProductManager {
             canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Could not process that photo. Try a different one.'))), 'image/jpeg', quality);
         });
 
-        let blob = await toBlob(0.82);
-        for (const quality of [0.7, 0.6, 0.5]) {
+        let blob = await toBlob(0.8);
+        for (const quality of [0.7, 0.6, 0.5, 0.4]) {
             if (blob.size <= TARGET_BYTES) break;
             blob = await toBlob(quality);
+        }
+        if (blob.size > HARD_LIMIT) {
+            // Belt and braces: nothing oversized ever reaches the product list.
+            throw new Error('That photo could not be made small enough. Try a simpler photo or crop it first.');
         }
         return blob;
     }
@@ -438,7 +445,7 @@ class ProductManager {
 
             return `
             <div class="product-list-item">
-                <img src="${escapeHtml(imageSrc)}" alt="${productName}" class="product-list-image"
+                <img src="${escapeHtml(imageSrc)}" alt="${productName}" class="product-list-image" loading="lazy" decoding="async"
                      onerror="this.onerror=null; this.src='${PLACEHOLDER_LIST}'">
                 <div class="product-list-info">
                     <div class="product-list-name">${productName}</div>
