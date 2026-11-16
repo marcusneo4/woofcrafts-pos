@@ -41,7 +41,7 @@ let pass=0,fail=0;const ok=(c,n)=>{c?pass++:fail++;console.log((c?'PASS ':'FAIL 
  app.cart=[{productId:1,name:'Tag',price:52,quantity:1}];app.discountApplied=true;app.updateTotals();
  ok(fee()==='$2.50'&&tot()==='$51.90','52 with 5% off = 49.40 -> delivery charged, total 51.90 ('+tot()+')');
  app.discountApplied=false;app.cart=[{productId:1,name:'Tag',price:35,quantity:1}];
- app.setFulfilment('collect');app.updateTotals();
+ app.setFulfilment('taken_now');app.updateTotals();
  ok(fee()==='Pickup'&&tot()==='$35.00'&&hint().classList.contains('hidden'),'pickup: no fee, total 35, hint hidden');
  app.setFulfilment('delivery');app.cart=[];app.updateTotals();
  ok(tot()==='$0.00','empty cart total 0');
@@ -56,7 +56,7 @@ let pass=0,fail=0;const ok=(c,n)=>{c?pass++:fail++;console.log((c?'PASS ':'FAIL 
  ok(app.cart.length===0&&app.pendingOrderId===null&&app.fulfilmentTouched===false&&app.paymentMethod==='','cart cleared, pending id reset, choices reset');
  ok(/Order #001000 saved/.test(els['order-done-body'].innerHTML)&&els['order-done'].open===true,'saved screen shown for 001000');
  // second order, pickup
- app.cart=[{productId:1,name:'Tag',price:35,quantity:1}];app.setFulfilment('collect');app.paymentMethod='cash';mk('customer-email').value='c@d.co';
+ app.cart=[{productId:1,name:'Tag',price:35,quantity:1}];app.setFulfilment('taken_now');app.paymentMethod='cash';mk('customer-email').value='c@d.co';
  await app.sendOrderEmail();
  ins=calls.inserts[1].row;
  ok(ins.order_id==='001001'&&ins.delivery_fee===0&&ins.total===35,'order 001001 pickup: delivery 0, total 35');

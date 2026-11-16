@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),path=require('path');const root=(process.argv[2] || require('path').join(__dirname, '..'));
-const els={};const mk=(id)=>{const cls=new Set();return els[id]||(els[id]={id,value:'',innerHTML:'',textContent:'',disabled:false,files:[],style:{},classList:{add:c=>cls.add(c),remove:c=>cls.delete(c),contains:c=>cls.has(c)},addEventListener(){},reset(){Object.values(els).forEach(e=>{});},scrollIntoView(){},focus(){}})};
+const els={};const mk=(id)=>{const cls=new Set();return els[id]||(els[id]={id,value:'',innerHTML:'',textContent:'',disabled:false,files:[],style:{},classList:{toggle(c,f){f?cls.add(c):cls.delete(c)},add:c=>cls.add(c),remove:c=>cls.delete(c),contains:c=>cls.has(c)},addEventListener(){},reset(){Object.values(els).forEach(e=>{});},scrollIntoView(){},focus(){}})};
 const toasts=[];const up={calls:[],fail:false,upsert:[],deleted:[]};let rows=[];
 const doc={getElementById:mk,querySelector:()=>({scrollIntoView(){}}),querySelectorAll:()=>[],addEventListener(){},createElement:()=>({getContext:()=>({drawImage(){}}),toBlob(cb){cb({size:1000})}}),body:{classList:{add(){},remove(){}}}};
 const ctx={document:doc,console,Intl,Date,Math,JSON,Promise,Map,Set,Number,setTimeout,FileReader:function(){this.readAsDataURL=()=>{this.onload&&this.onload({target:{result:'data:image/jpeg;base64,AA'}})}},
@@ -16,19 +16,22 @@ for(const f of ['js/utils.js','js/products.js'])vm.runInContext(fs.readFileSync(
 vm.runInContext('globalThis.ProductManager=ProductManager;',ctx);
 ctx.ui.showToast=(m,t)=>toasts.push({m,t});ctx.ui.confirm=async()=>true;
 let pass=0,fail=0;const ok=(c,n)=>{c?pass++:fail++;console.log((c?'PASS ':'FAIL ')+n)};
-const submit=async(pm,data)=>{toasts.length=0;return pm.handleFormSubmit({preventDefault(){},target:{__data:data}})};
+const submit=async(pm,data)=>{toasts.length=0;if(data.category!==undefined){if(data.newCategory){els['product-category'].value='__new__';mk('product-category-new').value=data.category}else els['product-category'].value=data.category}return pm.handleFormSubmit({preventDefault(){},target:{__data:data}})};
 (async()=>{
  const pm=new ctx.ProductManager();await new Promise(r=>setTimeout(r,30));
  pm.prepareImageForUpload=async()=>({size:180*1024});
  pm.renderProducts=()=>{};
  const file={name:'IMG_4821.HEIC',size:8*1024*1024,type:'image/heic'};
- await submit(pm,{name:'Candy Cane',price:'18',category:'  Christmas Gifts  ',image:file});
+ await submit(pm,{name:'Candy Cane',price:'18',category:'  Christmas Gifts  ',newCategory:true,image:file});
  ok(up.upsert[0]&&up.upsert[0].category==='christmas gifts','typed category is tidied: '+(up.upsert[0]||{}).category);
  ok(/^https:.*product-images\/products\/.*\/photo-\d+\.jpg$/.test(up.upsert[0].image_url),'photo went to storage as jpg: '+up.upsert[0].image_url.slice(-30));
  ok(ctx.localStorage.getItem('woofcrafts_last_category')==='christmas gifts','last category remembered');
  ok(els['submit-btn'].disabled===false,'button re-enabled after save');
  ok(toasts.some(t=>t.t==='success'),'success toast');
  pm.resetForm();ok(els['product-category'].value==='christmas gifts','form reopens with last category');
+ {const opts=pm.categoryChoices();ok(opts.includes('general')&&opts.includes('tags')&&opts.includes('christmas gifts'),'dropdown lists standard and in-use categories');
+  pm.setCategoryValue('tags');await submit(pm,{name:'Ribbon',price:'5',category:'tags',image:file});ok(up.upsert.at(-1).category==='tags','picking an existing category saves it');
+   mk('product-category-new').value='  Leashes ';els['product-category'].value='__new__';ok(pm.getCategoryValue()==='leashes','New category box is tidied and used');}
  up.fail=true;const before=up.upsert.length;
  await submit(pm,{name:'Big Tag',price:'20',category:'tags',image:file});
  ok(up.upsert.length===before,'upload failure saves nothing');

@@ -75,25 +75,16 @@
 
                     <div class="form-group">
                         <label for="product-category">Category</label>
-                        <input type="text" id="product-category" name="category" class="input-field" list="category-list" value="general" autocomplete="off" placeholder="general">
-                        <datalist id="category-list">
-                            <option value="general"></option>
-                            <option value="tags"></option>
-                            <option value="addons"></option>
-                            <option value="photoframes"></option>
-                            <option value="christmas"></option>
-                            <option value="promotion"></option>
-                            <option value="toys"></option>
-                            <option value="treats"></option>
-                            <option value="food"></option>
-                            <option value="grooming"></option>
-                            <option value="accessories"></option>
-                        </datalist>
-                        <p class="field-note">Pick one, or type a new category name.</p>
+                        <select id="product-category" name="category" class="input-field"><option value="general">General</option></select>
+                        <input type="text" id="product-category-new" class="input-field hidden" placeholder="Type the new category name" autocomplete="off" aria-label="New category name">
+                        <p class="field-note">The product appears under this filter on the POS screen. Choose New category… to start a new one.</p>
                     </div>
 
                     <div class="form-group">
-                        <label class="choice choice-wide"><input type="checkbox" id="product-needs-details" name="needsDetails"><span><strong>Asks for engraving details</strong> Shows a card for each one in the cart: pet's name, ring colour, front and back text. Leave off for charms and other add-ons.</span></label>
+                        <label class="switch-row" for="product-needs-details">
+                            <input type="checkbox" id="product-needs-details" name="needsDetails">
+                            <span class="switch-text"><strong>Asks for engraving details</strong><small>Shows a card for each one in the cart: pet's name, ring colour, front and back text. Leave off for charms and other add-ons.</small></span>
+                        </label>
                     </div>
 
                     <div class="form-group">

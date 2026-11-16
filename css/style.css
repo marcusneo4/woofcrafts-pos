@@ -906,6 +906,7 @@ textarea.textarea-short { min-height: 4.5rem; }
         height: calc(100dvh - var(--header-h) - var(--gap) * 2);
         min-height: 20rem;
     }
+    .purchases-sidebar > :not(.purchases-list) { flex-shrink: 0; }
     .purchases-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--space-1) var(--space-2) 0; }
     .purchase-date-heading { position: sticky; top: 0; z-index: 1; }
     .purchase-details-pane { display: block; min-width: 0; }
@@ -1008,7 +1009,8 @@ textarea.textarea-short { min-height: 4.5rem; }
 .summary-grid strong { font-size: var(--fs-lg); font-weight: 800; }
 .summary-pay { margin: var(--space-2) 0 0; text-align: center; font-size: var(--fs-xs); color: var(--muted); font-weight: 700; }
 
-.status-filters { display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: var(--space-2); margin-bottom: var(--space-2); }
+.status-filters { display: flex; flex-wrap: nowrap; gap: var(--space-2); overflow-x: auto; overflow-y: hidden; padding: 2px 2px var(--space-2); margin-bottom: var(--space-2); min-height: 3.25rem; flex-shrink: 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.status-filters::-webkit-scrollbar { display: none; }
 .filter-chip { flex: 0 0 auto; min-height: 2.75rem; padding: 0 var(--space-3); border-radius: 999px; border: 2px solid var(--line-control); background: var(--card); color: var(--ink); font-weight: 700; font-size: var(--fs-sm); }
 .filter-chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
 .filter-count { opacity: 0.8; font-weight: 600; }
@@ -1080,3 +1082,12 @@ fieldset.edit-tag legend { padding: 0 var(--space-2); }
 .queue-list { list-style: none; margin: var(--space-3) 0; padding: 0; display: grid; gap: var(--space-2); }
 .queue-list li { padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); }
 .queue-error { color: var(--red); font-size: var(--fs-sm); }
+
+/* Products page: engraving switch row, new-category box */
+.switch-row { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3); border: 2px solid var(--line-control); border-radius: var(--radius-md); background: var(--card); cursor: pointer; }
+.switch-row input[type="checkbox"] { flex: 0 0 auto; width: 1.5rem; height: 1.5rem; margin: 0.1rem 0 0; accent-color: var(--ink); }
+.switch-text { display: grid; gap: 0.25rem; min-width: 0; }
+.switch-text strong { font-size: var(--fs-md); }
+.switch-text small { color: var(--muted); font-size: var(--fs-sm); line-height: 1.35; }
+#product-category-new { margin-top: var(--space-2); }
+#product-category-new.hidden { display: none; }

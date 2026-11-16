@@ -94,12 +94,12 @@ ctx.ui.confirm = async () => true;
     ok(/Order #001001 saved/.test(mk('order-done-body').innerHTML) && /No email given/.test(mk('order-done-body').innerHTML) && /order-done-share/.test(mk('order-done-body').innerHTML), 'saved screen offers Share invoice when there is no email');
     ok(app.lastInvoice && app.lastInvoice.orderId === '001001' && app.lastInvoice.pdfBase64 === 'QUJD', 'the invoice PDF is kept ready to share');
 
-    // ---- collect-at-booth tag order, no tags filled in: still made-to-order
+    // ---- delivery tag order, no tags filled in: still made-to-order
     app.cart = [{ productId: 1, name: 'Daisy Tag', price: 15, quantity: 1, needsDetails: true, tags: [{ pet: '', ring: '', front: '', back: '' }] }];
-    app.setFulfilment('collect'); app.setPaymentMethod('cash'); mk('customer-name').value = 'Lee'; mk('customer-phone').value = '81234567'; mk('customer-email').value = '';
+    app.setFulfilment('delivery'); app.setPaymentMethod('cash'); mk('customer-name').value = 'Lee'; mk('customer-phone').value = '81234567'; mk('customer-email').value = '';
     await app.sendOrderEmail();
     row = calls.inserts[2].row;
-    ok(row.fulfilment === 'collect' && row.status === 'to_make' && row.delivery_fee === 0 && row.tags.length === 1 && row.pet_name === null, 'collect-at-booth tag order: To make, no delivery fee');
+    ok(row.fulfilment === 'delivery' && row.status === 'to_make' && row.tags.length === 1 && row.pet_name === null, 'delivery tag order: To make');
 
     // ---- a charm for delivery needs no making, so it starts as Made
     app.cart = [{ productId: 2, name: 'Charms', price: 4, quantity: 1, needsDetails: false, tags: [] }];
@@ -143,7 +143,9 @@ ctx.ui.confirm = async () => true;
 
     // ---- the form follows the cart
     app.fulfilmentTouched = false; app.cart = [{ productId: 1, name: 'Daisy Tag', price: 15, quantity: 1, needsDetails: true, tags: [{ pet: '', ring: '', front: '', back: '' }] }];
-    app.afterCartChange(); ok(app.fulfilment === 'collect', 'a cart with tags defaults to Collect at booth');
+    app.afterCartChange(); ok(app.fulfilment === 'taken_now', 'a cart with tags defaults to Taken now (Collect at booth is gone)');
+    ok(!/data-fulfilment="collect"/.test(require('fs').readFileSync(path.join(root, 'pos.html'), 'utf8')), 'the order form no longer offers Collect at booth');
+    ok(app.fulfilmentLabel('collect') === 'Collect at booth', 'old orders saved as Collect at booth keep their label');
     app.cart = [{ productId: 2, name: 'Charms', price: 4, quantity: 1, needsDetails: false, tags: [] }];
     app.afterCartChange(); ok(app.fulfilment === 'taken_now', 'a charms-only cart defaults to Taken now');
     app.setFulfilment('delivery', true); app.afterCartChange(); ok(app.fulfilment === 'delivery', 'once staff choose, the cart stops choosing for them');

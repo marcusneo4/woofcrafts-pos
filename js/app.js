@@ -15,7 +15,7 @@ class POSApp {
         this.deliveryEnabled = false;  // true only when "Delivery" is chosen; set by setFulfilment()
         this.FREE_DELIVERY_MIN = 50;   // SGD, measured after any discount
         this.DELIVERY_FEE = 2.5;       // SGD
-        this.fulfilment = 'collect';   // 'taken_now' | 'collect' | 'delivery'
+        this.fulfilment = 'taken_now'; // 'taken_now' | 'delivery' ('collect' only on orders saved before it was removed)
         this.fulfilmentTouched = false; // true once staff pick a button, so the cart stops choosing for them
         this.paymentMethod = '';       // '', 'paynow' or 'cash'
         this.lastInvoice = null;       // most recent invoice PDF, for the Share button on the saved screen
@@ -2014,7 +2014,8 @@ class POSApp {
     static get FULFILMENT_INFO() {
         return {
             taken_now: { label: 'Taken now', note: 'Handed over now. No delivery fee. Name and phone are optional.' },
-            collect: { label: 'Collect at booth', note: 'The customer comes back for it. We need a name and phone to tell them when it is ready.' },
+            // No longer offered at the counter; kept so orders saved earlier still show their label.
+            collect: { label: 'Collect at booth', note: 'The customer comes back for it.', legacy: true },
             delivery: { label: 'Delivery', note: 'Posted to the customer. Delivery fee applies. Needs a name, phone and address.' }
         };
     }
@@ -2052,7 +2053,7 @@ class POSApp {
 
     afterCartChange() {
         if (!this.fulfilmentTouched) {
-            this.setFulfilment(this.cart.length === 0 ? 'collect' : (this.cartHasTags() ? 'collect' : 'taken_now'), false);
+            this.setFulfilment('taken_now', false);
         }
         this.renderTagDetails();
         this.updateSendButton();
@@ -3480,7 +3481,7 @@ class POSApp {
                 const el = document.getElementById(id);
                 if (el && POSApp.DRAFT_FIELDS.includes(id)) el.value = value;
             });
-            if (draft.fulfilment && POSApp.FULFILMENT_INFO[draft.fulfilment]) this.setFulfilment(draft.fulfilment, Boolean(draft.touched));
+            if (draft.fulfilment && POSApp.FULFILMENT_INFO[draft.fulfilment] && !POSApp.FULFILMENT_INFO[draft.fulfilment].legacy) this.setFulfilment(draft.fulfilment, Boolean(draft.touched));
             if (draft.payment) this.setPaymentMethod(draft.payment);
             // The email box is split into a name and a domain button; bring both back, then rebuild the address.
             if (draft.emailDomain) {

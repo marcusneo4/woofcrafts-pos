@@ -39,7 +39,7 @@ let pass=0,fail=0;const ok=(c,n)=>{c?pass++:fail++;console.log((c?'PASS ':'FAIL 
  app.products=[{id:1,name:'Tag',price:10,category:'Tags',image:''}];
  app.saveCart=()=>{};app.renderCart=()=>{};app.closeCartSheet=()=>{};app.updateCustomerEmailFromComposer=()=>{};
  app.generateInvoicePdfBase64=async()=>'QUJD';
- const fill=()=>{app.cart=[{productId:1,name:'Tag',price:10,quantity:1}];app.setFulfilment('collect');app.paymentMethod='cash';mk('customer-name').value='Amy';mk('customer-phone').value='91234567';mk('customer-email').value='a@b.co';app.syncCartTags&&app.syncCartTags();app.cart.forEach(i=>{if(i.tags)i.tags=[{pet:'Milo',ring:'silver',front:'MILO',back:'9123'}]});};
+ const fill=()=>{app.cart=[{productId:1,name:'Tag',price:10,quantity:1}];app.setFulfilment('taken_now');app.paymentMethod='cash';mk('customer-name').value='Amy';mk('customer-phone').value='91234567';mk('customer-email').value='a@b.co';app.syncCartTags&&app.syncCartTags();app.cart.forEach(i=>{if(i.tags)i.tags=[{pet:'Milo',ring:'silver',front:'MILO',back:'9123'}]});};
 
  // 1. offline at the counter: queued, cart cleared, nothing lost
  net=false;nav.onLine=false;fill();
