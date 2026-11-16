@@ -15,6 +15,13 @@ class POSApp {
         this.deliveryEnabled = true;   // staff can switch delivery off for on-the-spot sales
         this.FREE_DELIVERY_MIN = 50;   // SGD, measured after any discount
         this.DELIVERY_FEE = 2.5;       // SGD
+        this.ringColour = '';          // '', 'silver', 'gold' or 'gun metal'
+        this.orderPhotos = [];         // optional photos for the order being taken: { blob, url }
+        this.MAX_ORDER_PHOTOS = 3;
+        this.allPurchases = [];
+        this.selectedPurchaseId = null;
+        this.purchaseSearch = '';
+        this.editingPurchase = false;
         
         this.init();
     }
@@ -131,8 +138,14 @@ class POSApp {
             discount_amount: Number(orderDetails.discountAmount || 0),
             delivery_fee: Number(orderDetails.deliveryFee || 0),
             total: Number(orderDetails.total || 0),
-            items: items
+            items: items,
+            pet_name: String(orderDetails.petName || '').trim() || null,
+            address: String(orderDetails.address || '').trim() || null,
+            ring_colour: orderDetails.ringColour || null,
+            delivery_method: orderDetails.deliveryMethod === 'pickup' ? 'pickup' : 'delivery'
         };
+        // A row id chosen here lets photos be attached without reading the order back.
+        if (orderDetails.rowId) payload.id = orderDetails.rowId;
 
         const { error } = await supabaseClient.from('orders').insert(payload);
         if (error) {
@@ -160,8 +173,14 @@ class POSApp {
             customer_comment: String(orderDetails.customerComment || ''),
             subtotal: Number(orderDetails.subtotal || 0),
             discount_amount: Number(orderDetails.discountAmount || 0),
+            delivery_fee: Number(orderDetails.deliveryFee || 0),
             total: Number(orderDetails.total || 0),
             items,
+            pet_name: String(orderDetails.petName || '').trim() || null,
+            address: String(orderDetails.address || '').trim() || null,
+            ring_colour: orderDetails.ringColour || null,
+            delivery_method: orderDetails.deliveryMethod === 'pickup' ? 'pickup' : 'delivery',
+            photo_paths: [],
             created_at: nowIso
         };
 
@@ -203,19 +222,25 @@ class POSApp {
         const supabaseClient = await this.getSupabaseClient();
         if (!supabaseClient) return [];
 
-        const { data, error } = await supabaseClient
-            .from('orders')
-            .select('id,order_id,customer_email,total,created_at,items,customer_name,customer_phone,customer_comment,subtotal,discount_amount,delivery_fee')
-            .order('created_at', { ascending: false })
-            .limit(50);
+        // Every order, newest first, read in pages so nothing is cut off.
+        const pageSize = 500;
+        const all = [];
+        for (let from = 0; ; from += pageSize) {
+            const { data, error } = await supabaseClient
+                .from('orders')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .order('id', { ascending: true })
+                .range(from, from + pageSize - 1);
 
-        if (error) {
-            throw new Error(`[PurchaseLog] Supabase select failed: ${error.message}`);
+            if (error) {
+                throw new Error(`[PurchaseLog] Supabase select failed: ${error.message}`);
+            }
+            if (!Array.isArray(data)) break;
+            all.push(...data);
+            if (data.length < pageSize) break;
         }
-
-        if (!Array.isArray(data)) return [];
-
-        return data;
+        return all;
     }
 
     loadPurchasesFromLocalStorage() {
@@ -254,17 +279,62 @@ class POSApp {
         return escapeHtml(text);
     }
 
+    // ------------------------------------------------------------ purchases
+    // Invoice list on the left, the selected invoice on the right. On a phone the
+    // list fills the screen and an invoice opens over it with a Back button.
+
+    /** Date (yyyy-mm-dd) and time (HH:MM) of an order in Singapore time. */
+    sgtParts(dateLike) {
+        const date = dateLike ? new Date(dateLike) : new Date();
+        if (Number.isNaN(date.getTime())) return { date: '', time: '' };
+        const time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
+        return { date: this.invoiceFolderFor(date), time: time === '24:00' ? '00:00' : time };
+    }
+
+    ringColourLabel(value) {
+        const key = String(value || '').toLowerCase();
+        return { 'silver': 'Silver', 'gold': 'Gold', 'gun metal': 'Gun metal' }[key] || '';
+    }
+
+    /** The name staff typed, or '' for the old placeholder that meant "no name given". */
+    ownerNameOf(purchase) {
+        const name = String((purchase && purchase.customer_name) || '').trim();
+        return name === 'Customer' ? '' : name;
+    }
+
+    purchaseItemCount(purchase) {
+        const items = Array.isArray(purchase && purchase.items) ? purchase.items : [];
+        return items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    }
+
+    filteredPurchases() {
+        const all = Array.isArray(this.allPurchases) ? this.allPurchases : [];
+        const query = String(this.purchaseSearch || '').trim().toLowerCase();
+        if (!query) return all;
+        return all.filter((p) => {
+            const items = Array.isArray(p.items) ? p.items.map((item) => item && item.name).join(' ') : '';
+            const haystack = [p.order_id, p.customer_name, p.pet_name, p.customer_email, p.customer_phone, p.address, p.customer_comment, items]
+                .map((value) => String(value || '')).join(' ').toLowerCase();
+            return haystack.includes(query);
+        });
+    }
+
     renderPurchasesList(purchases) {
+        if (Array.isArray(purchases)) {
+            this.allPurchases = purchases;
+            this.purchaseCache.clear();
+            purchases.forEach((p) => { if (p && p.id) this.purchaseCache.set(String(p.id), p); });
+        }
+
         const listEl = document.getElementById('purchases-list');
         if (!listEl) return;
+        const countEl = document.getElementById('purchases-count');
+        const all = Array.isArray(this.allPurchases) ? this.allPurchases : [];
 
-        if (!Array.isArray(purchases) || purchases.length === 0) {
+        if (all.length === 0) {
             const localModeNotice = !this.isSupabaseConfigured()
-                ? `<p style="font-size: 0.9rem; margin-top: 10px; color: var(--text-light); font-weight: 700;">
-                        Supabase is not configured. Purchases will appear here after checkout, stored locally in this browser.
-                   </p>`
+                ? '<p class="empty-state-note">The order database is not connected. Purchases made on this device will show here.</p>'
                 : '';
-
             listEl.innerHTML = `
                 <div class="empty-state">
                     <span class="empty-icon">${iconSvg('receipt')}</span>
@@ -273,98 +343,213 @@ class POSApp {
                     ${localModeNotice}
                 </div>
             `;
+            if (countEl) countEl.textContent = '';
             return;
         }
 
-        // Cache purchase records for quick drill-down
-        this.purchaseCache.clear();
-        purchases.forEach((p) => {
-            if (p && p.id) this.purchaseCache.set(String(p.id), p);
+        const visible = this.filteredPurchases();
+        if (countEl) {
+            countEl.textContent = visible.length === all.length
+                ? `${all.length} ${all.length === 1 ? 'invoice' : 'invoices'}`
+                : `${visible.length} of ${all.length} invoices`;
+        }
+
+        if (visible.length === 0) {
+            listEl.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">${iconSvg('search')}</span>
+                    <p>No invoice matches that search</p>
+                    <button type="button" class="btn-secondary" id="purchases-search-clear">Clear search</button>
+                </div>
+            `;
+            return;
+        }
+
+        // Day totals for the date headings.
+        const dayTotals = new Map();
+        visible.forEach((p) => {
+            const day = p.created_at ? this.invoiceFolderFor(p.created_at) : '';
+            const entry = dayTotals.get(day) || { count: 0, total: 0 };
+            entry.count += 1;
+            entry.total += Number(p.total) || 0;
+            dayTotals.set(day, entry);
         });
 
-        let lastFolder = '';
-        listEl.innerHTML = purchases.map((p) => {
+        let lastDay = null;
+        listEl.innerHTML = visible.map((p) => {
             const purchaseId = String(p.id);
-            const orderId = this.escapePurchaseText(p.order_id || '');
-            const email = this.escapePurchaseText(p.customer_email || '');
-            const total = this.formatCurrency(p.total);
-            const createdAt = p.created_at ? new Date(p.created_at) : null;
-            const dateText = createdAt ? createdAt.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '';
+            const orderId = escapeHtml(p.order_id || '');
+            const owner = escapeHtml(this.ownerNameOf(p));
+            const pet = escapeHtml(p.pet_name || '');
+            const { date: day, time } = this.sgtParts(p.created_at);
+            const count = this.purchaseItemCount(p);
 
-            const folder = p.created_at ? this.invoiceFolderFor(p.created_at) : '';
             let heading = '';
-            if (folder && folder !== lastFolder) {
-                lastFolder = folder;
-                const headingText = new Date(p.created_at).toLocaleDateString('en-GB', { timeZone: 'Asia/Singapore', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-                heading = `<h3 class="purchase-date-heading">${this.escapePurchaseText(headingText)}</h3>`;
+            if (day !== lastDay) {
+                lastDay = day;
+                const info = dayTotals.get(day);
+                const headingText = p.created_at
+                    ? new Date(p.created_at).toLocaleDateString('en-GB', { timeZone: 'Asia/Singapore', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+                    : 'No date';
+                heading = `<h3 class="purchase-date-heading"><span>${escapeHtml(headingText)}</span><span class="purchase-date-total">${info.count} · ${escapeHtml(this.formatCurrency(info.total))}</span></h3>`;
             }
 
+            const sub = [pet, `${count} ${count === 1 ? 'item' : 'items'}`, escapeHtml(time)].filter(Boolean).join(' · ');
+            const selected = purchaseId === String(this.selectedPurchaseId || '');
             return `${heading}
-                <button
-                    type="button"
-                    class="btn-secondary purchase-card-btn"
-                    data-purchase-id="${escapeHtml(purchaseId)}"
-                    aria-label="View purchase ${orderId}"
-                >
-                    <span class="purchase-card-left">
-                        ${iconSvg('receipt')}
-                        <span>#${orderId}</span>
+                <button type="button" class="purchase-row" data-purchase-id="${escapeHtml(purchaseId)}" aria-current="${selected ? 'true' : 'false'}"
+                    aria-label="Invoice ${orderId}${owner ? ', ' + owner : ''}, ${escapeHtml(this.formatCurrency(p.total))}">
+                    <span class="purchase-row-main">
+                        <span class="purchase-row-title">#${orderId}${owner ? ` <span class="purchase-row-owner">${owner}</span>` : ''}</span>
+                        <span class="purchase-row-sub">${sub}</span>
                     </span>
-                    <span class="purchase-card-right">
-                        ${this.escapePurchaseText(total)}<span class="purchase-card-date">${this.escapePurchaseText(dateText)}</span>
-                    </span>
+                    <span class="purchase-row-total">${escapeHtml(this.formatCurrency(p.total))}</span>
                 </button>
             `;
         }).join('');
     }
 
-    renderPurchaseDetails(purchase) {
+    /** True when the list and the invoice sit side by side. */
+    isPurchasesWide() {
+        return Boolean(window.matchMedia && window.matchMedia('(min-width: 768px)').matches);
+    }
+
+    detailField(label, value, extraClass = '') {
+        const text = String(value || '').trim();
+        return `<div class="detail-field ${extraClass}"><dt>${escapeHtml(label)}</dt><dd class="${text ? '' : 'is-empty'}">${text ? escapeHtml(text) : 'Not recorded'}</dd></div>`;
+    }
+
+    renderPurchaseDetails(purchase, options = {}) {
         const detailsEl = document.getElementById('purchase-details');
+        const layoutEl = document.getElementById('purchases-layout');
         if (!detailsEl) return;
 
         if (!purchase) {
-            detailsEl.style.display = 'none';
+            this.selectedPurchaseId = null;
+            this.editingPurchase = false;
+            if (layoutEl) layoutEl.classList.remove('show-detail');
+            detailsEl.innerHTML = `
+                <div class="empty-state purchase-details-empty">
+                    <span class="empty-icon">${iconSvg('receipt')}</span>
+                    <p>Pick an invoice from the list</p>
+                </div>
+            `;
             return;
         }
 
-        const safeOrderId = this.escapePurchaseText(purchase.order_id || '');
-        const customerEmail = this.escapePurchaseText(purchase.customer_email || '');
-        const customerName = this.escapePurchaseText(purchase.customer_name || '');
-        const customerPhone = this.escapePurchaseText(purchase.customer_phone || '');
-        const customerComment = this.escapePurchaseText(purchase.customer_comment || '');
-
+        const editing = Boolean(options.editing);
+        this.editingPurchase = editing;
+        const purchaseId = String(purchase.id);
+        const safeOrderId = escapeHtml(purchase.order_id || '');
         const createdAt = purchase.created_at ? new Date(purchase.created_at) : null;
-        const dateText = createdAt ? createdAt.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
-
+        const dateText = createdAt
+            ? createdAt.toLocaleDateString('en-GB', { timeZone: 'Asia/Singapore', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + this.sgtParts(createdAt).time
+            : '';
+        const notes = String(purchase.customer_comment || '');
+        const ring = String(purchase.ring_colour || '').toLowerCase();
         const items = Array.isArray(purchase.items) ? purchase.items : [];
 
         const itemsRows = items.map((item) => {
-            const itemName = this.escapePurchaseText(item.name || '');
             const qty = Number(item.quantity || 0);
-            const price = this.formatCurrency(item.price);
-            const subtotal = this.formatCurrency(item.subtotal || (Number(item.price || 0) * qty));
-
             return `
                 <tr>
-                    <td>${itemName}</td>
+                    <td>${escapeHtml(item.name || '')}</td>
                     <td class="purchase-details-qty-cell">${qty}</td>
-                    <td class="purchase-details-price-cell">${price}</td>
-                    <td class="purchase-details-subtotal-cell">${subtotal}</td>
+                    <td class="purchase-details-price-cell">${this.formatCurrency(item.price)}</td>
+                    <td class="purchase-details-subtotal-cell">${this.formatCurrency(item.subtotal || (Number(item.price || 0) * qty))}</td>
                 </tr>
             `;
         }).join('');
 
-        detailsEl.style.display = 'block';
+        const editedStamp = purchase.notes_edited_at
+            ? `<p class="edited-stamp">Edited ${escapeHtml(new Date(purchase.notes_edited_at).toLocaleString('en-GB', { timeZone: 'Asia/Singapore', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</p>`
+            : '';
+
+        const deliveryText = purchase.delivery_method === 'pickup'
+            ? 'Pickup'
+            : (Number(purchase.delivery_fee || 0) > 0 ? this.formatCurrency(purchase.delivery_fee) : (purchase.delivery_method === 'delivery' ? 'Free' : ''));
+
+        const infoBlock = editing ? `
+            <form class="purchase-edit-form" id="purchase-edit-form" novalidate>
+                <div class="input-group">
+                    <label for="edit-owner-name">Owner name</label>
+                    <input type="text" id="edit-owner-name" class="input-field" autocomplete="off" value="${escapeHtml(this.ownerNameOf(purchase))}">
+                </div>
+                <div class="input-group">
+                    <label for="edit-pet-name">Pet's name</label>
+                    <input type="text" id="edit-pet-name" class="input-field" autocomplete="off" value="${escapeHtml(purchase.pet_name || '')}">
+                </div>
+                <div class="input-group">
+                    <span class="group-label" id="edit-ring-label">Colour of ring</span>
+                    <div class="segmented" id="edit-ring-colour" role="group" aria-labelledby="edit-ring-label">
+                        ${['silver', 'gold', 'gun metal'].map((value) => `<button type="button" class="seg-btn" data-ring="${value}" aria-pressed="${ring === value}">${this.ringColourLabel(value)}</button>`).join('')}
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="edit-address">Delivery address</label>
+                    <textarea id="edit-address" class="input-field textarea-short" rows="2" autocomplete="off">${escapeHtml(purchase.address || '')}</textarea>
+                </div>
+                <div class="input-group">
+                    <label for="edit-notes">Notes</label>
+                    <textarea id="edit-notes" class="input-field textarea-resizable" rows="5">${escapeHtml(notes)}</textarea>
+                </div>
+                <p class="field-note">The invoice PDF already sent to the customer keeps the original text. Earlier versions of these fields are kept in the order history.</p>
+                <div class="purchase-edit-actions">
+                    <button type="button" class="btn-secondary" id="purchase-edit-cancel">Cancel</button>
+                    <button type="submit" class="btn-primary" id="purchase-edit-save">${iconSvg('check')} Save changes</button>
+                </div>
+            </form>
+        ` : `
+            <dl class="detail-grid">
+                ${this.detailField('Owner name', this.ownerNameOf(purchase))}
+                ${this.detailField("Pet's name", purchase.pet_name)}
+                ${this.detailField('Colour of ring', this.ringColourLabel(purchase.ring_colour))}
+                ${this.detailField('Phone', purchase.customer_phone)}
+                ${this.detailField('Email', purchase.customer_email, 'detail-field-wide detail-field-email')}
+                ${this.detailField('Delivery address', purchase.address, 'detail-field-wide')}
+            </dl>
+            <section class="detail-notes" aria-labelledby="detail-notes-heading">
+                <h3 id="detail-notes-heading">Notes</h3>
+                <p class="purchase-details-notes ${notes.trim() ? '' : 'is-empty'}">${notes.trim() ? escapeHtml(notes.trim()) : 'No notes'}</p>
+                ${editedStamp}
+            </section>
+        `;
+
+        const photoPaths = Array.isArray(purchase.photo_paths) ? purchase.photo_paths : [];
+        const canAddPhoto = !String(purchaseId).startsWith('local_') && this.isSupabaseConfigured();
+        const photosBlock = editing ? '' : `
+            <section class="detail-photos" aria-labelledby="detail-photos-heading">
+                <h3 id="detail-photos-heading">Photos</h3>
+                <div class="photo-strip" id="detail-photo-strip" data-photo-count="${photoPaths.length}">
+                    ${photoPaths.length ? '<p class="field-note">Loading photos…</p>' : '<p class="field-note">No photo for this order.</p>'}
+                </div>
+                ${canAddPhoto ? `<button type="button" class="btn-secondary" id="detail-photo-add">${iconSvg('camera')} Add photo</button>` : ''}
+            </section>
+        `;
+
         detailsEl.innerHTML = `
-            <article class="purchase-details-card">
-                <h2 class="purchase-details-title">Purchase #${safeOrderId}</h2>
-                <p class="purchase-details-meta">
-                    ${customerName ? `Customer: ${customerName}<br/>` : ''}
-                    ${customerEmail ? `Email: ${customerEmail}<br/>` : ''}
-                    ${customerPhone ? `Phone: ${customerPhone}<br/>` : ''}
-                    ${dateText ? `Date: ${this.escapePurchaseText(dateText)}<br/>` : ''}
-                </p>
-                ${customerComment ? `<p class="purchase-details-notes">Notes: ${customerComment}</p>` : ''}
+            <article class="purchase-details-card" data-purchase-id="${escapeHtml(purchaseId)}">
+                <button type="button" class="btn-secondary purchase-back-btn" id="purchase-back-btn">${iconSvg('back')} Purchases</button>
+                <div class="purchase-details-head">
+                    <div class="purchase-details-heading">
+                        <h2 class="purchase-details-title">Invoice #${safeOrderId}</h2>
+                        ${dateText ? `<p class="purchase-details-date">${escapeHtml(dateText)}</p>` : ''}
+                    </div>
+                    ${editing ? '' : `
+                    <div class="purchase-details-actions">
+                        <button type="button" class="btn-secondary" id="purchase-edit-btn">${iconSvg('edit')} Edit</button>
+                        ${purchase.order_id && purchase.created_at ? `
+                            <button type="button" class="btn-secondary invoice-open-btn"
+                                data-invoice-order="${escapeHtml(String(purchase.order_id))}"
+                                data-invoice-date="${escapeHtml(String(purchase.created_at))}">
+                                ${iconSvg('receipt')} Invoice PDF
+                            </button>
+                        ` : ''}
+                    </div>`}
+                </div>
+
+                ${infoBlock}
+                ${photosBlock}
 
                 <div class="purchase-details-table-wrap">
                     <table class="purchase-details-table">
@@ -376,9 +561,7 @@ class POSApp {
                                 <th class="purchase-details-subtotal-cell">Subtotal</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${itemsRows}
-                        </tbody>
+                        <tbody>${itemsRows}</tbody>
                     </table>
                 </div>
 
@@ -393,10 +576,10 @@ class POSApp {
                             <div class="purchase-total-value purchase-total-value-muted">-${this.formatCurrency(purchase.discount_amount)}</div>
                         </div>
                     ` : ''}
-                    ${Number(purchase.delivery_fee || 0) > 0 ? `
+                    ${deliveryText ? `
                         <div class="purchase-total-box">
                             <div class="purchase-total-label">Delivery</div>
-                            <div class="purchase-total-value">${this.formatCurrency(purchase.delivery_fee)}</div>
+                            <div class="purchase-total-value">${escapeHtml(deliveryText)}</div>
                         </div>
                     ` : ''}
                     <div class="purchase-total-box purchase-total-box-highlight">
@@ -404,41 +587,429 @@ class POSApp {
                         <div class="purchase-total-value purchase-total-value-highlight">${this.formatCurrency(purchase.total)}</div>
                     </div>
                 </div>
-                ${purchase.order_id && purchase.created_at ? `
-                    <button type="button" class="btn-secondary invoice-open-btn"
-                        data-invoice-order="${escapeHtml(String(purchase.order_id))}"
-                        data-invoice-date="${escapeHtml(String(purchase.created_at))}">
-                        ${iconSvg('receipt')} Open invoice PDF
-                    </button>
-                ` : ''}
             </article>
         `;
+
+        if (!editing && photoPaths.length) this.renderPurchasePhotos(purchase);
+        if (editing) {
+            const notesField = document.getElementById('edit-notes');
+            if (notesField && notesField.focus) notesField.focus({ preventScroll: false });
+        }
     }
 
-    async showPurchaseDetails(purchaseId) {
+    /** Photos live in a private bucket, so each one needs a short-lived signed link. */
+    async renderPurchasePhotos(purchase) {
+        const paths = Array.isArray(purchase.photo_paths) ? purchase.photo_paths : [];
+        const stripFor = () => {
+            const card = document.querySelector('.purchase-details-card');
+            if (!card || card.getAttribute('data-purchase-id') !== String(purchase.id)) return null;
+            return document.getElementById('detail-photo-strip');
+        };
+        try {
+            const client = await this.getSupabaseClient();
+            if (!client) throw new Error('not connected');
+            const { data, error } = await client.storage.from('order-photos').createSignedUrls(paths, 900);
+            if (error || !Array.isArray(data)) throw new Error(error ? error.message : 'no links');
+            const strip = stripFor();
+            if (!strip) return; // the user has moved on to another invoice
+            const links = data.filter((entry) => entry && entry.signedUrl);
+            strip.innerHTML = links.length
+                ? links.map((entry, index) => `
+                    <a class="photo-thumb" href="${escapeHtml(entry.signedUrl)}" target="_blank" rel="noopener" aria-label="Open photo ${index + 1}">
+                        <img src="${escapeHtml(entry.signedUrl)}" alt="Order photo ${index + 1}" loading="lazy" decoding="async">
+                    </a>`).join('')
+                : '<p class="field-note">The photos for this order could not be found.</p>';
+        } catch (error) {
+            console.error('Could not load order photos:', error);
+            const strip = stripFor();
+            if (strip) strip.innerHTML = '<p class="field-note">Photos could not be loaded. Check the connection and open the invoice again.</p>';
+        }
+    }
+
+    selectPurchaseRow(purchaseId) {
+        this.selectedPurchaseId = purchaseId ? String(purchaseId) : null;
+        document.querySelectorAll('#purchases-list .purchase-row').forEach((row) => {
+            row.setAttribute('aria-current', String(row.getAttribute('data-purchase-id') === this.selectedPurchaseId));
+        });
+    }
+
+    async showPurchaseDetails(purchaseId, options = {}) {
         const id = String(purchaseId || '');
         if (!id) return;
 
-        const cached = this.purchaseCache.get(id);
-        if (cached) {
-            this.renderPurchaseDetails(cached);
-            return;
+        let purchase = this.purchaseCache.get(id);
+        if (!purchase) {
+            const supabaseClient = await this.getSupabaseClient();
+            if (!supabaseClient) return;
+            const { data, error } = await supabaseClient.from('orders').select('*').eq('id', id).single();
+            if (error) throw new Error(`[PurchaseLog] Failed to load purchase ${id}: ${error.message}`);
+            purchase = data;
+            this.purchaseCache.set(id, data);
         }
 
-        const supabaseClient = await this.getSupabaseClient();
-        if (!supabaseClient) return;
+        this.selectPurchaseRow(id);
+        this.renderPurchaseDetails(purchase);
 
-        const { data, error } = await supabaseClient.from('orders').select('*').eq('id', id).single();
-        if (error) throw new Error(`[PurchaseLog] Failed to load purchase ${id}: ${error.message}`);
-        this.renderPurchaseDetails(data);
-        this.purchaseCache.set(id, data);
+        const layoutEl = document.getElementById('purchases-layout');
+        const detailsEl = document.getElementById('purchase-details');
+        if (!options.keepList && layoutEl) layoutEl.classList.add('show-detail');
+        if (detailsEl) {
+            detailsEl.scrollTop = 0;
+            if (!this.isPurchasesWide() && !options.keepList) {
+                window.scrollTo(0, 0);
+                if (detailsEl.focus) detailsEl.focus({ preventScroll: true });
+            }
+        }
+    }
+
+    closePurchaseDetails() {
+        const layoutEl = document.getElementById('purchases-layout');
+        if (layoutEl) layoutEl.classList.remove('show-detail');
+        this.editingPurchase = false;
+        const selected = document.querySelector('#purchases-list .purchase-row[aria-current="true"]');
+        if (selected) {
+            if (selected.scrollIntoView) selected.scrollIntoView({ block: 'center' });
+            if (selected.focus) selected.focus({ preventScroll: true });
+        }
     }
 
     async refreshPurchasesView() {
         const purchases = await this.loadPurchases();
         this.purchasesLoaded = true;
         this.renderPurchasesList(purchases);
-        this.renderPurchaseDetails(null);
+
+        // Keep the open invoice open across a refresh; on a wide screen show the newest one.
+        const keepId = this.selectedPurchaseId && this.purchaseCache.has(String(this.selectedPurchaseId)) ? String(this.selectedPurchaseId) : null;
+        const layoutEl = document.getElementById('purchases-layout');
+        const detailOpen = Boolean(layoutEl && layoutEl.classList.contains('show-detail'));
+        if (keepId && (this.isPurchasesWide() || detailOpen)) {
+            if (!this.editingPurchase) await this.showPurchaseDetails(keepId, { keepList: !detailOpen });
+        } else if (this.isPurchasesWide() && purchases.length > 0) {
+            await this.showPurchaseDetails(purchases[0].id, { keepList: true });
+        } else {
+            this.renderPurchaseDetails(null);
+        }
+    }
+
+    async reloadPurchases() {
+        const listEl = document.getElementById('purchases-list');
+        try {
+            await this.refreshPurchasesView();
+        } catch (error) {
+            console.error('Error loading purchases:', error);
+            if (listEl) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <span class="empty-icon">${iconSvg('alert')}</span>
+                        <p>Purchases did not load</p>
+                        <p class="empty-state-note">Check the connection, then try again.</p>
+                        <button type="button" class="btn-secondary" id="purchases-retry-btn">${iconSvg('refresh')} Try again</button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    /** Save edits to an order's notes and details. Money, items and the order number cannot be changed. */
+    async savePurchaseEdits(purchaseId, values) {
+        const id = String(purchaseId || '');
+        const current = this.purchaseCache.get(id);
+        if (!current) throw new Error('This invoice is no longer in the list. Refresh and try again.');
+
+        const changes = {
+            customer_name: String(values.ownerName || '').trim(),
+            pet_name: String(values.petName || '').trim() || null,
+            ring_colour: this.ringColourLabel(values.ringColour) ? String(values.ringColour).toLowerCase() : null,
+            address: String(values.address || '').trim() || null,
+            customer_comment: String(values.notes || '').trim()
+        };
+
+        let updated;
+        if (id.startsWith('local_')) {
+            const storageKey = this.getLocalPurchasesKey();
+            const list = this.loadPurchasesFromLocalStorage();
+            const index = list.findIndex((p) => String(p.id) === id);
+            if (index < 0) throw new Error('This invoice is no longer on this device.');
+            list[index] = { ...list[index], ...changes, notes_edited_at: new Date().toISOString() };
+            localStorage.setItem(storageKey, JSON.stringify(list));
+            updated = list[index];
+        } else {
+            const client = await this.getSupabaseClient();
+            if (!client) throw new Error('Not connected to the order database.');
+            const { data, error } = await client.from('orders').update(changes).eq('id', id).select('*').single();
+            if (error || !data) throw new Error(error ? error.message : 'The order was not found.');
+            updated = data;
+        }
+
+        this.purchaseCache.set(id, updated);
+        if (Array.isArray(this.allPurchases)) {
+            this.allPurchases = this.allPurchases.map((p) => (String(p.id) === id ? updated : p));
+        }
+        return updated;
+    }
+
+    /** Shrink a camera photo before upload: about 1600px on the long side, well under the bucket limit. */
+    async prepareOrderPhoto(file) {
+        const MAX_SIDE = 1600;
+        const TARGET_BYTES = 450 * 1024;
+        const HARD_LIMIT = 4 * 1024 * 1024;
+
+        let bitmap;
+        try {
+            bitmap = await createImageBitmap(file);
+        } catch (error) {
+            throw new Error('That photo could not be read. Take it again or pick a JPG or PNG.');
+        }
+        const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+        canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        if (bitmap.close) bitmap.close();
+
+        const toBlob = (quality) => new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('That photo could not be processed. Take it again.'))), 'image/jpeg', quality);
+        });
+        let blob = await toBlob(0.82);
+        for (const quality of [0.72, 0.62, 0.5]) {
+            if (blob.size <= TARGET_BYTES) break;
+            blob = await toBlob(quality);
+        }
+        if (blob.size > HARD_LIMIT) throw new Error('That photo is too large to save. Take it again from a little further back.');
+        return blob;
+    }
+
+    orderPhotoPath(orderId, dateLike, index) {
+        return `${this.invoiceFolderFor(dateLike)}/${orderId}-${Date.now()}-${index}.jpg`;
+    }
+
+    /** Upload photo blobs for an order and return the storage paths that succeeded. */
+    async uploadOrderPhotos(orderId, dateLike, blobs) {
+        const client = await this.getSupabaseClient();
+        if (!client) throw new Error('Not connected to storage');
+        const saved = [];
+        for (let i = 0; i < blobs.length; i++) {
+            const path = this.orderPhotoPath(orderId, dateLike, i + 1);
+            const { error } = await client.storage.from('order-photos').upload(path, blobs[i], { contentType: 'image/jpeg', upsert: false });
+            if (error) throw new Error(error.message);
+            saved.push(path);
+        }
+        return saved;
+    }
+
+    async addPhotoToPurchase(purchaseId, file) {
+        const id = String(purchaseId || '');
+        const purchase = this.purchaseCache.get(id);
+        if (!purchase || !file) return;
+        const addBtn = document.getElementById('detail-photo-add');
+        if (addBtn) { addBtn.disabled = true; addBtn.innerHTML = iconSvg('camera') + ' Saving photo…'; }
+        try {
+            const blob = await this.prepareOrderPhoto(file);
+            const [path] = await this.uploadOrderPhotos(purchase.order_id, purchase.created_at, [blob]);
+            const client = await this.getSupabaseClient();
+            const nextPaths = [...(Array.isArray(purchase.photo_paths) ? purchase.photo_paths : []), path];
+            const { data, error } = await client.from('orders').update({ photo_paths: nextPaths }).eq('id', id).select('*').single();
+            if (error || !data) throw new Error(error ? error.message : 'The order was not found.');
+            this.purchaseCache.set(id, data);
+            this.allPurchases = (this.allPurchases || []).map((p) => (String(p.id) === id ? data : p));
+            if (String(this.selectedPurchaseId) === id && !this.editingPurchase) this.renderPurchaseDetails(data);
+            ui.showToast('Photo added to invoice #' + purchase.order_id + '.', 'success');
+        } catch (error) {
+            console.error('Could not add photo:', error);
+            ui.showToast('The photo was not saved: ' + (error.message || 'unknown error') + '. Try again.', 'error');
+            if (addBtn) { addBtn.disabled = false; addBtn.innerHTML = iconSvg('camera') + ' Add photo'; }
+        }
+    }
+
+    // ---- Excel export
+    /** First and last day (yyyy-mm-dd, Singapore time) for an export range, or nulls for everything. */
+    exportRangeBounds(range, customFrom, customTo) {
+        const today = this.invoiceFolderFor(new Date());
+        const [y, m, d] = today.split('-').map(Number);
+        const iso = (date) => date.toISOString().slice(0, 10);
+        if (range === 'today') return { from: today, to: today };
+        if (range === 'week') {
+            const noon = new Date(Date.UTC(y, m - 1, d, 12));
+            const sinceMonday = (noon.getUTCDay() + 6) % 7;
+            noon.setUTCDate(noon.getUTCDate() - sinceMonday);
+            return { from: iso(noon), to: today };
+        }
+        if (range === 'month') return { from: `${today.slice(0, 7)}-01`, to: today };
+        if (range === 'custom') {
+            let from = customFrom || null;
+            let to = customTo || null;
+            if (from && to && from > to) [from, to] = [to, from];
+            return { from, to };
+        }
+        return { from: null, to: null };
+    }
+
+    purchasesInRange(bounds) {
+        const all = Array.isArray(this.allPurchases) ? this.allPurchases : [];
+        return all
+            .filter((p) => {
+                const day = p.created_at ? this.invoiceFolderFor(p.created_at) : '';
+                if (bounds.from && (!day || day < bounds.from)) return false;
+                if (bounds.to && (!day || day > bounds.to)) return false;
+                return true;
+            })
+            .sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
+    }
+
+    /** Excel serial date and day-fraction time for an order, in Singapore time. */
+    excelDateParts(dateLike) {
+        const { date, time } = this.sgtParts(dateLike);
+        if (!date) return { serial: '', fraction: '' };
+        const [y, m, d] = date.split('-').map(Number);
+        const [hh, mm] = time.split(':').map(Number);
+        return { serial: Math.round(Date.UTC(y, m - 1, d) / 86400000) + 25569, fraction: ((hh * 60) + mm) / 1440 };
+    }
+
+    buildExportSheets(purchases, layout) {
+        const money = (value) => Math.round((Number(value) || 0) * 100) / 100;
+        const sheets = [];
+
+        if (layout === 'orders' || layout === 'both') {
+            sheets.push({
+                name: 'Invoices',
+                columns: [
+                    { header: 'Order no.', width: 11 },
+                    { header: 'Date', width: 13, type: 'date' },
+                    { header: 'Time', width: 8, type: 'time' },
+                    { header: 'Owner name', width: 22 },
+                    { header: "Pet's name", width: 22 },
+                    { header: 'Colour of ring', width: 15 },
+                    { header: 'Phone', width: 13 },
+                    { header: 'Email', width: 30 },
+                    { header: 'Address', width: 40, type: 'wrap' },
+                    { header: 'Items', width: 34, type: 'wrap' },
+                    { header: 'Qty', width: 6, type: 'number' },
+                    { header: 'Subtotal', width: 11, type: 'money' },
+                    { header: 'Discount', width: 11, type: 'money' },
+                    { header: 'Delivery', width: 11, type: 'money' },
+                    { header: 'Total', width: 11, type: 'money' },
+                    { header: 'Notes', width: 44, type: 'wrap' },
+                    { header: 'Photos', width: 8, type: 'number' }
+                ],
+                rows: purchases.map((p) => {
+                    const { serial, fraction } = this.excelDateParts(p.created_at);
+                    const items = Array.isArray(p.items) ? p.items : [];
+                    return [
+                        String(p.order_id || ''), serial, fraction,
+                        this.ownerNameOf(p), String(p.pet_name || ''), this.ringColourLabel(p.ring_colour),
+                        String(p.customer_phone || ''), String(p.customer_email || ''), String(p.address || ''),
+                        items.map((item) => `${Number(item.quantity) || 0} x ${item.name || ''}`).join('\n'),
+                        this.purchaseItemCount(p),
+                        money(p.subtotal), money(p.discount_amount), money(p.delivery_fee), money(p.total),
+                        String(p.customer_comment || ''),
+                        Array.isArray(p.photo_paths) ? p.photo_paths.length : 0
+                    ];
+                }),
+                totals: ['Total', null, null, null, null, null, null, null, null, null, { sum: true }, { sum: true }, { sum: true }, { sum: true }, { sum: true }, null, null]
+            });
+        }
+
+        if (layout === 'items' || layout === 'both') {
+            const rows = [];
+            purchases.forEach((p) => {
+                const { serial } = this.excelDateParts(p.created_at);
+                (Array.isArray(p.items) ? p.items : []).forEach((item) => {
+                    const qty = Number(item.quantity) || 0;
+                    rows.push([
+                        String(p.order_id || ''), serial,
+                        this.ownerNameOf(p), String(p.pet_name || ''), this.ringColourLabel(p.ring_colour),
+                        String(item.name || ''), qty, money(item.price), money(item.subtotal != null ? item.subtotal : qty * (Number(item.price) || 0)),
+                        String(p.address || ''), String(p.customer_comment || '')
+                    ]);
+                });
+            });
+            sheets.push({
+                name: 'Items',
+                columns: [
+                    { header: 'Order no.', width: 11 },
+                    { header: 'Date', width: 13, type: 'date' },
+                    { header: 'Owner name', width: 22 },
+                    { header: "Pet's name", width: 22 },
+                    { header: 'Colour of ring', width: 15 },
+                    { header: 'Item', width: 28 },
+                    { header: 'Qty', width: 6, type: 'number' },
+                    { header: 'Price', width: 10, type: 'money' },
+                    { header: 'Subtotal', width: 11, type: 'money' },
+                    { header: 'Address', width: 40, type: 'wrap' },
+                    { header: 'Notes', width: 44, type: 'wrap' }
+                ],
+                rows,
+                totals: ['Total', null, null, null, null, null, { sum: true }, null, { sum: true }, null, null]
+            });
+        }
+        return sheets;
+    }
+
+    readExportChoices() {
+        const checked = (name, fallback) => {
+            const el = document.querySelector(`input[name="${name}"]:checked`);
+            return el ? el.value : fallback;
+        };
+        const range = checked('export-range', 'all');
+        const layout = checked('export-layout', 'orders');
+        const fromEl = document.getElementById('export-from');
+        const toEl = document.getElementById('export-to');
+        const bounds = this.exportRangeBounds(range, fromEl ? fromEl.value : '', toEl ? toEl.value : '');
+        return { range, layout, bounds };
+    }
+
+    updateExportSummary() {
+        const summaryEl = document.getElementById('export-summary');
+        const datesEl = document.getElementById('export-dates');
+        const downloadBtn = document.getElementById('export-download');
+        const { range, bounds } = this.readExportChoices();
+        if (datesEl) datesEl.classList.toggle('hidden', range !== 'custom');
+        const count = this.purchasesInRange(bounds).length;
+        if (summaryEl) summaryEl.textContent = count === 0 ? 'No invoices in that range.' : `${count} ${count === 1 ? 'invoice' : 'invoices'} will be exported.`;
+        if (downloadBtn) downloadBtn.disabled = count === 0;
+    }
+
+    async openExportDialog() {
+        const dialog = document.getElementById('export-dialog');
+        if (!dialog) return;
+        if (!this.purchasesLoaded) await this.reloadPurchases();
+        this.updateExportSummary();
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        else dialog.setAttribute('open', '');
+    }
+
+    closeExportDialog() {
+        const dialog = document.getElementById('export-dialog');
+        if (!dialog) return;
+        if (typeof dialog.close === 'function') dialog.close();
+        else dialog.removeAttribute('open');
+    }
+
+    downloadExport() {
+        const { layout, bounds } = this.readExportChoices();
+        const purchases = this.purchasesInRange(bounds);
+        if (purchases.length === 0) return;
+        try {
+            if (!window.XlsxLite) throw new Error('The export tool did not load. Refresh the page and try again');
+            const blob = window.XlsxLite.build(this.buildExportSheets(purchases, layout));
+            const today = this.invoiceFolderFor(new Date());
+            const span = bounds.from || bounds.to
+                ? `${bounds.from || 'start'}_to_${bounds.to || today}`
+                : `all_to_${today}`;
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `WoofCrafts_Orders_${span}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 30000);
+            this.closeExportDialog();
+            ui.showToast(`Exported ${purchases.length} ${purchases.length === 1 ? 'invoice' : 'invoices'} to Excel.`, 'success');
+        } catch (error) {
+            console.error('Export failed:', error);
+            ui.showToast((error.message || 'The export failed') + '.', 'error');
+        }
     }
 
     setupPurchaseTabs() {
@@ -453,6 +1024,8 @@ class POSApp {
             const isPos = active === 'pos';
             viewPos.classList.toggle('hidden', !isPos);
             viewPurchases.classList.toggle('hidden', isPos);
+            document.body.classList.toggle('purchases-open', !isPos);
+            if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
 
             posBtn.setAttribute('aria-selected', String(isPos));
             purchasesBtn.setAttribute('aria-selected', String(!isPos));
@@ -461,34 +1034,108 @@ class POSApp {
         posBtn.addEventListener('click', () => setActive('pos'));
         purchasesBtn.addEventListener('click', async () => {
             setActive('purchases');
+            // Always reload: a sale made a minute ago has to be in the list.
+            if (!this.editingPurchase) await this.reloadPurchases();
+        });
+
+        const on = (id, type, handler) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener(type, handler);
+        };
+
+        on('purchases-refresh-btn', 'click', () => this.reloadPurchases());
+        on('export-open-btn', 'click', () => this.openExportDialog());
+        on('export-cancel', 'click', () => this.closeExportDialog());
+        on('export-download', 'click', () => this.downloadExport());
+        on('export-form', 'change', () => this.updateExportSummary());
+        on('purchases-search', 'input', (event) => {
+            this.purchaseSearch = event.target.value || '';
+            this.renderPurchasesList();
+        });
+
+        on('purchases-list', 'click', async (event) => {
+            const target = event.target && event.target.closest ? event.target : null;
+            if (!target) return;
+            if (target.closest('#purchases-retry-btn')) { this.reloadPurchases(); return; }
+            if (target.closest('#purchases-search-clear')) {
+                this.purchaseSearch = '';
+                const searchEl = document.getElementById('purchases-search');
+                if (searchEl) searchEl.value = '';
+                this.renderPurchasesList();
+                return;
+            }
+            const row = target.closest('[data-purchase-id]');
+            if (!row) return;
+            if (this.editingPurchase && !(await ui.confirm('Leave without saving your changes to this invoice?', 'Unsaved changes'))) return;
             try {
-                if (!this.purchasesLoaded) {
-                    await this.refreshPurchasesView();
-                }
+                await this.showPurchaseDetails(row.getAttribute('data-purchase-id'));
             } catch (error) {
-                console.error('Error loading purchases:', error);
-                const listEl = document.getElementById('purchases-list');
-                if (listEl) listEl.textContent = 'Failed to load purchases. Check console.';
+                console.error('Error showing purchase details:', error);
+                ui.showToast('Could not load this purchase. Check the connection and try again.', 'error');
             }
         });
 
-        const purchasesListEl = document.getElementById('purchases-list');
-        if (purchasesListEl) {
-            purchasesListEl.addEventListener('click', async (event) => {
-                const target = event.target;
-                const button = target && target.closest ? target.closest('[data-purchase-id]') : null;
-                if (!button) return;
-                const purchaseId = button.getAttribute('data-purchase-id');
-                try {
-                    await this.showPurchaseDetails(purchaseId);
-                } catch (error) {
-                    console.error('Error showing purchase details:', error);
-                    ui.showToast('Could not load this purchase. Check the connection and try again.', 'error');
-                }
-            });
-        }
+        on('purchase-details', 'click', async (event) => {
+            const target = event.target && event.target.closest ? event.target : null;
+            if (!target) return;
+            const id = this.selectedPurchaseId;
+            const purchase = id ? this.purchaseCache.get(String(id)) : null;
+
+            if (target.closest('#purchase-back-btn')) {
+                if (this.editingPurchase && !(await ui.confirm('Leave without saving your changes to this invoice?', 'Unsaved changes'))) return;
+                if (this.editingPurchase && purchase) this.renderPurchaseDetails(purchase);
+                this.closePurchaseDetails();
+                return;
+            }
+            if (!purchase) return;
+            if (target.closest('#purchase-edit-btn')) { this.renderPurchaseDetails(purchase, { editing: true }); return; }
+            if (target.closest('#purchase-edit-cancel')) { this.renderPurchaseDetails(purchase); return; }
+            if (target.closest('#detail-photo-add')) {
+                const input = document.getElementById('detail-photo-input');
+                if (input) input.click();
+                return;
+            }
+            const ringBtn = target.closest('#edit-ring-colour .seg-btn');
+            if (ringBtn) {
+                const wasPressed = ringBtn.getAttribute('aria-pressed') === 'true';
+                document.querySelectorAll('#edit-ring-colour .seg-btn').forEach((btn) => btn.setAttribute('aria-pressed', 'false'));
+                ringBtn.setAttribute('aria-pressed', String(!wasPressed));
+            }
+        });
+
+        on('purchase-details', 'submit', async (event) => {
+            if (!event.target || event.target.id !== 'purchase-edit-form') return;
+            event.preventDefault();
+            const id = this.selectedPurchaseId;
+            const saveBtn = document.getElementById('purchase-edit-save');
+            const value = (fieldId) => { const el = document.getElementById(fieldId); return el ? el.value : ''; };
+            const pressed = document.querySelector('#edit-ring-colour .seg-btn[aria-pressed="true"]');
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = iconSvg('check') + ' Saving…'; }
+            try {
+                const updated = await this.savePurchaseEdits(id, {
+                    ownerName: value('edit-owner-name'),
+                    petName: value('edit-pet-name'),
+                    ringColour: pressed ? pressed.getAttribute('data-ring') : '',
+                    address: value('edit-address'),
+                    notes: value('edit-notes')
+                });
+                this.renderPurchasesList();
+                this.renderPurchaseDetails(updated);
+                ui.showToast('Invoice #' + (updated.order_id || '') + ' updated.', 'success');
+            } catch (error) {
+                console.error('Could not save invoice edits:', error);
+                ui.showToast('Your changes were not saved: ' + (error.message || 'unknown error') + '. Check the connection and try again.', 'error');
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = iconSvg('check') + ' Save changes'; }
+            }
+        });
+
+        on('detail-photo-input', 'change', async (event) => {
+            const file = event.target.files && event.target.files[0];
+            event.target.value = '';
+            if (file && this.selectedPurchaseId) await this.addPhotoToPurchase(this.selectedPurchaseId, file);
+        });
     }
-    
+
     async refreshProducts() {
         // Force reload products and re-render
         console.log('Refreshing products...');
@@ -834,16 +1481,18 @@ class POSApp {
         return this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     }
 
+    /** Tap once to take 5% off, tap again to remove it. */
     applyDiscount() {
-        if (this.discountApplied || this.cart.length === 0) return;
-        
+        if (this.discountApplied) { this.clearDiscount(); return; }
+        if (this.cart.length === 0) return;
+
         this.discountApplied = true;
         this.updateTotals();
-        
+
         const discountBtn = document.getElementById('discount-btn');
         if (discountBtn) {
-            discountBtn.disabled = true;
-            discountBtn.innerHTML = iconSvg('check') + ' 5% discount applied';
+            discountBtn.setAttribute('aria-pressed', 'true');
+            discountBtn.innerHTML = iconSvg('check') + ' 5% discount on. Tap to remove';
         }
     }
 
@@ -852,9 +1501,84 @@ class POSApp {
         const discountBtn = document.getElementById('discount-btn');
         if (discountBtn) {
             discountBtn.disabled = false;
+            discountBtn.setAttribute('aria-pressed', 'false');
             discountBtn.innerHTML = iconSvg('percent') + ' Apply 5% discount';
         }
         this.updateTotals();
+    }
+
+    // ---- Order details: ring colour, address, photos
+    setRingColour(value) {
+        const next = this.ringColourLabel(value) ? String(value).toLowerCase() : '';
+        this.ringColour = next;
+        document.querySelectorAll('#ring-colour .seg-btn').forEach((btn) => {
+            btn.setAttribute('aria-pressed', String(btn.getAttribute('data-ring') === next));
+        });
+    }
+
+    /** The delivery address only matters when the order is being delivered. */
+    syncAddressField() {
+        const group = document.getElementById('address-group');
+        if (group) group.classList.toggle('hidden', !this.deliveryEnabled);
+    }
+
+    renderOrderPhotos() {
+        const strip = document.getElementById('order-photos');
+        const btn = document.getElementById('order-photo-btn');
+        const btnText = document.getElementById('order-photo-btn-text');
+        const count = this.orderPhotos.length;
+        if (strip) {
+            strip.innerHTML = this.orderPhotos.map((photo, index) => `
+                <div class="photo-thumb">
+                    <img src="${escapeHtml(photo.url)}" alt="Order photo ${index + 1}">
+                    <button type="button" class="photo-remove" data-photo-index="${index}" aria-label="Remove photo ${index + 1}">${iconSvg('x')}</button>
+                </div>`).join('');
+        }
+        if (btnText) btnText.textContent = count === 0 ? 'Take photo' : 'Add another photo';
+        if (btn) btn.classList.toggle('hidden', count >= this.MAX_ORDER_PHOTOS);
+    }
+
+    async addOrderPhoto(file) {
+        if (!file) return;
+        if (this.orderPhotos.length >= this.MAX_ORDER_PHOTOS) {
+            ui.showToast(`An order can have up to ${this.MAX_ORDER_PHOTOS} photos.`, 'error');
+            return;
+        }
+        try {
+            const blob = await this.prepareOrderPhoto(file);
+            this.orderPhotos.push({ blob, url: URL.createObjectURL(blob) });
+            this.renderOrderPhotos();
+        } catch (error) {
+            console.error('Could not prepare photo:', error);
+            ui.showToast(error.message || 'That photo could not be used. Take it again.', 'error');
+        }
+    }
+
+    removeOrderPhoto(index) {
+        const [removed] = this.orderPhotos.splice(index, 1);
+        if (removed && removed.url && typeof URL !== 'undefined' && URL.revokeObjectURL) URL.revokeObjectURL(removed.url);
+        this.renderOrderPhotos();
+    }
+
+    clearOrderPhotos() {
+        this.orderPhotos.forEach((photo) => {
+            if (photo && photo.url && typeof URL !== 'undefined' && URL.revokeObjectURL) URL.revokeObjectURL(photo.url);
+        });
+        this.orderPhotos = [];
+        this.renderOrderPhotos();
+    }
+
+    setFieldError(message) {
+        const errorEl = document.getElementById('customer-email-error');
+        const inputEl = document.getElementById('customer-email-local');
+        if (errorEl) {
+            errorEl.textContent = message || '';
+            errorEl.classList.toggle('hidden', !message);
+        }
+        if (inputEl) {
+            if (message) inputEl.setAttribute('aria-invalid', 'true');
+            else if (inputEl.removeAttribute) inputEl.removeAttribute('aria-invalid');
+        }
     }
 
     /** Subtotal, discount, delivery and total for the current cart. Delivery is free from 50 SGD. */
@@ -991,6 +1715,19 @@ class POSApp {
         document.getElementById('customer-phone').value = '';
         const commentField = document.getElementById('customer-comment');
         if (commentField) commentField.value = '';
+
+        ['pet-name', 'customer-address'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        this.setRingColour('');
+        this.clearOrderPhotos();
+        this.syncAddressField();
+        this.setFieldError('');
+
+        // The next customer's order starts at the top of the cart, not halfway down the form.
+        const panel = document.getElementById('cart-panel');
+        if (panel) panel.scrollTop = 0;
     }
 
     validateCheckout() {
@@ -999,20 +1736,30 @@ class POSApp {
 
         const emailEl = document.getElementById('customer-email');
         const email = emailEl ? (emailEl.value || '').trim() : '';
+        this.setFieldError('');
+        const focusEmail = () => {
+            const el = document.getElementById('customer-email-local');
+            if (el && el.focus) el.focus();
+        };
+
+        if (this.cart.length === 0) {
+            ui.showToast('Add an item to the cart first.', 'error');
+            return false;
+        }
+
         if (!email) {
+            this.setFieldError('Enter the customer email address.');
             ui.showToast('Enter the customer email address.', 'error');
+            focusEmail();
             return false;
         }
 
         // Basic format validation so bad domains like "custom" don't slip through.
         const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         if (!isValidEmail) {
+            this.setFieldError('Enter a valid email address, like name@gmail.com.');
             ui.showToast('Enter a valid email address, like name@gmail.com.', 'error');
-            return false;
-        }
-
-        if (this.cart.length === 0) {
-            ui.showToast('Add an item to the cart first.', 'error');
+            focusEmail();
             return false;
         }
         return true;
@@ -1083,6 +1830,7 @@ class POSApp {
                 if (domain === '__other__') {
                     setCustomMode(true);
                     setActiveDomainButton('__other__');
+                    if (customerEmailDomainCustomInput && customerEmailDomainCustomInput.focus) customerEmailDomainCustomInput.focus();
                 } else {
                     setCustomMode(false);
                     customerEmailSelectedDomainEl.textContent = domain;
@@ -1101,7 +1849,26 @@ class POSApp {
             });
 
             // Wire local part + custom domain typing.
-            customerEmailLocalInput.addEventListener('input', () => this.updateCustomerEmailFromComposer());
+            customerEmailLocalInput.addEventListener('input', () => {
+                const typed = customerEmailLocalInput.value || '';
+                const at = typed.indexOf('@');
+                if (at >= 0) {
+                    // "jane@gmail.com" in the name box: keep "jane" and pick the provider.
+                    const domainPart = typed.slice(at + 1).trim().toLowerCase();
+                    customerEmailLocalInput.value = typed.slice(0, at).trim();
+                    const presetButton = domainButtons.find((btn) => btn.getAttribute('data-domain') === domainPart);
+                    if (presetButton) {
+                        applyDomainSelection(domainPart);
+                    } else if (domainPart) {
+                        setCustomMode(true);
+                        setActiveDomainButton('__other__');
+                        if (customerEmailDomainCustomInput) customerEmailDomainCustomInput.value = domainPart;
+                        customerEmailSelectedDomainEl.textContent = domainPart;
+                    }
+                }
+                this.setFieldError('');
+                this.updateCustomerEmailFromComposer();
+            });
             if (customerEmailDomainCustomInput) {
                 customerEmailDomainCustomInput.addEventListener('input', () => {
                     const customDomain = (customerEmailDomainCustomInput.value || '').trim();
@@ -1248,6 +2015,24 @@ class POSApp {
             yCursor += 14;
         }
 
+        const petName = String(orderDetails.petName || '').trim();
+        const ringLabel = this.ringColourLabel(orderDetails.ringColour);
+        const address = String(orderDetails.address || '').trim();
+        if (petName) {
+            const petLines = doc.splitTextToSize(`Pet's name: ${petName}`, availableWidth);
+            doc.text(petLines, marginLeft, yCursor);
+            yCursor += petLines.length * 14;
+        }
+        if (ringLabel) {
+            doc.text(`Colour of ring: ${ringLabel}`, marginLeft, yCursor);
+            yCursor += 14;
+        }
+        if (address) {
+            const addressLines = doc.splitTextToSize(`Delivery address: ${address.replace(/\s*\n\s*/g, ', ')}`, availableWidth);
+            doc.text(addressLines, marginLeft, yCursor);
+            yCursor += addressLines.length * 14;
+        }
+
         if (customerComment) {
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(...palette.brand);
@@ -1392,11 +2177,21 @@ class POSApp {
         this.pendingOrderDate = orderDateIso;
 
         const customerComment = document.getElementById('customer-comment')?.value.trim() || '';
+        const fieldValue = (id) => { const el = document.getElementById(id); return el && typeof el.value === 'string' ? el.value.trim() : ''; };
+        const petName = fieldValue('pet-name');
+        const address = this.deliveryEnabled ? fieldValue('customer-address') : '';
+
+        // One row id per sale, kept across retries, so photos can be attached to the right order.
+        if (!this.pendingRowId && typeof crypto !== 'undefined' && crypto.randomUUID) this.pendingRowId = crypto.randomUUID();
 
         const orderDetails = {
             orderId: orderId,
             orderDate: orderDateIso,
-            customerName: customerNameForInvoice,
+            rowId: this.pendingRowId || null,
+            petName: petName,
+            address: address,
+            ringColour: this.ringColour || '',
+            customerName: customerNameRaw,
             customerEmail: customerEmail,
             customerPhone: customerPhone,
             customerComment: customerComment,
@@ -1422,7 +2217,26 @@ class POSApp {
                 this.pendingOrderLogged = true;
             }
 
-            const pdfBase64 = await this.generateInvoicePdfBase64(orderDetails);
+            // Optional photos. The sale is already recorded, so a failed upload must never stop the invoice.
+            let photosSaved = true;
+            if (this.orderPhotos.length > 0 && !this.pendingPhotosSaved) {
+                try {
+                    if (this.lastPurchasesSource !== 'supabase') throw new Error('order saved on this device only');
+                    const paths = await this.uploadOrderPhotos(orderDetails.orderId, orderDateIso, this.orderPhotos.map((photo) => photo.blob));
+                    const client = await this.getSupabaseClient();
+                    const query = client.from('orders').update({ photo_paths: paths });
+                    const { error: photoError } = orderDetails.rowId
+                        ? await query.eq('id', orderDetails.rowId)
+                        : await query.eq('order_id', orderDetails.orderId);
+                    if (photoError) throw new Error(photoError.message);
+                    this.pendingPhotosSaved = true;
+                } catch (photoError) {
+                    photosSaved = false;
+                    console.error('Could not save order photos:', photoError);
+                }
+            }
+
+            const pdfBase64 = await this.generateInvoicePdfBase64({ ...orderDetails, customerName: customerNameForInvoice });
             const fileName = `WoofCrafts_Order_${orderDetails.orderId}.pdf`;
 
             // File a copy in the invoices folder for today's date. A failure here must not stop the email.
@@ -1455,6 +2269,9 @@ class POSApp {
                         deliveryFee: orderDetails.deliveryFee,
                         deliveryMethod: orderDetails.deliveryMethod,
                         customerComment: orderDetails.customerComment,
+                        petName: orderDetails.petName,
+                        ringColour: this.ringColourLabel(orderDetails.ringColour),
+                        address: orderDetails.address,
                         total: orderDetails.total
                     }
                 })
@@ -1465,18 +2282,19 @@ class POSApp {
                 throw new Error(result.error || 'Failed to send invoice email');
             }
 
-            // If user is currently viewing purchases, refresh list immediately.
-            const purchasesView = document.getElementById('view-purchases');
-            if (purchasesView && !purchasesView.classList.contains('hidden')) {
-                this.purchasesLoaded = false;
-                await this.refreshPurchasesView();
-            }
+            // The Purchases list reloads the next time it is opened.
+            this.purchasesLoaded = false;
 
-            ui.showToast('Invoice #' + orderDetails.orderId + ' sent to ' + orderDetails.customerEmail + (savedCopy ? '' : '. The PDF copy could not be filed, so download it from the email.'), savedCopy ? 'success' : 'error');
+            const problems = [];
+            if (!savedCopy) problems.push('The PDF copy could not be filed, so download it from the email.');
+            if (!photosSaved) problems.push('The photo was not saved. Add it again from Purchases.');
+            ui.showToast('Invoice #' + orderDetails.orderId + ' sent to ' + orderDetails.customerEmail + (problems.length ? '. ' + problems.join(' ') : ''), problems.length ? 'error' : 'success');
             this.closeCartSheet();
             this.pendingOrderId = null;
             this.pendingOrderDate = null;
             this.pendingOrderLogged = false;
+            this.pendingRowId = null;
+            this.pendingPhotosSaved = false;
             // Cart clears automatically without prompt as per UX review
             this.clearCart(true);
         } catch (error) {
@@ -1561,8 +2379,36 @@ class POSApp {
             deliveryToggle.addEventListener('change', () => {
                 this.deliveryEnabled = deliveryToggle.checked;
                 this.updateTotals();
+                this.syncAddressField();
             });
         }
+
+        const ringGroup = document.getElementById('ring-colour');
+        if (ringGroup) {
+            ringGroup.addEventListener('click', (event) => {
+                const btn = event.target && event.target.closest ? event.target.closest('.seg-btn') : null;
+                if (!btn) return;
+                const value = btn.getAttribute('data-ring');
+                this.setRingColour(this.ringColour === value ? '' : value);   // tap again to clear
+            });
+        }
+
+        const photoInput = document.getElementById('order-photo-input');
+        if (photoInput) {
+            photoInput.addEventListener('change', async () => {
+                const file = photoInput.files && photoInput.files[0];
+                photoInput.value = '';
+                await this.addOrderPhoto(file);
+            });
+        }
+        const photoStrip = document.getElementById('order-photos');
+        if (photoStrip) {
+            photoStrip.addEventListener('click', (event) => {
+                const btn = event.target && event.target.closest ? event.target.closest('.photo-remove') : null;
+                if (btn) this.removeOrderPhoto(Number(btn.getAttribute('data-photo-index')));
+            });
+        }
+        this.syncAddressField();
         this.setupCartSheet();
         this.setupCategoryFilter();
         const discountBtn = document.getElementById('discount-btn');

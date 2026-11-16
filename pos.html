@@ -33,6 +33,9 @@
         <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
         <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5"/></symbol>
         <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+        <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
     </svg>
 
     <div class="container">
@@ -114,7 +117,7 @@
                             <span id="subtotal">$0.00</span>
                         </div>
                         <div class="discount-section">
-                            <button id="discount-btn" class="discount-btn" type="button">
+                            <button id="discount-btn" class="discount-btn" type="button" aria-pressed="false">
                                 <svg class="icon" aria-hidden="true"><use href="#i-percent"/></svg> Apply 5% discount
                             </button>
                             <span id="discount-amount" class="discount-amount hidden">-$0.00</span>
@@ -140,15 +143,32 @@
                     </div>
 
                     <div class="checkout-section">
-                        <h3>Customer details</h3>
+                        <h3>Order details</h3>
                         <div class="input-group">
-                            <label for="customer-name">Name (optional)</label>
-                            <input type="text" id="customer-name" placeholder="Customer name" class="input-field" autocomplete="off">
+                            <label for="customer-name">Owner name</label>
+                            <input type="text" id="customer-name" class="input-field" autocomplete="off" autocapitalize="words" enterkeyhint="next">
+                        </div>
+                        <div class="input-group">
+                            <label for="pet-name">Pet's name</label>
+                            <input type="text" id="pet-name" class="input-field" autocomplete="off" autocapitalize="words" enterkeyhint="next" aria-describedby="pet-name-hint">
+                            <p class="field-note" id="pet-name-hint">More than one pet? Separate the names with commas.</p>
+                        </div>
+                        <div class="input-group">
+                            <span class="group-label" id="ring-colour-label">Colour of ring</span>
+                            <div class="segmented" id="ring-colour" role="group" aria-labelledby="ring-colour-label">
+                                <button type="button" class="seg-btn" data-ring="silver" aria-pressed="false">Silver</button>
+                                <button type="button" class="seg-btn" data-ring="gold" aria-pressed="false">Gold</button>
+                                <button type="button" class="seg-btn" data-ring="gun metal" aria-pressed="false">Gun metal</button>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="customer-phone">Phone</label>
+                            <input type="tel" id="customer-phone" class="input-field" autocomplete="off" inputmode="tel" enterkeyhint="next">
                         </div>
                         <div class="input-group">
                             <label for="customer-email-local">Email (required)</label>
                             <div class="email-compose-row" aria-label="Customer email">
-                                <input type="text" id="customer-email-local" placeholder="name" class="input-field email-local-input" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email">
+                                <input type="text" id="customer-email-local" placeholder="name" class="input-field email-local-input" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" aria-describedby="customer-email-error">
                                 <span class="email-at" aria-hidden="true">@</span>
                                 <span id="customer-email-domain-selected" class="email-domain-selected" role="status" aria-live="polite">gmail.com</span>
                             </div>
@@ -160,36 +180,61 @@
                                 <button type="button" class="domain-btn" data-domain="aol.com">aol.com</button>
                                 <button type="button" class="domain-btn" data-domain="__other__" id="email-domain-other-btn">Other</button>
                             </div>
-                            <input type="text" id="customer-email-domain-custom" class="input-field email-domain-custom hidden" placeholder="example.com" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+                            <input type="text" id="customer-email-domain-custom" class="input-field email-domain-custom hidden" placeholder="example.com" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Email provider">
                             <input type="email" id="customer-email" class="hidden" aria-label="Customer email (hidden)">
+                            <p class="field-error hidden" id="customer-email-error" role="alert"></p>
+                        </div>
+                        <div class="input-group" id="address-group">
+                            <label for="customer-address">Delivery address</label>
+                            <textarea id="customer-address" class="input-field textarea-short" rows="2" autocomplete="off" placeholder="Block, street, unit, postal code"></textarea>
+                            <p class="field-note">Leave blank if you will collect it later. You can add it from Purchases.</p>
                         </div>
                         <div class="input-group">
-                            <label for="customer-phone">Phone</label>
-                            <input type="tel" id="customer-phone" placeholder="9123 4567" class="input-field" autocomplete="off" inputmode="tel">
+                            <span class="group-label" id="order-photo-label">Photo (optional)</span>
+                            <div class="photo-strip" id="order-photos" aria-live="polite"></div>
+                            <label class="btn-secondary photo-add-btn" for="order-photo-input" id="order-photo-btn">
+                                <svg class="icon" aria-hidden="true"><use href="#i-camera"/></svg> <span id="order-photo-btn-text">Take photo</span>
+                            </label>
+                            <input type="file" id="order-photo-input" class="visually-hidden" accept="image/*" capture="environment" aria-labelledby="order-photo-label">
                         </div>
                         <div class="input-group">
                             <label for="customer-comment">Notes</label>
                             <textarea id="customer-comment" placeholder="Engraving text, special requests" class="input-field textarea-resizable" rows="3"></textarea>
                         </div>
+                    </div>
 
-                        <div class="action-buttons">
-                            <button id="send-email-btn" class="btn-primary" type="button">
-                                <svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg> Send invoice
-                            </button>
-                        </div>
+                    <div class="action-buttons">
+                        <button id="send-email-btn" class="btn-primary" type="button">
+                            <svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg> Send invoice
+                        </button>
                     </div>
                 </aside>
             </div>
 
-            <section id="view-purchases" class="hidden" aria-label="Purchase history">
-                <div class="section-header">
-                    <h2 id="purchases-heading">Purchases</h2>
-                    <p class="section-subtitle">Tap a purchase to see its items.</p>
+            <section id="view-purchases" class="hidden purchases-view" aria-label="Purchase history">
+                <div class="purchases-layout" id="purchases-layout">
+                    <aside class="purchases-sidebar" aria-label="Invoices">
+                        <div class="purchases-toolbar">
+                            <h2 id="purchases-heading">Purchases</h2>
+                            <div class="purchases-toolbar-actions">
+                                <button type="button" class="btn-secondary icon-only-btn" id="purchases-refresh-btn" aria-label="Refresh purchases" title="Refresh">
+                                    <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>
+                                </button>
+                                <button type="button" class="btn-secondary" id="export-open-btn">
+                                    <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> Export
+                                </button>
+                            </div>
+                        </div>
+                        <div class="purchases-search-wrap">
+                            <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+                            <input type="search" id="purchases-search" class="input-field purchases-search" placeholder="Search name, pet or order no." aria-label="Search invoices" autocomplete="off">
+                        </div>
+                        <p id="purchases-count" class="purchases-count" role="status" aria-live="polite"></p>
+                        <div id="purchases-list" class="purchases-list"></div>
+                    </aside>
+                    <div id="purchase-details" class="purchase-details-pane" tabindex="-1"></div>
                 </div>
-
-                <div id="purchases-list" class="products-grid"></div>
-
-                <div id="purchase-details" class="container purchase-details-panel"></div>
+                <input type="file" id="detail-photo-input" class="visually-hidden" accept="image/*" capture="environment" aria-label="Add a photo to this order">
             </section>
         </main>
     </div>
@@ -208,6 +253,45 @@
         </div>
     </dialog>
 
+    <dialog id="export-dialog" class="custom-modal export-dialog" aria-labelledby="export-title">
+        <form method="dialog" class="custom-modal-content" id="export-form">
+            <h3 id="export-title" class="custom-modal-title">Export to Excel</h3>
+
+            <fieldset class="export-fieldset">
+                <legend>Which orders</legend>
+                <div class="choice-row" id="export-range">
+                    <label class="choice"><input type="radio" name="export-range" value="today"><span>Today</span></label>
+                    <label class="choice"><input type="radio" name="export-range" value="week"><span>This week</span></label>
+                    <label class="choice"><input type="radio" name="export-range" value="month"><span>This month</span></label>
+                    <label class="choice"><input type="radio" name="export-range" value="all" checked><span>All</span></label>
+                    <label class="choice"><input type="radio" name="export-range" value="custom"><span>Pick dates</span></label>
+                </div>
+                <div class="export-dates hidden" id="export-dates">
+                    <label>From <input type="date" id="export-from" class="input-field"></label>
+                    <label>To <input type="date" id="export-to" class="input-field"></label>
+                </div>
+            </fieldset>
+
+            <fieldset class="export-fieldset">
+                <legend>Layout</legend>
+                <div class="choice-column" id="export-layout">
+                    <label class="choice choice-wide"><input type="radio" name="export-layout" value="orders" checked><span><strong>Invoices</strong> One row per invoice</span></label>
+                    <label class="choice choice-wide"><input type="radio" name="export-layout" value="items"><span><strong>Items</strong> One row per item sold</span></label>
+                    <label class="choice choice-wide"><input type="radio" name="export-layout" value="both"><span><strong>Both</strong> Two sheets in one file</span></label>
+                </div>
+            </fieldset>
+
+            <p class="export-summary" id="export-summary" role="status" aria-live="polite"></p>
+
+            <div class="custom-modal-actions">
+                <button type="button" class="btn-secondary modal-action-btn" id="export-cancel">Cancel</button>
+                <button type="button" class="btn-primary modal-action-btn" id="export-download">
+                    <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> Download
+                </button>
+            </div>
+        </form>
+    </dialog>
+
     <!-- Shared utilities (must load first) -->
     <script src="js/config.public.js"></script>
     <script src="js/config.js"></script>
@@ -219,6 +303,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <!-- Main app script -->
+    <!-- Excel export (kept in the repo so it works without a CDN) -->
+    <script src="js/xlsx-lite.js"></script>
     <script src="js/app.js"></script>
     <script>
         document.getElementById('sign-out-btn').addEventListener('click', () => window.WoofAuth.signOut());
