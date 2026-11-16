@@ -15,6 +15,7 @@ class ProductManager {
         await this.loadProducts();
         this.renderProducts();
         this.setupEventListeners();
+        this.setCategoryValue('general');
     }
 
     async loadProducts() {
@@ -26,7 +27,7 @@ class ProductManager {
 
                 const { data, error } = await supabaseClient
                     .from(tableName)
-                    .select('id,title,description,price,category,image_url,created_at')
+                    .select('id,title,description,price,category,image_url,created_at,needs_details')
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
@@ -40,7 +41,8 @@ class ProductManager {
                             description: row.description || '',
                             price: Number(row.price),
                             category: (row.category || 'general'),
-                            image: row.image_url || ''
+                            image: row.image_url || '',
+                            needsDetails: typeof row.needs_details === 'boolean' ? row.needs_details : /tag/i.test(String(row.title || ''))
                         };
                     });
                     console.log(`✓ Loaded ${this.products.length} products from Supabase`);
@@ -96,7 +98,7 @@ class ProductManager {
         return window.WoofAuth.getClient();
     }
 
-    async upsertProduct({ productId, title, description, price, category, imageUrl }) {
+    async upsertProduct({ productId, title, description, price, category, imageUrl, needsDetails }) {
         const supabaseClient = await this.getSupabaseClient();
         if (!supabaseClient) throw new Error('Supabase is not configured (missing window.SUPABASE_CONFIG)');
 
@@ -109,7 +111,8 @@ class ProductManager {
             description: description && description.trim().length > 0 ? description.trim() : null,
             price: price,
             category: category,
-            image_url: imageUrl
+            image_url: imageUrl,
+            needs_details: Boolean(needsDetails)
         };
 
         const { error } = await supabaseClient.from(tableName).upsert(payload, { onConflict: 'id' });
@@ -233,7 +236,7 @@ class ProductManager {
         const name = (formData.get('name') || '').toString().trim();
         const description = (formData.get('description') || '').toString().trim();
         const price = parseFloat(formData.get('price') || 0);
-        const category = ((formData.get('category') || '').toString().trim().toLowerCase().replace(/\s+/g, ' ')) || 'general';
+        const category = this.getCategoryValue();
         const imageFile = formData.get('image');
 
         if (!name) {
@@ -302,7 +305,8 @@ class ProductManager {
                 description: description,
                 price: price,
                 category: category,
-                imageUrl: imagePath
+                imageUrl: imagePath,
+                needsDetails: Boolean(document.getElementById('product-needs-details')?.checked)
             });
 
             // Reload from Supabase to keep the list consistent
@@ -327,6 +331,54 @@ class ProductManager {
         }
     }
 
+    static get DEFAULT_CATEGORIES() { return ['general', 'tags', 'addons', 'photoframes', 'christmas', 'promotion']; }
+    static get NEW_CATEGORY() { return '__new__'; }
+
+    /** Categories already in use (these are the filter buttons on the POS screen) plus the standard ones. */
+    categoryChoices() {
+        const seen = new Set(ProductManager.DEFAULT_CATEGORIES);
+        (this.products || []).forEach((p) => { const c = String(p.category || '').trim().toLowerCase(); if (c) seen.add(c); });
+        return Array.from(seen).sort((a, b) => a.localeCompare(b));
+    }
+
+    renderCategorySelect(selected) {
+        const select = document.getElementById('product-category');
+        if (!select) return;
+        const choices = this.categoryChoices();
+        const want = String(selected || select.value || 'general').trim().toLowerCase();
+        if (want && want !== ProductManager.NEW_CATEGORY && !choices.includes(want)) choices.push(want);
+        select.innerHTML = choices.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c.charAt(0).toUpperCase() + c.slice(1))}</option>`).join('')
+            + `<option value="${ProductManager.NEW_CATEGORY}">New category…</option>`;
+        select.value = want;
+        this.syncNewCategoryBox();
+    }
+
+    setCategoryValue(value) {
+        this.renderCategorySelect(value);
+        const box = document.getElementById('product-category-new');
+        if (box) box.value = '';
+        this.syncNewCategoryBox();
+    }
+
+    syncNewCategoryBox() {
+        const select = document.getElementById('product-category');
+        const box = document.getElementById('product-category-new');
+        if (!select || !box) return;
+        const isNew = select.value === ProductManager.NEW_CATEGORY;
+        box.classList.toggle('hidden', !isNew);
+        box.required = isNew;
+    }
+
+    getCategoryValue() {
+        const select = document.getElementById('product-category');
+        let value = select ? select.value : 'general';
+        if (value === ProductManager.NEW_CATEGORY) {
+            const box = document.getElementById('product-category-new');
+            value = box ? box.value : '';
+        }
+        return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ') || 'general';
+    }
+
     editProduct(productId) {
         const product = this.products.find(p => p.id == productId || String(p.id) === String(productId));
         if (!product) return;
@@ -335,7 +387,9 @@ class ProductManager {
         document.getElementById('product-id').value = productId;
         document.getElementById('product-name').value = product.name;
         document.getElementById('product-price').value = product.price;
-        document.getElementById('product-category').value = (product.category || 'general').toLowerCase();
+        this.setCategoryValue((product.category || 'general').toLowerCase());
+        const needsDetailsEl = document.getElementById('product-needs-details');
+        if (needsDetailsEl) needsDetailsEl.checked = Boolean(product.needsDetails);
 
         const descriptionEl = document.getElementById('product-description');
         if (descriptionEl) descriptionEl.value = product.description || '';
@@ -394,12 +448,11 @@ class ProductManager {
         document.getElementById('submit-btn').innerHTML = iconSvg('plus') + ' Add product';
         document.getElementById('cancel-edit-btn').classList.add('hidden');
 
-        const categoryEl = document.getElementById('product-category');
-        if (categoryEl) {
-            let last = '';
-            try { last = localStorage.getItem('woofcrafts_last_category') || ''; } catch (error) { /* private mode */ }
-            categoryEl.value = last || 'general';
-        }
+        let last = '';
+        try { last = localStorage.getItem('woofcrafts_last_category') || ''; } catch (error) { /* private mode */ }
+        this.setCategoryValue(last || 'general');
+        const needsDetailsEl = document.getElementById('product-needs-details');
+        if (needsDetailsEl) needsDetailsEl.checked = /tag/i.test(last);
     }
 
     renderProducts() {
@@ -463,6 +516,14 @@ class ProductManager {
     }
 
     setupEventListeners() {
+        const categorySelect = document.getElementById('product-category');
+        if (categorySelect) {
+            categorySelect.addEventListener('change', () => {
+                this.syncNewCategoryBox();
+                const box = document.getElementById('product-category-new');
+                if (box && !box.classList.contains('hidden') && box.focus) box.focus();
+            });
+        }
         document.getElementById('product-form').addEventListener('submit', (e) => {
             this.handleFormSubmit(e);
         });

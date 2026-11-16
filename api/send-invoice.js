@@ -199,7 +199,36 @@ module.exports = async function sendInvoiceHandler(req, res) {
         const discountAmount = Number(order.discountAmount || 0);
         const deliveryFee = Number(order.deliveryFee || 0);
         const isPickup = order.deliveryMethod === 'pickup';
-        const comment = sanitizeInlineText(order.customerComment, '');
+        // Notes carry the engraving text, so keep every line (capped at 1,500 characters).
+        const sanitizeNote = (value) => {
+            if (typeof value !== 'string') return '';
+            return value.replace(/\r\n?/g, '\n').split('\n').map((line) => line.replace(/[ \t]+/g, ' ').trim())
+                .join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1500);
+        };
+        const comment = sanitizeNote(order.customerComment);
+        const petName = sanitizeInlineText(order.petName, '');
+        const ringColour = sanitizeInlineText(order.ringColour, '');
+        const deliveryAddress = sanitizeNote(order.address).replace(/\n+/g, ', ').slice(0, 300);
+        // One line per tag: what is engraved and the ring colour.
+        const tagList = (Array.isArray(order.tags) ? order.tags.slice(0, 40) : []).map((t) => {
+            const name = sanitizeInlineText(t && t.item, 'Tag');
+            const of = Number((t && t.of) || 1);
+            const label = of > 1 ? `${name} (${Number((t && t.number) || 1)}/${of})` : name;
+            const parts = [
+                sanitizeInlineText(t && t.petName, ''),
+                sanitizeInlineText(t && t.ringColour, '') ? `${sanitizeInlineText(t.ringColour, '')} ring` : '',
+                sanitizeInlineText(t && t.front, '') ? `Front: ${sanitizeInlineText(t.front, '')}` : '',
+                sanitizeInlineText(t && t.back, '') ? `Back: ${sanitizeInlineText(t.back, '')}` : ''
+            ].filter(Boolean);
+            return { label, detail: parts.join(' | ') };
+        }).filter((t) => t.detail);
+        const orderFacts = [
+            ['How', sanitizeInlineText(order.fulfilment, '')],
+            ['Payment', sanitizeInlineText(order.paymentMethod, '')],
+            ["Pet's name", tagList.length ? '' : petName],
+            ['Colour of ring', tagList.length ? '' : ringColour],
+            ['Delivery address', isPickup ? '' : deliveryAddress]
+        ].filter(([, value]) => value);
         const hasTotals = items.length > 0 || Number(order.total || 0) > 0;
 
         const deliveryText = isPickup ? 'Pickup' : (deliveryFee > 0 ? money(deliveryFee) : 'Free');
@@ -223,8 +252,16 @@ module.exports = async function sendInvoiceHandler(req, res) {
             textLines.push(`Delivery - ${deliveryText}`);
             textLines.push(`Total - ${money(order.total)}`);
         }
+        if (orderFacts.length) {
+            textLines.push('');
+            orderFacts.forEach(([label, value]) => textLines.push(`${label}: ${value}`));
+        }
+        if (tagList.length) {
+            textLines.push('', 'Engraving details:');
+            tagList.forEach((t) => textLines.push(`${t.label}: ${t.detail}`));
+        }
         if (comment) {
-            textLines.push('', `Your note: "${comment}"`);
+            textLines.push('', 'Your note:', comment);
         }
         textLines.push(
             '',
@@ -261,9 +298,28 @@ module.exports = async function sendInvoiceHandler(req, res) {
             ${totalRow('Total', money(order.total), true)}
           </table>` : '';
 
+        const factsBlock = orderFacts.length ? `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0;">
+            ${orderFacts.map(([label, value]) => `
+            <tr>
+              <td style="padding:4px 12px 4px 0;font-size:15px;color:${c.muted};white-space:nowrap;vertical-align:top;">${escapeHtml(label)}</td>
+              <td style="padding:4px 0;font-size:15px;color:${c.ink};">${escapeHtml(value)}</td>
+            </tr>`).join('')}
+          </table>` : '';
+
+        const tagsBlock = tagList.length ? `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0;">
+            <tr><td colspan="2" style="padding:0 0 6px;font-size:13px;font-weight:700;color:${c.brand};letter-spacing:0.04em;">ENGRAVING DETAILS</td></tr>
+            ${tagList.map((t) => `
+            <tr>
+              <td style="padding:4px 12px 4px 0;font-size:15px;color:${c.muted};vertical-align:top;">${escapeHtml(t.label)}</td>
+              <td style="padding:4px 0;font-size:15px;color:${c.ink};">${escapeHtml(t.detail)}</td>
+            </tr>`).join('')}
+          </table>` : '';
+
         const noteBlock = comment ? `
           <p style="margin:18px 0 0;padding:12px 14px;background:${c.paper};border-radius:10px;font-size:15px;color:${c.ink};">
-            <span style="color:${c.muted};">Your note:</span> ${escapeHtml(comment)}
+            <span style="color:${c.muted};">Your note:</span><br>${escapeHtml(comment).replace(/\n/g, '<br>')}
           </p>` : '';
 
         const emailHtml = `<!DOCTYPE html>
@@ -279,6 +335,8 @@ module.exports = async function sendInvoiceHandler(req, res) {
       <p style="margin:0;font-size:16px;color:${c.ink};">Hi ${escapeHtml(greetingName)},</p>
       <p style="margin:10px 0 0;font-size:16px;color:${c.ink};">Thanks for shopping with WoofCrafts! Here&#39;s your invoice for today&#39;s order.</p>
       ${summaryBlock}
+      ${factsBlock}
+      ${tagsBlock}
       ${noteBlock}
       <p style="margin:22px 0 0;font-size:15px;color:${c.muted};">The PDF invoice is attached for your records. Reply to this email if anything isn&#39;t right.</p>
       <p style="margin:18px 0 0;font-size:15px;color:${c.ink};">Woof woof,<br>The WoofCrafts team</p>
