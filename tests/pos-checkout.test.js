@@ -63,7 +63,7 @@ let pass=0,fail=0;const ok=(c,n)=>{c?pass++:fail++;console.log((c?'PASS ':'FAIL 
  // rpc failure
  failRpc=true;app.cart=[{productId:1,name:'Tag',price:10,quantity:1}];app.setFulfilment('delivery');app.paymentMethod='cash';mk('customer-email').value='e@f.co';
  const before=calls.inserts.length;await app.sendOrderEmail();failRpc=false;
- ok(calls.inserts.length===before&&toasts.at(-1).t==='error'&&mk('send-email-btn').disabled===false,'rpc failure: no order saved, error toast, button re-enabled');
+ ok(calls.inserts.length===before&&!mk('send-banner').classList.contains('hidden')&&/boom/.test(mk('send-banner-text').textContent)&&mk('send-email-btn').disabled===false,'rpc failure: no order saved, persistent banner, button re-enabled');
  // upload failure still emails
  failUpload=true;const fb=calls.fetches.length;app.cart=[{productId:1,name:'Tag',price:60,quantity:1}];app.paymentMethod='cash';
  await app.sendOrderEmail();failUpload=false;

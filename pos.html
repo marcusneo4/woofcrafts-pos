@@ -54,6 +54,9 @@
                     </button>
                 </div>
                 <div class="header-actions">
+                    <button type="button" class="conn-chip hidden" id="conn-chip" aria-label="Connection and orders waiting to upload">
+                        <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg><span id="conn-chip-text"></span>
+                    </button>
                     <a href="products.html" class="manage-products-btn" aria-label="Manage products">
                         <svg class="icon" aria-hidden="true"><use href="#i-box"/></svg><span class="label">Products</span>
                     </a>
@@ -210,6 +213,14 @@
                         </div>
                     </div>
 
+                    <div class="send-banner hidden" id="send-banner" role="alert">
+                        <p id="send-banner-text"></p>
+                        <div class="send-banner-actions">
+                            <button type="button" class="btn-primary" id="send-banner-retry">Try again</button>
+                            <button type="button" class="btn-secondary" id="send-banner-close">Dismiss</button>
+                        </div>
+                    </div>
+
                     <div class="action-buttons">
                         <button id="send-email-btn" class="btn-primary" type="button">
                             <svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg> Send invoice
@@ -263,6 +274,10 @@
                 <button id="modal-confirm" class="btn-primary btn-danger-soft modal-action-btn" type="button">Confirm</button>
             </div>
         </div>
+    </dialog>
+
+    <dialog id="queue-dialog" class="custom-modal order-done" aria-labelledby="queue-dialog-title">
+        <div class="custom-modal-content" id="queue-dialog-body"></div>
     </dialog>
 
     <dialog id="order-done" class="custom-modal order-done" aria-labelledby="order-done-title">
@@ -321,9 +336,16 @@
     <!-- Main app script -->
     <!-- Excel export (kept in the repo so it works without a CDN) -->
     <script src="js/xlsx-lite.js"></script>
+    <script src="js/order-queue.js"></script>
     <script src="js/app.js"></script>
     <script>
         document.getElementById('sign-out-btn').addEventListener('click', () => window.WoofAuth.signOut());
+    </script>
+    <script>
+        // Keeps the POS available with no signal. Skipped when opened as a file.
+        if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch((e) => console.warn('Offline mode unavailable:', e)));
+        }
     </script>
 </body>
 </html>

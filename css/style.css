@@ -1065,3 +1065,18 @@ fieldset.edit-tag legend { padding: 0 var(--space-2); }
 .purchases-toolbar h2 { flex: 1 1 auto; }
 .purchases-toolbar-actions { flex-wrap: wrap; }
 .purchases-toolbar-actions .btn-secondary { white-space: nowrap; }
+
+/* Weak Wi-Fi protection: connection chip, send banner, queue list */
+.conn-chip { display: inline-flex; align-items: center; gap: 0.35rem; min-height: var(--tap); padding: 0 0.75rem; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-weight: 700; font-size: var(--fs-sm); cursor: pointer; white-space: nowrap; }
+.conn-chip .icon { width: 1.1rem; height: 1.1rem; }
+.conn-chip.is-offline { background: #fdecec; border-color: var(--red); color: var(--red); }
+.conn-chip.is-waiting { background: var(--wash); border-color: var(--brass); color: var(--brass); }
+.conn-chip.hidden { display: none; }
+.send-banner { margin: 0 0 var(--space-3); padding: var(--space-3); border: 2px solid var(--red); border-radius: var(--radius-md); background: #fdecec; }
+.send-banner.hidden { display: none; }
+.send-banner p { margin: 0 0 var(--space-2); font-weight: 600; color: var(--ink); }
+.send-banner-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.send-banner-actions .btn-primary, .send-banner-actions .btn-secondary { min-height: var(--tap-lg); }
+.queue-list { list-style: none; margin: var(--space-3) 0; padding: 0; display: grid; gap: var(--space-2); }
+.queue-list li { padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.queue-error { color: var(--red); font-size: var(--fs-sm); }

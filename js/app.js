@@ -45,6 +45,8 @@ class POSApp {
             this.renderProducts();
             this.renderCart();
             this.setupEventListeners();
+            this.restoreDraft();
+            this.setupConnectivity();
         } catch (error) {
             console.error('Error initializing POS:', error);
             this.products = [];
@@ -82,6 +84,7 @@ class POSApp {
                         };
                     });
                     console.log(`✓ Loaded ${this.products.length} products from Supabase`);
+                    this.saveProductCache();
                     return;
                 }
 
@@ -94,6 +97,8 @@ class POSApp {
                 console.error('Could not load products from Supabase:', error);
                 // An unexplained empty grid is the worst thing to hand someone at a
                 // market stall, so the page says what happened and offers a retry.
+                // With a saved copy of the list the stall can keep selling.
+                if (this.useProductCache()) return;
                 this.loadError = error.message || 'The connection failed';
                 this.products = [];
                 return;
@@ -103,6 +108,24 @@ class POSApp {
         // For shared product state across devices, require Supabase configuration.
         console.warn('Supabase is not configured. Product list is unavailable.');
         this.products = [];
+    }
+
+    saveProductCache() {
+        try {
+            localStorage.setItem('woofcrafts_products_cache', JSON.stringify({ savedAt: new Date().toISOString(), products: this.products }));
+        } catch (e) { console.warn('Could not cache products:', e); }
+    }
+
+    /** Falls back to the last product list that loaded. Returns true when one was used. */
+    useProductCache() {
+        try {
+            const cached = JSON.parse(localStorage.getItem('woofcrafts_products_cache') || 'null');
+            if (!cached || !Array.isArray(cached.products) || cached.products.length === 0) return false;
+            this.products = cached.products;
+            this.loadError = null;
+            this.productsFromCache = cached.savedAt || true;
+            return true;
+        } catch { return false; }
     }
 
     getSupabaseConfig() {
@@ -156,10 +179,14 @@ class POSApp {
         };
         // A row id chosen here lets photos be attached without reading the order back.
         if (orderDetails.rowId) payload.id = orderDetails.rowId;
+        // An order taken offline keeps the time of the sale, not the time it uploaded.
+        if (orderDetails.queuedAt) payload.created_at = orderDetails.orderDate;
 
         const { error } = await supabaseClient.from('orders').insert(payload);
         if (error) {
-            throw new Error(`[PurchaseLog] Supabase insert failed: ${error.message}`);
+            const failure = new Error(`[PurchaseLog] Supabase insert failed: ${error.message}`);
+            failure.code = error.code;
+            throw failure;
         }
     }
 
@@ -216,7 +243,7 @@ class POSApp {
         return localRecord;
     }
 
-    async logPurchase(orderDetails) {
+    async logPurchase(orderDetails, options = {}) {
         // Prefer Supabase when configured; always fall back to local storage.
         if (this.isSupabaseConfigured()) {
             try {
@@ -224,6 +251,13 @@ class POSApp {
                 this.lastPurchasesSource = 'supabase';
                 return;
             } catch (error) {
+                // Same sale sent twice (a retry after a dropped reply): it is already recorded.
+                if (error && (error.code === '23505' || /duplicate key/i.test(String(error.message || '')))) {
+                    this.lastPurchasesSource = 'supabase';
+                    return;
+                }
+                // No signal: the caller queues the sale on the phone instead of hiding it in local storage.
+                if (options.queueOnNetworkError && this.isNetworkError(error)) throw error;
                 console.warn('[PurchaseLog] Supabase logging failed; falling back to local storage:', error);
             }
         }
@@ -2497,6 +2531,7 @@ class POSApp {
     }
 
     clearCustomerInfo() {
+        try { localStorage.removeItem('woofcrafts_draft'); } catch { /* ignore */ }
         document.getElementById('customer-name').value = '';
         const customerEmailLocalInput = document.getElementById('customer-email-local');
         if (customerEmailLocalInput) customerEmailLocalInput.value = '';
@@ -2939,6 +2974,36 @@ class POSApp {
         return pdfBase64;
     }
 
+    /** The request body for /api/send-invoice. Shared by the counter flow and the offline queue. */
+    buildEmailPayload(orderDetails, pdfBase64, fileName, customerNameRaw) {
+        return {
+            pdfBase64,
+            customerEmail: orderDetails.customerEmail,
+            customerName: customerNameRaw,
+            purchaseDate: orderDetails.orderDate,
+            invoiceNumber: orderDetails.orderId,
+            fileName,
+            order: {
+                items: orderDetails.items,
+                subtotal: orderDetails.subtotal,
+                discountAmount: orderDetails.discountAmount,
+                deliveryFee: orderDetails.deliveryFee,
+                deliveryMethod: orderDetails.deliveryMethod,
+                fulfilment: this.fulfilmentLabel(orderDetails.fulfilment),
+                paymentMethod: this.paymentLabel(orderDetails.paymentMethod),
+                customerComment: orderDetails.customerComment,
+                petName: orderDetails.petName,
+                ringColour: this.ringColourLabel(orderDetails.ringColour),
+                tags: orderDetails.tags.map((t) => ({
+                    item: t.item, number: t.number, of: t.of,
+                    petName: t.pet_name, ringColour: this.ringColourLabel(t.ring_colour), front: t.front, back: t.back
+                })),
+                address: orderDetails.address,
+                total: orderDetails.total
+            }
+        };
+    }
+
     async sendOrderEmail() {
         if (!this.validateCheckout()) return;
 
@@ -2948,6 +3013,7 @@ class POSApp {
             if (!goOn) { this.focusField('customer-address'); return; }
         }
 
+        this.hideSendBanner();
         const sendBtn = document.getElementById('send-email-btn');
         const hasEmailAtStart = Boolean((document.getElementById('customer-email')?.value || '').trim());
         if (sendBtn) {
@@ -2964,19 +3030,8 @@ class POSApp {
 
         // A retry after a failed email reuses the same order id and date, so one
         // sale never becomes two rows in the order history.
-        let orderId = this.pendingOrderId;
-        if (!orderId) {
-            try {
-                orderId = await this.allocateOrderId();
-            } catch (error) {
-                ui.showToast(error.message + '. Check the connection and try again.', 'error');
-                if (sendBtn) sendBtn.disabled = false;
-                this.updateSendButton();
-                return;
-            }
-        }
+        let orderId = this.pendingOrderId || null;
         const orderDateIso = this.pendingOrderDate || new Date().toISOString();
-        this.pendingOrderId = orderId;
         this.pendingOrderDate = orderDateIso;
 
         const customerComment = document.getElementById('customer-comment')?.value.trim() || '';
@@ -3020,11 +3075,37 @@ class POSApp {
             total: total
         };
 
+        if (!orderId) {
+            try {
+                orderId = await this.allocateOrderId();
+            } catch (error) {
+                if (this.isNetworkError(error)) {
+                    // No signal: keep the whole sale on this phone and upload it when the signal returns.
+                    await this.queueCurrentOrder(orderDetails, null);
+                } else {
+                    this.showSendBanner(error.message + '. Check the connection and try again.');
+                }
+                if (sendBtn) sendBtn.disabled = false;
+                this.updateSendButton();
+                return;
+            }
+            orderDetails.orderId = orderId;
+        }
+        this.pendingOrderId = orderId;
+
         try {
             // Record the sale first. The order record matters more than the invoice
             // email: a booth sale that is never written down is lost for good.
             if (!this.pendingOrderLogged) {
-                await this.logPurchase(orderDetails);
+                try {
+                    await this.logPurchase(orderDetails, { queueOnNetworkError: true });
+                } catch (logError) {
+                    if (this.isNetworkError(logError)) {
+                        await this.queueCurrentOrder(orderDetails, orderId);
+                        return;
+                    }
+                    throw logError;
+                }
                 this.pendingOrderLogged = true;
             }
 
@@ -3070,32 +3151,7 @@ class POSApp {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${accessToken || ''}`
                     },
-                    body: JSON.stringify({
-                        pdfBase64,
-                        customerEmail: orderDetails.customerEmail,
-                        customerName: customerNameRaw,
-                        purchaseDate: orderDateIso,
-                        invoiceNumber: orderDetails.orderId,
-                        fileName,
-                        order: {
-                            items: orderDetails.items,
-                            subtotal: orderDetails.subtotal,
-                            discountAmount: orderDetails.discountAmount,
-                            deliveryFee: orderDetails.deliveryFee,
-                            deliveryMethod: orderDetails.deliveryMethod,
-                            fulfilment: this.fulfilmentLabel(orderDetails.fulfilment),
-                            paymentMethod: this.paymentLabel(orderDetails.paymentMethod),
-                            customerComment: orderDetails.customerComment,
-                            petName: orderDetails.petName,
-                            ringColour: this.ringColourLabel(orderDetails.ringColour),
-                            tags: orderDetails.tags.map((t) => ({
-                                item: t.item, number: t.number, of: t.of,
-                                petName: t.pet_name, ringColour: this.ringColourLabel(t.ring_colour), front: t.front, back: t.back
-                            })),
-                            address: orderDetails.address,
-                            total: orderDetails.total
-                        }
-                    })
+                    body: JSON.stringify(this.buildEmailPayload(orderDetails, pdfBase64, fileName, customerNameRaw))
                 });
 
                 const result = await response.json();
@@ -3129,26 +3185,315 @@ class POSApp {
             this.pendingOrderLogged = false;
             this.pendingRowId = null;
             this.pendingPhotosSaved = false;
+            this.hideSendBanner();
             // Cart clears automatically without prompt as per UX review
             this.clearCart(true);
             this.showOrderDone(doneInfo);
+            this.syncQueue();
         } catch (error) {
             console.error('Error sending email:', error);
             const where = this.lastPurchasesSource === 'supabase' ? 'order history' : 'this device';
             if (this.pendingOrderLogged) {
-                ui.showToast(
+                this.showSendBanner(
                     `Order #${orderDetails.orderId} is saved to ${where}, but the invoice did not finish: `
                     + (error.message || 'unknown error')
-                    + '. Press the button again to retry. It will not create a second order.',
-                    'error'
+                    + '. Try again. It will not create a second order.'
                 );
             } else {
-                ui.showToast('Could not record this sale: ' + (error.message || 'unknown error') + '. Check the connection and try again.', 'error');
+                this.showSendBanner('Could not record this sale: ' + (error.message || 'unknown error') + '. Check the connection and try again.');
             }
         } finally {
             if (sendBtn) sendBtn.disabled = false;
             this.updateSendButton();
         }
+    }
+
+    // ---- Weak Wi-Fi protection: queue, connection indicator, draft ---------------------------------
+
+    isNetworkError(error) {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+        const text = String((error && (error.message || error)) || '');
+        return /failed to fetch|networkerror|network request failed|load failed|network error|timed? ?out|err_internet|offline/i.test(text);
+    }
+
+    /** A message that stays on screen until the sale goes through (a toast would vanish at a busy stall). */
+    showSendBanner(message) {
+        const el = document.getElementById('send-banner');
+        const text = document.getElementById('send-banner-text');
+        if (!el) { ui.showToast(message, 'error'); return; }
+        if (text) text.textContent = message;
+        el.classList.remove('hidden');
+    }
+
+    hideSendBanner() {
+        const el = document.getElementById('send-banner');
+        if (el) el.classList.add('hidden');
+    }
+
+    /** Keep the sale on this phone because the connection failed. The cart is cleared; nothing is lost. */
+    async queueCurrentOrder(orderDetails, orderId) {
+        const details = { ...orderDetails, orderId: null, queuedAt: new Date().toISOString() };
+        const record = WoofQueue.newRecord(details, this.orderPhotos.map((photo) => photo.blob));
+        if (orderId) record.progress.orderId = orderId;
+        try {
+            await WoofQueue.add(record);
+        } catch (error) {
+            console.error('Could not queue the order:', error);
+            this.showSendBanner('No signal, and this phone could not keep the order either: ' + (error.message || 'storage error') + '. Do not clear the cart. Write the order down and try again.');
+            return false;
+        }
+        this.pendingOrderId = null;
+        this.pendingOrderDate = null;
+        this.pendingOrderLogged = false;
+        this.pendingRowId = null;
+        this.pendingPhotosSaved = false;
+        this.hideSendBanner();
+        this.closeCartSheet();
+        await this.clearCart(true);
+        this.showQueuedDone(record);
+        await this.refreshQueueState();
+        return true;
+    }
+
+    showQueuedDone(record) {
+        const dialog = document.getElementById('order-done');
+        const body = document.getElementById('order-done-body');
+        if (!dialog || !body) return;
+        const d = record.details;
+        const summary = [this.fulfilmentLabel(d.fulfilment), this.paymentLabel(d.paymentMethod)].filter(Boolean).join(' · ');
+        body.innerHTML = `
+            <div class="order-done-head">
+                <span class="order-done-tick is-warn">${iconSvg('alert')}</span>
+                <h3 id="order-done-title">Saved on this phone</h3>
+                <p class="order-done-sub">$${Number(d.total).toFixed(2)} · ${escapeHtml(summary)}</p>
+            </div>
+            <ul class="order-done-steps">
+                <li><span class="ok">${iconSvg('check')}</span><span>The order is kept safely on this phone</span></li>
+                <li><span class="skip">${iconSvg('minus')}</span><span>It uploads by itself when the signal returns. The order number and invoice are made then${d.customerEmail ? ', and the invoice is emailed' : ''}</span></li>
+            </ul>
+            <div class="order-done-actions">
+                <button type="button" class="btn-primary" id="order-done-new">New order</button>
+            </div>`;
+        const newBtn = document.getElementById('order-done-new');
+        if (newBtn) newBtn.addEventListener('click', () => { if (dialog.open) dialog.close(); });
+        if (!dialog.open) dialog.showModal();
+        if (newBtn && newBtn.focus) newBtn.focus();
+    }
+
+    async refreshQueueState() {
+        try { this.queued = await WoofQueue.all(); } catch { this.queued = []; }
+        this.renderConnChip();
+        if (document.getElementById('queue-dialog') && document.getElementById('queue-dialog').open) this.renderQueueDialog();
+        return this.queued;
+    }
+
+    renderConnChip() {
+        const chip = document.getElementById('conn-chip');
+        if (!chip) return;
+        const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+        const count = (this.queued || []).length;
+        let label = '';
+        let mode = '';
+        if (!online && count > 0) { label = `Offline · ${count} waiting`; mode = 'is-offline'; }
+        else if (!online) { label = 'Offline'; mode = 'is-offline'; }
+        else if (count > 0) { label = this.syncing ? `Uploading ${count}…` : `${count} waiting to upload`; mode = 'is-waiting'; }
+        chip.classList.toggle('hidden', label === '');
+        chip.classList.remove('is-offline', 'is-waiting');
+        if (mode) chip.classList.add(mode);
+        const text = document.getElementById('conn-chip-text');
+        if (text) text.textContent = label;
+    }
+
+    renderQueueDialog() {
+        const body = document.getElementById('queue-dialog-body');
+        if (!body) return;
+        const list = this.queued || [];
+        const rows = list.map((rec) => {
+            const d = rec.details;
+            const who = d.customerName || 'No name';
+            const time = new Intl.DateTimeFormat('en-SG', { timeZone: 'Asia/Singapore', hour: 'numeric', minute: '2-digit', day: 'numeric', month: 'short' }).format(new Date(rec.queuedAt));
+            const note = rec.lastError ? `<span class="queue-error">${escapeHtml(rec.lastError)}</span>` : '';
+            return `<li><div><strong>${escapeHtml(who)}</strong> · $${Number(d.total).toFixed(2)}<br><span class="muted">${escapeHtml(time)} · ${escapeHtml(this.fulfilmentLabel(d.fulfilment))}</span>${note ? '<br>' + note : ''}</div></li>`;
+        }).join('');
+        const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+        body.innerHTML = `
+            <h3 id="queue-dialog-title">Orders waiting to upload</h3>
+            ${list.length === 0
+                ? '<p class="muted">Nothing is waiting. Every order is saved.</p>'
+                : `<p class="muted">${online ? 'These upload by themselves. You can also upload them now.' : 'There is no signal. These upload by themselves when it returns.'}</p><ul class="queue-list">${rows}</ul>`}
+            <div class="order-done-actions">
+                ${list.length > 0 ? `<button type="button" class="btn-secondary" id="queue-sync-now"${this.syncing ? ' disabled' : ''}>${this.syncing ? 'Uploading…' : 'Upload now'}</button>` : ''}
+                <button type="button" class="btn-primary" id="queue-close">Close</button>
+            </div>`;
+        const dialog = document.getElementById('queue-dialog');
+        const close = document.getElementById('queue-close');
+        if (close) close.addEventListener('click', () => { if (dialog && dialog.open) dialog.close(); });
+        const now = document.getElementById('queue-sync-now');
+        if (now) now.addEventListener('click', () => this.syncQueue(true));
+    }
+
+    async openQueueDialog() {
+        await this.refreshQueueState();
+        this.renderQueueDialog();
+        const dialog = document.getElementById('queue-dialog');
+        if (dialog && !dialog.open) dialog.showModal();
+    }
+
+    /** Uploads waiting orders one at a time, oldest first. Safe to call often. */
+    async syncQueue(manual = false) {
+        // The flag is raised before any await so two triggers (online event, timer) can never run together.
+        if (this.syncing) return;
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) { await this.refreshQueueState(); return; }
+        this.syncing = true;
+        let list;
+        try { list = await this.refreshQueueState(); } catch { list = []; }
+        if (list.length === 0) { this.syncing = false; this.renderConnChip(); return; }
+        this.renderConnChip();
+        let done = 0;
+        let stopped = false;
+        for (const rec of list) {
+            try {
+                await this.syncQueuedOrder(rec);
+                done += 1;
+            } catch (error) {
+                rec.attempts = (rec.attempts || 0) + 1;
+                rec.lastError = this.isNetworkError(error) ? 'Waiting for signal' : (error.message || 'Upload failed');
+                try { await WoofQueue.put(rec); } catch { /* keep going */ }
+                // A dropped connection stops the run so the rest are tried again later, in order.
+                if (this.isNetworkError(error)) { stopped = true; break; }
+            }
+        }
+        this.syncing = false;
+        this.purchasesLoaded = false;
+        await this.refreshQueueState();
+        if (done > 0) ui.showToast(done === 1 ? '1 saved order uploaded.' : `${done} saved orders uploaded.`, 'success');
+        else if (manual && stopped) ui.showToast('Still no signal. The orders are safe on this phone.', 'error');
+    }
+
+    /** One queued order, step by step. Each step is remembered so a retry never repeats it. */
+    async syncQueuedOrder(rec) {
+        const d = rec.details;
+        const p = rec.progress;
+        if (!p.orderId) {
+            p.orderId = await this.allocateOrderId();
+            await WoofQueue.put(rec);
+        }
+        d.orderId = p.orderId;
+        if (!p.logged) {
+            await this.logPurchaseToSupabaseSafe(d);
+            p.logged = true;
+            rec.lastError = '';
+            await WoofQueue.put(rec);
+        }
+        if (rec.photos && rec.photos.length > 0 && !p.photosSaved) {
+            try {
+                const paths = await this.uploadOrderPhotos(d.orderId, d.orderDate, rec.photos);
+                const client = await this.getSupabaseClient();
+                const { error } = await client.from('orders').update({ photo_paths: paths }).eq('id', d.rowId);
+                if (error) throw new Error(error.message);
+                p.photosSaved = true;
+                await WoofQueue.put(rec);
+            } catch (photoError) {
+                // A dropped signal is retried; anything else must not hold back the invoice.
+                if (this.isNetworkError(photoError)) throw photoError;
+                console.error('Queued photo not saved:', photoError);
+                p.photosSaved = true;
+                await WoofQueue.put(rec);
+            }
+        }
+        const pdfBase64 = await this.generateInvoicePdfBase64({ ...d, customerName: d.customerName || 'Customer' });
+        const fileName = `WoofCrafts_Order_${d.orderId}.pdf`;
+        if (!p.pdfSaved) {
+            await this.saveInvoicePdf(d.orderId, d.orderDate, pdfBase64);
+            p.pdfSaved = true;
+            await WoofQueue.put(rec);
+        }
+        if (d.customerEmail && !p.emailed) {
+            const accessToken = await window.WoofAuth.getAccessToken();
+            const response = await fetch('/api/send-invoice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken || ''}` },
+                body: JSON.stringify(this.buildEmailPayload(d, pdfBase64, fileName, d.customerName || ''))
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'Failed to send invoice email');
+            p.emailed = true;
+            await WoofQueue.put(rec);
+        }
+        await WoofQueue.remove(rec.queueId);
+    }
+
+    /** Insert the order row; a row that is already there (earlier try) counts as done. */
+    async logPurchaseToSupabaseSafe(details) {
+        try {
+            await this.logPurchaseToSupabase(details);
+        } catch (error) {
+            if (error && (error.code === '23505' || /duplicate key/i.test(String(error.message || '')))) return;
+            throw error;
+        }
+    }
+
+    setupConnectivity() {
+        const chip = document.getElementById('conn-chip');
+        if (chip) chip.addEventListener('click', () => this.openQueueDialog());
+        const retry = document.getElementById('send-banner-retry');
+        if (retry) retry.addEventListener('click', () => this.sendOrderEmail());
+        const dismiss = document.getElementById('send-banner-close');
+        if (dismiss) dismiss.addEventListener('click', () => this.hideSendBanner());
+        let draftTimer = null;
+        const scheduleDraft = () => { clearTimeout(draftTimer); draftTimer = setTimeout(() => this.saveDraft(), 400); };
+        document.addEventListener('input', scheduleDraft);
+        document.addEventListener('click', scheduleDraft);
+        window.addEventListener('online', () => { this.renderConnChip(); this.syncQueue(); });
+        window.addEventListener('offline', () => this.renderConnChip());
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) this.syncQueue(); });
+        setInterval(() => { if ((this.queued || []).length > 0) this.syncQueue(); }, 45000);
+        this.refreshQueueState().then(() => this.syncQueue());
+        if (this.productsFromCache) {
+            ui.showToast('No signal. Showing the product list saved on this phone.', 'error');
+        }
+    }
+
+    // Typed-in customer details survive a reload or a crashed tab.
+    static get DRAFT_FIELDS() { return ['customer-name', 'customer-phone', 'customer-comment', 'customer-address', 'customer-email-local']; }
+
+    saveDraft() {
+        try {
+            const draft = { fulfilment: this.fulfilment, touched: this.fulfilmentTouched, payment: this.paymentMethod, fields: {} };
+            POSApp.DRAFT_FIELDS.forEach((id) => {
+                const el = document.getElementById(id);
+                if (el && typeof el.value === 'string' && el.value) draft.fields[id] = el.value;
+            });
+            const domainEl = document.getElementById('customer-email-domain-selected');
+            if (domainEl && domainEl.textContent) draft.emailDomain = domainEl.textContent.trim();
+            if (this.cart.length === 0) { localStorage.removeItem('woofcrafts_draft'); return; }
+            localStorage.setItem('woofcrafts_draft', JSON.stringify(draft));
+        } catch { /* a full or blocked store must never break selling */ }
+    }
+
+    restoreDraft() {
+        try {
+            if (this.cart.length === 0) { localStorage.removeItem('woofcrafts_draft'); return; }
+            const draft = JSON.parse(localStorage.getItem('woofcrafts_draft') || 'null');
+            if (!draft) return;
+            Object.entries(draft.fields || {}).forEach(([id, value]) => {
+                const el = document.getElementById(id);
+                if (el && POSApp.DRAFT_FIELDS.includes(id)) el.value = value;
+            });
+            if (draft.fulfilment && POSApp.FULFILMENT_INFO[draft.fulfilment]) this.setFulfilment(draft.fulfilment, Boolean(draft.touched));
+            if (draft.payment) this.setPaymentMethod(draft.payment);
+            // The email box is split into a name and a domain button; bring both back, then rebuild the address.
+            if (draft.emailDomain) {
+                const domainEl = document.getElementById('customer-email-domain-selected');
+                const known = Array.from(document.querySelectorAll('.email-domain-buttons .domain-btn[data-domain]'));
+                const match = known.find((btn) => btn.getAttribute('data-domain') === draft.emailDomain);
+                if (domainEl && match) {
+                    domainEl.textContent = draft.emailDomain;
+                    known.forEach((btn) => btn.classList.toggle('active', btn === match));
+                }
+            }
+            this.updateCustomerEmailFromComposer();
+        } catch { /* ignore a damaged draft */ }
     }
 
     // ---- Cart sheet (phones and iPad portrait). From 900px wide the cart is docked beside the products.
