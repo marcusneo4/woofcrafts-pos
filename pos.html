@@ -50,7 +50,7 @@
                         <svg class="icon" aria-hidden="true"><use href="#i-store"/></svg> POS
                     </button>
                     <button type="button" class="btn-secondary" id="purchases-tab-btn" role="tab" aria-controls="view-purchases" aria-selected="false">
-                        <svg class="icon" aria-hidden="true"><use href="#i-receipt"/></svg> Purchases
+                        <svg class="icon" aria-hidden="true"><use href="#i-receipt"/></svg> Purchases <span class="tab-badge hidden" id="purchases-badge" aria-label="orders still to make"></span>
                     </button>
                 </div>
                 <div class="header-actions">
@@ -123,10 +123,7 @@
                             <span id="discount-amount" class="discount-amount hidden">-$0.00</span>
                         </div>
                         <div class="summary-row">
-                            <label class="delivery-toggle" for="delivery-toggle">
-                                <input type="checkbox" id="delivery-toggle" checked>
-                                <span>Delivery</span>
-                            </label>
+                            <span>Delivery</span>
                             <span id="delivery-fee">$0.00</span>
                         </div>
                         <p id="delivery-hint" class="delivery-hint hidden"></p>
@@ -144,29 +141,31 @@
 
                     <div class="checkout-section">
                         <h3>Order details</h3>
+
                         <div class="input-group">
-                            <label for="customer-name">Owner name</label>
-                            <input type="text" id="customer-name" class="input-field" autocomplete="off" autocapitalize="words" enterkeyhint="next">
-                        </div>
-                        <div class="input-group">
-                            <label for="pet-name">Pet's name</label>
-                            <input type="text" id="pet-name" class="input-field" autocomplete="off" autocapitalize="words" enterkeyhint="next" aria-describedby="pet-name-hint">
-                            <p class="field-note" id="pet-name-hint">More than one pet? Separate the names with commas.</p>
-                        </div>
-                        <div class="input-group">
-                            <span class="group-label" id="ring-colour-label">Colour of ring</span>
-                            <div class="segmented" id="ring-colour" role="group" aria-labelledby="ring-colour-label">
-                                <button type="button" class="seg-btn" data-ring="silver" aria-pressed="false">Silver</button>
-                                <button type="button" class="seg-btn" data-ring="gold" aria-pressed="false">Gold</button>
-                                <button type="button" class="seg-btn" data-ring="gun metal" aria-pressed="false">Gun metal</button>
+                            <span class="group-label" id="fulfilment-label">How is the customer getting it?</span>
+                            <div class="segmented segmented-3 segmented-tall" id="fulfilment" role="group" aria-labelledby="fulfilment-label">
+                                <button type="button" class="seg-btn" data-fulfilment="taken_now" aria-pressed="false"><strong>Taken now</strong><small>Handed over at the booth</small></button>
+                                <button type="button" class="seg-btn" data-fulfilment="collect" aria-pressed="false"><strong>Collect at booth</strong><small>Customer comes back</small></button>
+                                <button type="button" class="seg-btn" data-fulfilment="delivery" aria-pressed="false"><strong>Delivery</strong><small>Posted to them</small></button>
                             </div>
+                            <p class="field-note" id="fulfilment-note"></p>
+                        </div>
+
+                        <div id="tag-details" class="tag-details" aria-live="polite"></div>
+
+                        <div class="input-group">
+                            <label for="customer-name">Owner name <span class="optional-mark" id="customer-name-opt">(optional)</span></label>
+                            <input type="text" id="customer-name" class="input-field" autocomplete="off" autocapitalize="words" enterkeyhint="next" aria-describedby="customer-name-error">
+                            <p class="field-error hidden" id="customer-name-error" role="alert"></p>
                         </div>
                         <div class="input-group">
-                            <label for="customer-phone">Phone</label>
-                            <input type="tel" id="customer-phone" class="input-field" autocomplete="off" inputmode="tel" enterkeyhint="next">
+                            <label for="customer-phone">Phone <span class="optional-mark" id="customer-phone-opt">(optional)</span></label>
+                            <input type="tel" id="customer-phone" class="input-field" autocomplete="off" inputmode="tel" enterkeyhint="next" aria-describedby="customer-phone-error">
+                            <p class="field-error hidden" id="customer-phone-error" role="alert"></p>
                         </div>
                         <div class="input-group">
-                            <label for="customer-email-local">Email (required)</label>
+                            <label for="customer-email-local">Email <span class="optional-mark">(optional)</span></label>
                             <div class="email-compose-row" aria-label="Customer email">
                                 <input type="text" id="customer-email-local" placeholder="name" class="input-field email-local-input" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" aria-describedby="customer-email-error">
                                 <span class="email-at" aria-hidden="true">@</span>
@@ -187,7 +186,15 @@
                         <div class="input-group" id="address-group">
                             <label for="customer-address">Delivery address</label>
                             <textarea id="customer-address" class="input-field textarea-short" rows="2" autocomplete="off" placeholder="Block, street, unit, postal code"></textarea>
-                            <p class="field-note">Leave blank if you will collect it later. You can add it from Purchases.</p>
+                            <p class="field-note">You can add or change the address later from Purchases.</p>
+                        </div>
+                        <div class="input-group">
+                            <span class="group-label" id="payment-label">Payment</span>
+                            <div class="segmented segmented-2 segmented-tall" id="payment-method" role="group" aria-labelledby="payment-label" aria-describedby="payment-error">
+                                <button type="button" class="seg-btn" data-payment="paynow" aria-pressed="false"><strong>PayNow</strong></button>
+                                <button type="button" class="seg-btn" data-payment="cash" aria-pressed="false"><strong>Cash</strong></button>
+                            </div>
+                            <p class="field-error hidden" id="payment-error" role="alert"></p>
                         </div>
                         <div class="input-group">
                             <span class="group-label" id="order-photo-label">Photo (optional)</span>
@@ -199,7 +206,7 @@
                         </div>
                         <div class="input-group">
                             <label for="customer-comment">Notes</label>
-                            <textarea id="customer-comment" placeholder="Engraving text, special requests" class="input-field textarea-resizable" rows="3"></textarea>
+                            <textarea id="customer-comment" placeholder="Special requests (engraving text goes on each tag above)" class="input-field textarea-resizable" rows="3"></textarea>
                         </div>
                     </div>
 
@@ -220,6 +227,9 @@
                                 <button type="button" class="btn-secondary icon-only-btn" id="purchases-refresh-btn" aria-label="Refresh purchases" title="Refresh">
                                     <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>
                                 </button>
+                                <button type="button" class="btn-secondary" id="make-list-btn">
+                                    <svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg> To make
+                                </button>
                                 <button type="button" class="btn-secondary" id="export-open-btn">
                                     <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> Export
                                 </button>
@@ -229,6 +239,8 @@
                             <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
                             <input type="search" id="purchases-search" class="input-field purchases-search" placeholder="Search name, pet or order no." aria-label="Search invoices" autocomplete="off">
                         </div>
+                        <div id="purchases-summary" class="purchases-summary" aria-label="Today"></div>
+                        <div class="status-filters" id="status-filters" role="group" aria-label="Filter by status"></div>
                         <p id="purchases-count" class="purchases-count" role="status" aria-live="polite"></p>
                         <div id="purchases-list" class="purchases-list"></div>
                     </aside>
@@ -251,6 +263,10 @@
                 <button id="modal-confirm" class="btn-primary btn-danger-soft modal-action-btn" type="button">Confirm</button>
             </div>
         </div>
+    </dialog>
+
+    <dialog id="order-done" class="custom-modal order-done" aria-labelledby="order-done-title">
+        <div class="custom-modal-content" id="order-done-body"></div>
     </dialog>
 
     <dialog id="export-dialog" class="custom-modal export-dialog" aria-labelledby="export-title">

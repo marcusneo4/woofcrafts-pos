@@ -3,7 +3,7 @@ const root=(process.argv[2] || require('path').join(__dirname, '..'));
 const els={};
 const mk=(id)=>{const cls=new Set();return els[id]||(els[id]={id,value:'',textContent:'',innerHTML:'',checked:true,disabled:false,style:{},dataset:{},
  classList:{add:(c)=>cls.add(c),remove:(c)=>cls.delete(c),contains:(c)=>cls.has(c),toggle(){},_s:cls},handlers:{},
- addEventListener(t,f){(this.handlers[t]=this.handlers[t]||[]).push(f)},focus(){},setAttribute(){},getAttribute(){return null},closest(){return null},querySelector(){return null},querySelectorAll(){return []}})};
+ addEventListener(t,f){(this.handlers[t]=this.handlers[t]||[]).push(f)},focus(){},showModal(){this.open=true},close(){this.open=false},open:false,setAttribute(){},getAttribute(){return null},closest(){return null},querySelector(){return null},querySelectorAll(){return []}})};
 const toasts=[];const calls={rpc:0,inserts:[],uploads:[],fetches:[]};
 let failRpc=false,failUpload=false;
 const doc={getElementById:mk,querySelectorAll:()=>[],querySelector:()=>null,addEventListener(){},body:{classList:{add(){},remove(){},contains:()=>false}}};
@@ -32,6 +32,7 @@ let pass=0,fail=0;const ok=(c,n)=>{c?pass++:fail++;console.log((c?'PASS ':'FAIL 
  app.saveCart=()=>{};app.renderCart=()=>{};app.closeCartSheet=()=>{};app.updateCustomerEmailFromComposer=()=>{};app.clearCustomerInfo=()=>{};
  app.generateInvoicePdfBase64=async()=> 'QUJD';
  const fee=()=>els['delivery-fee'].textContent, tot=()=>els['total'].textContent, hint=()=>els['delivery-hint'];
+ app.setFulfilment('delivery');
  app.cart=[{productId:1,name:'Tag',price:35,quantity:1}];app.updateTotals();
  ok(fee()==='$2.50'&&tot()==='$37.50','under 50: fee 2.50, total 37.50 ('+fee()+','+tot()+')');
  ok(!hint().classList.contains('hidden')&&/15\.00/.test(hint().textContent),'hint says add $15.00 ('+hint().textContent+')');
@@ -40,33 +41,33 @@ let pass=0,fail=0;const ok=(c,n)=>{c?pass++:fail++;console.log((c?'PASS ':'FAIL 
  app.cart=[{productId:1,name:'Tag',price:52,quantity:1}];app.discountApplied=true;app.updateTotals();
  ok(fee()==='$2.50'&&tot()==='$51.90','52 with 5% off = 49.40 -> delivery charged, total 51.90 ('+tot()+')');
  app.discountApplied=false;app.cart=[{productId:1,name:'Tag',price:35,quantity:1}];
- els['delivery-toggle'].checked=false;app.deliveryEnabled=false;app.updateTotals();
+ app.setFulfilment('collect');app.updateTotals();
  ok(fee()==='Pickup'&&tot()==='$35.00'&&hint().classList.contains('hidden'),'pickup: no fee, total 35, hint hidden');
- app.deliveryEnabled=true;app.cart=[];app.updateTotals();
+ app.setFulfilment('delivery');app.cart=[];app.updateTotals();
  ok(tot()==='$0.00','empty cart total 0');
  // order flow: delivery
- app.cart=[{productId:1,name:'Tag',price:35,quantity:1}];mk('customer-email').value='a@b.co';mk('customer-name').value='Sam';
+ app.cart=[{productId:1,name:'Tag',price:35,quantity:1}];mk('customer-email').value='a@b.co';mk('customer-name').value='Sam';mk('customer-phone').value='91234567';mk('customer-address').value='1 Test Road';app.paymentMethod='paynow';
  await app.sendOrderEmail();
  let ins=calls.inserts[0]&&calls.inserts[0].row;
  ok(ins&&ins.order_id==='001000'&&ins.delivery_fee===2.5&&ins.total===37.5,'order 001000 logged with delivery 2.5, total 37.5');
  const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Singapore'}).format(new Date());
  ok(calls.uploads[0]&&calls.uploads[0].b==='invoices'&&calls.uploads[0].p===day+'/WoofCrafts_Order_001000.pdf','pdf filed at '+(calls.uploads[0]&&calls.uploads[0].p));
  ok(calls.fetches[0]&&calls.fetches[0].body.invoiceNumber==='001000'&&calls.fetches[0].u==='/api/send-invoice','email request for 001000');
- ok(app.cart.length===0&&app.pendingOrderId===null&&app.deliveryEnabled===true,'cart cleared, pending id reset, delivery back on');
- ok(toasts.at(-1).t==='success'&&/001000/.test(toasts.at(-1).m),'success toast: '+toasts.at(-1).m);
+ ok(app.cart.length===0&&app.pendingOrderId===null&&app.fulfilmentTouched===false&&app.paymentMethod==='','cart cleared, pending id reset, choices reset');
+ ok(/Order #001000 saved/.test(els['order-done-body'].innerHTML)&&els['order-done'].open===true,'saved screen shown for 001000');
  // second order, pickup
- app.cart=[{productId:1,name:'Tag',price:35,quantity:1}];app.deliveryEnabled=false;mk('customer-email').value='c@d.co';
+ app.cart=[{productId:1,name:'Tag',price:35,quantity:1}];app.setFulfilment('collect');app.paymentMethod='cash';mk('customer-email').value='c@d.co';
  await app.sendOrderEmail();
  ins=calls.inserts[1].row;
  ok(ins.order_id==='001001'&&ins.delivery_fee===0&&ins.total===35,'order 001001 pickup: delivery 0, total 35');
  // rpc failure
- failRpc=true;app.cart=[{productId:1,name:'Tag',price:10,quantity:1}];app.deliveryEnabled=true;mk('customer-email').value='e@f.co';
+ failRpc=true;app.cart=[{productId:1,name:'Tag',price:10,quantity:1}];app.setFulfilment('delivery');app.paymentMethod='cash';mk('customer-email').value='e@f.co';
  const before=calls.inserts.length;await app.sendOrderEmail();failRpc=false;
  ok(calls.inserts.length===before&&toasts.at(-1).t==='error'&&mk('send-email-btn').disabled===false,'rpc failure: no order saved, error toast, button re-enabled');
  // upload failure still emails
- failUpload=true;const fb=calls.fetches.length;app.cart=[{productId:1,name:'Tag',price:60,quantity:1}];
+ failUpload=true;const fb=calls.fetches.length;app.cart=[{productId:1,name:'Tag',price:60,quantity:1}];app.paymentMethod='cash';
  await app.sendOrderEmail();failUpload=false;
- ok(calls.fetches.length===fb+1&&toasts.at(-1).t==='error'&&/PDF copy/.test(toasts.at(-1).m),'upload failure: email still sent, warning shown');
+ ok(calls.fetches.length===fb+1&&/PDF could not be filed/.test(els['order-done-body'].innerHTML),'upload failure: email still sent, warning shown');
  ok(app.invoiceFolderFor('2026-11-14T17:30:00Z')==='2026-11-15','Singapore date folder rolls over at 16:00 UTC');
  const list=mk('purchases-list');app.renderPurchasesList([{id:'a',order_id:'001001',total:35,created_at:'2026-11-15T03:00:00Z'},{id:'b',order_id:'001000',total:37.5,created_at:'2026-11-15T01:00:00Z'},{id:'c',order_id:'009344',total:20,created_at:'2026-11-13T05:00:00Z'}]);
  ok((list.innerHTML.match(/purchase-date-heading/g)||[]).length===2&&/Sun, 15 Nov 2026/.test(list.innerHTML),'purchases grouped under 2 date headings');

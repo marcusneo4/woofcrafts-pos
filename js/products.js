@@ -26,7 +26,7 @@ class ProductManager {
 
                 const { data, error } = await supabaseClient
                     .from(tableName)
-                    .select('id,title,description,price,category,image_url,created_at')
+                    .select('id,title,description,price,category,image_url,created_at,needs_details')
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
@@ -40,7 +40,8 @@ class ProductManager {
                             description: row.description || '',
                             price: Number(row.price),
                             category: (row.category || 'general'),
-                            image: row.image_url || ''
+                            image: row.image_url || '',
+                            needsDetails: typeof row.needs_details === 'boolean' ? row.needs_details : /tag/i.test(String(row.title || ''))
                         };
                     });
                     console.log(`✓ Loaded ${this.products.length} products from Supabase`);
@@ -96,7 +97,7 @@ class ProductManager {
         return window.WoofAuth.getClient();
     }
 
-    async upsertProduct({ productId, title, description, price, category, imageUrl }) {
+    async upsertProduct({ productId, title, description, price, category, imageUrl, needsDetails }) {
         const supabaseClient = await this.getSupabaseClient();
         if (!supabaseClient) throw new Error('Supabase is not configured (missing window.SUPABASE_CONFIG)');
 
@@ -109,7 +110,8 @@ class ProductManager {
             description: description && description.trim().length > 0 ? description.trim() : null,
             price: price,
             category: category,
-            image_url: imageUrl
+            image_url: imageUrl,
+            needs_details: Boolean(needsDetails)
         };
 
         const { error } = await supabaseClient.from(tableName).upsert(payload, { onConflict: 'id' });
@@ -302,7 +304,8 @@ class ProductManager {
                 description: description,
                 price: price,
                 category: category,
-                imageUrl: imagePath
+                imageUrl: imagePath,
+                needsDetails: Boolean(document.getElementById('product-needs-details')?.checked)
             });
 
             // Reload from Supabase to keep the list consistent
@@ -336,6 +339,8 @@ class ProductManager {
         document.getElementById('product-name').value = product.name;
         document.getElementById('product-price').value = product.price;
         document.getElementById('product-category').value = (product.category || 'general').toLowerCase();
+        const needsDetailsEl = document.getElementById('product-needs-details');
+        if (needsDetailsEl) needsDetailsEl.checked = Boolean(product.needsDetails);
 
         const descriptionEl = document.getElementById('product-description');
         if (descriptionEl) descriptionEl.value = product.description || '';
@@ -400,6 +405,8 @@ class ProductManager {
             try { last = localStorage.getItem('woofcrafts_last_category') || ''; } catch (error) { /* private mode */ }
             categoryEl.value = last || 'general';
         }
+        const needsDetailsEl = document.getElementById('product-needs-details');
+        if (needsDetailsEl) needsDetailsEl.checked = /tag/i.test(last);
     }
 
     renderProducts() {
